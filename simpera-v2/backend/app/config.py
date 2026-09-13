@@ -62,6 +62,14 @@ class Settings:
             "FILE_BASE_URL", "https://e-surat.unisma.ac.id/public"
         ).rstrip("/")
 
+        # Folder berkas lampiran milik e-surat. Unggahan disimpan di sini
+        # supaya berkasnya tetap bisa dibuka dari aplikasi Laravel.
+        self.upload_root = os.getenv(
+            "UPLOAD_ROOT",
+            "/home/esurat193/e-surat.unisma.ac.id/public_html/public",
+        ).rstrip("/")
+        self.max_upload_mb = int(os.getenv("MAX_UPLOAD_MB", "25"))
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

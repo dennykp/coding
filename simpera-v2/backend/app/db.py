@@ -212,6 +212,46 @@ ESURAT_WRITES: dict[str, str] = {
         "INSERT INTO tt_suratkeluar_tembusan (surat_id_tembusan, jabatan_id_tembusan) "
         "VALUES (%s, %s)"
     ),
+
+    # SuratMasukController@simpan / @update / @destroy
+    "tambah_surat_masuk": (
+        "INSERT INTO tt_suratmasuk "
+        "(tgl_surat, id_jenis, nomor_surat, perihal, dari, id_jabatan, kepada, "
+        " file_upload, id_usrz, tgl_surat_terima, id_kode_arsip, id_kategori, "
+        " catatan, nomor_agenda, read_surat, created_at) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 0, NOW())"
+    ),
+    "ubah_surat_masuk": (
+        "UPDATE tt_suratmasuk SET "
+        " tgl_surat = %s, id_jenis = %s, nomor_surat = %s, perihal = %s, "
+        " dari = %s, id_jabatan = %s, kepada = %s, file_upload = %s, "
+        " diupdate_oleh = %s, tgl_surat_terima = %s, id_kode_arsip = %s, "
+        " id_kategori = %s, catatan = %s, nomor_agenda = %s, "
+        " update_at_diubah = NOW(), updated_at = NOW() "
+        "WHERE id_surat = %s"
+    ),
+    "hapus_surat_masuk": "DELETE FROM tt_suratmasuk WHERE id_surat = %s",
+    "hapus_disposisi_surat": "DELETE FROM tt_disposisi WHERE id_surat = %s",
+
+    # SuratKeluarController@update / @destroy
+    "ubah_surat_keluar": (
+        "UPDATE tt_suratkeluar SET "
+        " tgl_suratkel = %s, id_jenis = %s, nomor = %s, id_kode_arsip = %s, "
+        " perihal = %s, keterangan_perihal = %s, tujuan = %s, "
+        " tujuan_lainnya = %s, tembusan = %s, tanda_tangan = %s, "
+        " updated_at = NOW() "
+        "WHERE id_suratkel = %s"
+    ),
+    "hapus_surat_keluar": "DELETE FROM tt_suratkeluar WHERE id_suratkel = %s",
+    "hapus_penandatangan_surat_keluar": (
+        "DELETE FROM tc_suratkeluar WHERE id_suratkel = %s"
+    ),
+    "hapus_tujuan_surat_keluar": (
+        "DELETE FROM tt_suratkeluar_tujuan WHERE surat_id = %s"
+    ),
+    "hapus_tembusan_surat_keluar": (
+        "DELETE FROM tt_suratkeluar_tembusan WHERE surat_id_tembusan = %s"
+    ),
 }
 
 

@@ -19,9 +19,9 @@ import datetime as dt
 import re
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 
-from .. import db, security
+from .. import berkas, db, security
 from ..common import clean, clean_all, file_url
 from ..schemas import DisposisiIn, SelesaiDisposisiIn, SuratKeluarIn, VerifikasiIn
 
@@ -33,6 +33,7 @@ router = APIRouter(tags=["alur-surat"])
 ROLE_VERIFIKASI = {1, 3}          # Superadmin, Admin Verifikasi
 ROLE_DISPOSISI = {1, 2, 10}       # Superadmin, Kepala, Admin Khusus
 ROLE_BUAT_SURAT = {1, 3, 5}       # Superadmin, Admin Verifikasi, User Input
+ROLE_KELOLA_SURAT = {1, 3, 5}     # menambah, mengubah, menghapus surat
 
 STATUS_VERIFIKASI = {0: "Diproses", 1: "Diterima", 2: "Ditolak"}
 
@@ -68,6 +69,178 @@ def _surat_masuk(id_surat: int) -> dict[str, Any]:
     if not row:
         raise HTTPException(status_code=404, detail="Surat masuk tidak ditemukan.")
     return row
+
+
+# ------------------------------------------------- tambah/ubah/hapus surat masuk
+
+def _nomor_agenda_baru() -> str:
+    """Nomor agenda berikutnya, meniru SuratMasukController@simpan.
+
+    Laravel mengambil baris terakhir, memecah nomor agendanya pada titik,
+    menambah satu pada bagian depannya, lalu memformatnya empat digit dengan
+    tahun berjalan.
+    """
+    terakhir = db.fetch_one(
+        "SELECT nomor_agenda FROM tt_suratmasuk ORDER BY id_surat DESC LIMIT 1"
+    )
+    urutan = 0
+    if terakhir and terakhir.get("nomor_agenda"):
+        depan = str(terakhir["nomor_agenda"]).split(".")[0]
+        angka = re.match(r"\s*(\d+)", depan)
+        urutan = int(angka.group(1)) if angka else 0
+    return f"{urutan + 1:04d}.{dt.date.today().year}"
+
+
+def _validasi_referensi(id_jenis: int | None, id_kategori: int | None,
+                        id_jabatan: int | None, id_kode_arsip: int | None) -> None:
+    if id_jenis and not db.fetch_one(
+            "SELECT id_jenis FROM tm_jenis_surat WHERE id_jenis = %s", (id_jenis,)):
+        raise HTTPException(status_code=400, detail="Jenis surat tidak dikenal.")
+    if id_kategori and not db.fetch_one(
+            "SELECT id_kategori FROM tm_kategori WHERE id_kategori = %s", (id_kategori,)):
+        raise HTTPException(status_code=400, detail="Kategori surat tidak dikenal.")
+    if id_jabatan and not db.fetch_one(
+            "SELECT id_jabatan FROM tm_jabatan WHERE id_jabatan = %s", (id_jabatan,)):
+        raise HTTPException(status_code=400, detail="Jabatan tujuan tidak dikenal.")
+    if id_kode_arsip and not db.fetch_one(
+            "SELECT id_kode_arsip FROM tm_kode_arsip WHERE id_kode_arsip = %s",
+            (id_kode_arsip,)):
+        raise HTTPException(status_code=400, detail="Kode arsip tidak dikenal.")
+
+
+def _kode_arsip_teks(id_kode_arsip: int | None) -> str:
+    if not id_kode_arsip:
+        return ""
+    row = db.fetch_one(
+        "SELECT kode_arsip FROM tm_kode_arsip WHERE id_kode_arsip = %s",
+        (id_kode_arsip,),
+    )
+    return str(row["kode_arsip"]) if row and row.get("kode_arsip") else ""
+
+
+@router.post("/surat-masuk", status_code=201)
+def tambah_surat_masuk(
+    nomor_surat: str = Form(..., max_length=50),
+    tgl_surat: dt.date = Form(...),
+    tgl_surat_terima: dt.date = Form(...),
+    perihal: str = Form("", max_length=2000),
+    dari: str = Form("", max_length=100),
+    kepada: str = Form("", max_length=100),
+    id_jenis: int | None = Form(None),
+    id_kategori: int | None = Form(None),
+    id_jabatan: int | None = Form(None),
+    id_kode_arsip: int | None = Form(None),
+    catatan: str = Form("", max_length=2000),
+    lampiran: UploadFile | None = File(None),
+    user: dict[str, Any] = Depends(security.current_user),
+) -> Any:
+    """Catat surat masuk baru (alur User Input, mis. akun fitri).
+
+    Surat tersimpan dengan status belum diverifikasi dan nomor agenda
+    otomatis, sama seperti lewat aplikasi lama.
+    """
+    _wajib_role(user, ROLE_KELOLA_SURAT, "menambah surat masuk")
+    _validasi_referensi(id_jenis, id_kategori, id_jabatan, id_kode_arsip)
+
+    nama_berkas = None
+    if lampiran is not None and lampiran.filename:
+        nama_berkas = berkas.simpan(lampiran, "FILEUPLOAD", berkas.nama_baru(lampiran))
+
+    nomor_agenda = _nomor_agenda_baru()
+    id_surat = db.execute_esurat(
+        "tambah_surat_masuk",
+        (
+            tgl_surat, id_jenis, nomor_surat.strip(), perihal.strip(), dari.strip(),
+            id_jabatan, kepada.strip(), nama_berkas, user["id"], tgl_surat_terima,
+            str(id_kode_arsip) if id_kode_arsip else None, id_kategori,
+            catatan.strip(), nomor_agenda,
+        ),
+    )
+    return {
+        "id_surat": id_surat,
+        "nomor_surat": nomor_surat.strip(),
+        "nomor_agenda": nomor_agenda,
+        "status_surat": 0,
+        "status_label": "Belum Diverifikasi",
+        "lampiran": nama_berkas,
+        "dicatat_oleh": user.get("name") or user.get("username"),
+    }
+
+
+@router.put("/surat-masuk/{id_surat}")
+def ubah_surat_masuk(
+    id_surat: int,
+    nomor_surat: str = Form(..., max_length=50),
+    tgl_surat: dt.date = Form(...),
+    tgl_surat_terima: dt.date = Form(...),
+    nomor_agenda: str = Form("", max_length=50),
+    perihal: str = Form("", max_length=2000),
+    dari: str = Form("", max_length=100),
+    kepada: str = Form("", max_length=100),
+    id_jenis: int | None = Form(None),
+    id_kategori: int | None = Form(None),
+    id_jabatan: int | None = Form(None),
+    id_kode_arsip: int | None = Form(None),
+    catatan: str = Form("", max_length=2000),
+    lampiran: UploadFile | None = File(None),
+    user: dict[str, Any] = Depends(security.current_user),
+) -> Any:
+    """Ubah data surat masuk. Lampiran lama diganti hanya bila ada unggahan baru."""
+    _wajib_role(user, ROLE_KELOLA_SURAT, "mengubah surat masuk")
+    lama = _surat_masuk(id_surat)
+    _validasi_referensi(id_jenis, id_kategori, id_jabatan, id_kode_arsip)
+
+    nama_berkas = lama.get("file_upload")
+    if lampiran is not None and lampiran.filename:
+        baru = berkas.nama_ubah(lampiran, _kode_arsip_teks(id_kode_arsip), nomor_surat)
+        nama_berkas = berkas.simpan(lampiran, "FILEUPLOAD", baru)
+        if lama.get("file_upload") and lama["file_upload"] != nama_berkas:
+            berkas.hapus("FILEUPLOAD", lama["file_upload"])
+
+    db.execute_esurat(
+        "ubah_surat_masuk",
+        (
+            tgl_surat, id_jenis, nomor_surat.strip(), perihal.strip(), dari.strip(),
+            id_jabatan, kepada.strip(), nama_berkas, user["id"], tgl_surat_terima,
+            str(id_kode_arsip) if id_kode_arsip else None, id_kategori,
+            catatan.strip(), nomor_agenda.strip() or lama.get("nomor_agenda"),
+            id_surat,
+        ),
+    )
+    return {
+        "id_surat": id_surat,
+        "nomor_surat": nomor_surat.strip(),
+        "lampiran": nama_berkas,
+        "diubah_oleh": user.get("name") or user.get("username"),
+    }
+
+
+@router.delete("/surat-masuk/{id_surat}")
+def hapus_surat_masuk(
+    id_surat: int, user: dict[str, Any] = Depends(security.current_user)
+) -> Any:
+    """Hapus surat masuk beserta disposisi dan lampirannya.
+
+    Perilakunya sama dengan SuratMasukController@destroy: barisnya benar-benar
+    dihapus, bukan ditandai nonaktif.
+    """
+    _wajib_role(user, ROLE_KELOLA_SURAT, "menghapus surat masuk")
+    surat = _surat_masuk(id_surat)
+
+    jumlah_disposisi = int(db.fetch_value(
+        "SELECT COUNT(*) FROM tt_disposisi WHERE id_surat = %s", (id_surat,), default=0
+    ) or 0)
+
+    db.execute_esurat("hapus_disposisi_surat", (id_surat,))
+    db.execute_esurat("hapus_surat_masuk", (id_surat,))
+    berkas.hapus("FILEUPLOAD", surat.get("file_upload"))
+
+    return {
+        "id_surat": id_surat,
+        "nomor_surat": surat.get("nomor_surat"),
+        "disposisi_terhapus": jumlah_disposisi,
+        "status": "deleted",
+    }
 
 
 # --------------------------------------------------------------- verifikasi
@@ -374,6 +547,121 @@ def buat_surat_keluar(
         "status_surat": 0,
         "status_label": "Menunggu Persetujuan",
         "dibuat_oleh": user.get("name") or user.get("username"),
+    }
+
+
+@router.put("/surat-keluar/{id_suratkel}")
+def ubah_surat_keluar(
+    id_suratkel: int,
+    payload: SuratKeluarIn,
+    user: dict[str, Any] = Depends(security.current_user),
+) -> Any:
+    """Ubah surat keluar beserta daftar tujuan, tembusan, dan penanda tangan."""
+    _wajib_role(user, ROLE_KELOLA_SURAT, "mengubah surat keluar")
+    lama = db.fetch_one(
+        "SELECT id_suratkel, nomor, jabatan_id_suratkeluar FROM tt_suratkeluar "
+        "WHERE id_suratkel = %s",
+        (id_suratkel,),
+    )
+    if not lama:
+        raise HTTPException(status_code=404, detail="Surat keluar tidak ditemukan.")
+
+    bentrok = db.fetch_one(
+        "SELECT id_suratkel FROM tt_suratkeluar WHERE nomor = %s AND id_suratkel <> %s",
+        (payload.nomor.strip(), id_suratkel),
+    )
+    if bentrok:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Nomor surat {payload.nomor.strip()} sudah dipakai surat lain.",
+        )
+
+    semua = list(dict.fromkeys(
+        payload.tujuan + payload.tembusan + payload.tanda_tangan
+    ))
+    if semua:
+        dikenal = {
+            int(r["id_jabatan"])
+            for r in db.fetch_all(
+                "SELECT id_jabatan FROM tm_jabatan WHERE id_jabatan IN (%s)"
+                % ",".join(["%s"] * len(semua)),
+                semua,
+            )
+        }
+        hilang = [x for x in semua if x not in dikenal]
+        if hilang:
+            raise HTTPException(
+                status_code=400,
+                detail="Jabatan tidak dikenal: " + ", ".join(str(x) for x in hilang),
+            )
+
+    db.execute_esurat(
+        "ubah_surat_keluar",
+        (
+            payload.tgl_suratkel,
+            payload.id_jenis,
+            payload.nomor.strip(),
+            payload.id_kode_arsip,
+            str(payload.id_perihal) if payload.id_perihal else "",
+            payload.keterangan_perihal.strip() or "-",
+            ", ".join(str(x) for x in payload.tujuan),
+            payload.tujuan_lainnya,
+            ", ".join(str(x) for x in payload.tembusan),
+            ", ".join(str(x) for x in payload.tanda_tangan),
+            id_suratkel,
+        ),
+    )
+
+    # Daftar relasi ditulis ulang supaya selalu cocok dengan isi formulir.
+    approve_id_jabatan = (
+        PETA_APPROVE_JABATAN.get(int(lama.get("jabatan_id_suratkeluar") or 0))
+        if 1 in payload.tanda_tangan
+        else None
+    )
+    db.execute_esurat("hapus_penandatangan_surat_keluar", (id_suratkel,))
+    db.execute_esurat("hapus_tujuan_surat_keluar", (id_suratkel,))
+    db.execute_esurat("hapus_tembusan_surat_keluar", (id_suratkel,))
+    for id_jabatan in payload.tanda_tangan:
+        db.execute_esurat(
+            "tambah_penandatangan_surat_keluar",
+            (id_suratkel, id_jabatan, approve_id_jabatan),
+        )
+    for id_jabatan in payload.tujuan:
+        db.execute_esurat("tambah_tujuan_surat_keluar", (id_suratkel, id_jabatan))
+    for id_jabatan in payload.tembusan:
+        db.execute_esurat("tambah_tembusan_surat_keluar", (id_suratkel, id_jabatan))
+
+    return {
+        "id_suratkel": id_suratkel,
+        "nomor": payload.nomor.strip(),
+        "diubah_oleh": user.get("name") or user.get("username"),
+    }
+
+
+@router.delete("/surat-keluar/{id_suratkel}")
+def hapus_surat_keluar(
+    id_suratkel: int, user: dict[str, Any] = Depends(security.current_user)
+) -> Any:
+    """Hapus surat keluar beserta tujuan, tembusan, dan penanda tangannya."""
+    _wajib_role(user, ROLE_KELOLA_SURAT, "menghapus surat keluar")
+    surat = db.fetch_one(
+        "SELECT id_suratkel, nomor, file_upload FROM tt_suratkeluar "
+        "WHERE id_suratkel = %s",
+        (id_suratkel,),
+    )
+    if not surat:
+        raise HTTPException(status_code=404, detail="Surat keluar tidak ditemukan.")
+
+    db.execute_esurat("hapus_penandatangan_surat_keluar", (id_suratkel,))
+    db.execute_esurat("hapus_tujuan_surat_keluar", (id_suratkel,))
+    db.execute_esurat("hapus_tembusan_surat_keluar", (id_suratkel,))
+    db.execute_esurat("hapus_surat_keluar", (id_suratkel,))
+    berkas.hapus("FILESURATKELUAR", surat.get("file_upload"))
+
+    return {
+        "id_suratkel": id_suratkel,
+        "nomor": surat.get("nomor"),
+        "status": "deleted",
     }
 
 
