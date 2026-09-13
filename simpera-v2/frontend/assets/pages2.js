@@ -55,12 +55,6 @@
     }).catch(function () { notReady(container, judul); return false; });
   }
 
-  function options(list, valueKey, labelKey, kosong) {
-    return '<option value="">' + esc(kosong) + '</option>' + list.map(function (x) {
-      return '<option value="' + esc(x[valueKey]) + '">' + esc(x[labelKey]) + '</option>';
-    }).join('');
-  }
-
   // ================================================================ BERKAS ARSIP
   pages['arsip'] = function (container) {
     return pastikanSiap(container, 'Modul arsip').then(function (siap) {
@@ -69,9 +63,14 @@
         request('/arteri/statistik'),
         request('/arteri/master/klasifikasi' + query({ limit: 1000 })),
         request('/arteri/sync/pratinjau' + query({ sumber: 'surat_keluar' })),
-        request('/arteri/sync/pratinjau' + query({ sumber: 'surat_masuk' }))
+        request('/arteri/sync/pratinjau' + query({ sumber: 'surat_masuk' })),
+        request('/arteri/master/pencipta' + query({ limit: 2000 })),
+        request('/arteri/master/pengolah' + query({ limit: 2000 })),
+        request('/arteri/master/lokasi'),
+        request('/arteri/master/media')
       ]).then(function (res) {
         var stat = res[0], klas = res[1], prevKeluar = res[2], prevMasuk = res[3];
+        var pencipta = res[4], pengolah = res[5], lokasi = res[6], media = res[7];
         var boleh = state.user && state.user.can_manage_arsip;
 
         var header =
@@ -139,41 +138,90 @@
               { value: 'surat_masuk', label: 'Dari surat masuk' }
             ] }
           ],
-          columns: [
-            { title: 'No. Arsip', tdClass: 'whitespace-nowrap', render: function (r) {
-                return '<span class="font-medium text-slate-800">' + dash(r.noarsip) + '</span>'; } },
-            { title: 'Uraian', thClass: 'w-[24%]', tdClass: 'min-w-[10rem]', render: function (r) {
-                return '<span class="clamp-2">' + dash(r.uraian) + '</span>'; } },
-            { title: 'Klasifikasi', render: function (r) {
-                return r.kode ? '<span class="font-medium text-slate-700">' + esc(r.kode) + '</span>' +
-                  (r.nama_klasifikasi ? '<br><span class="text-xs text-slate-500">' + esc(r.nama_klasifikasi) + '</span>' : '')
-                  : '<span class="text-slate-300">—</span>'; } },
-            { title: 'Tanggal', tdClass: 'whitespace-nowrap', render: function (r) { return tanggal(r.tanggal); } },
-            { title: 'Lokasi / Boks', render: function (r) {
-                return dash(r.nama_lokasi) + (r.nobox ? '<br><span class="text-xs text-slate-500">Boks ' + esc(r.nobox) + '</span>' : ''); } },
-            { title: 'Sumber', render: function (r) {
-                var map = { manual: ['Manual', 'slate'], surat_keluar: ['Surat keluar', 'sky'], surat_masuk: ['Surat masuk', 'amber'] };
-                var m = map[r.sumber] || ['—', 'slate'];
-                return badge(m[0], m[1]); } },
-            { title: 'Status', render: function (r) {
-                var out = r.dipinjam ? badge('Dipinjam', 'amber') : badge('Tersedia', 'green');
-                if (r.retensi_terlampaui) out += ' ' + badge('Retensi lewat', 'rose');
-                return out; } }
+          lanjutan: [
+            { name: 'pencipta_id', label: 'Pencipta', type: 'select',
+              options: [{ value: '', label: 'Semua pencipta' }].concat(pencipta.map(function (x) {
+                return { value: x.id, label: x.nama };
+              })) },
+            { name: 'pengolah_id', label: 'Unit pengolah', type: 'select',
+              options: [{ value: '', label: 'Semua unit' }].concat(pengolah.map(function (x) {
+                return { value: x.id, label: x.nama };
+              })) },
+            { name: 'lokasi_id', label: 'Lokasi simpan', type: 'select',
+              options: [{ value: '', label: 'Semua lokasi' }].concat(lokasi.map(function (x) {
+                return { value: x.id, label: x.nama };
+              })) },
+            { name: 'media_id', label: 'Media', type: 'select',
+              options: [{ value: '', label: 'Semua media' }].concat(media.map(function (x) {
+                return { value: x.id, label: x.nama };
+              })) },
+            { name: 'tahun', label: 'Tahun arsip', type: 'number', placeholder: 'mis. 2023' },
+            { name: 'dipinjam', label: 'Ketersediaan', type: 'select', options: [
+              { value: '', label: 'Tidak dibatasi' },
+              { value: 'false', label: 'Tersedia di rak' },
+              { value: 'true', label: 'Sedang dipinjam' }
+            ] }
           ],
-          onRow: function (row) { detailArsip(row.id); }
+          columns: [
+            { title: 'No. Arsip', tdClass: 'nomor min-w-[9rem]', render: function (r) {
+                return '<span class="font-medium text-slate-800">' + dash(r.noarsip) + '</span>' +
+                  '<span class="mt-0.5 block text-[11px] text-slate-400">' +
+                  tanggal(r.tanggal) + '</span>'; } },
+            { title: 'Uraian', thClass: 'w-[18%]', tdClass: 'min-w-[9rem]', render: function (r) {
+                return '<span class="clamp-2">' + dash(r.uraian) + '</span>'; } },
+            { title: 'Pencipta', tdClass: 'min-w-[10rem]', render: function (r) {
+                return S.avatar(r.nama_pencipta, { keterangan: r.nama_pengolah || '' }); } },
+            { title: 'Klasifikasi', tdClass: 'max-w-[11rem]', render: function (r) {
+                return r.kode ? '<span class="font-medium text-slate-700">' + esc(r.kode) + '</span>' +
+                  (r.nama_klasifikasi ? '<span class="clamp-2 block text-xs text-slate-500">' +
+                    esc(r.nama_klasifikasi) + '</span>' : '')
+                  : '<span class="text-slate-300">—</span>'; } },
+            { title: 'Lokasi / Boks', tdClass: 'max-w-[9rem]', render: function (r) {
+                return '<span class="clamp-2 block">' + dash(r.nama_lokasi) + '</span>' +
+                  (r.nobox ? '<span class="block text-xs text-slate-500">Boks ' + esc(r.nobox) + '</span>' : ''); } },
+            { title: 'Status / Sumber', tdClass: 'min-w-[8rem]', render: function (r) {
+                var peta = { manual: ['Manual', 'slate'], surat_keluar: ['Surat keluar', 'sky'],
+                             surat_masuk: ['Surat masuk', 'amber'] };
+                var sumber = peta[r.sumber] || ['—', 'slate'];
+                var isi = r.dipinjam ? badge('Dipinjam', 'amber') : badge('Tersedia', 'green');
+                if (r.retensi_terlampaui) isi += ' ' + badge('Retensi lewat', 'rose');
+                return isi + '<div class="mt-1">' + badge(sumber[0], sumber[1]) + '</div>'; } },
+            { title: 'Aksi', thClass: 'text-right kolom-aksi', tdClass: 'whitespace-nowrap kolom-aksi', render: function (r) {
+                return S.tombolAksi([
+                  { ikon: 'detail', warna: 'hijau', judul: 'Lihat detail arsip', aksi: 'detail' },
+                  { ikon: 'berkas', warna: 'biru', judul: r.file_url ? 'Buka berkas digital' : 'Tidak ada berkas',
+                    aksi: 'berkas', nonaktif: !r.file_url },
+                  boleh ? { ikon: 'ubah', warna: 'ungu', judul: 'Ubah data arsip', aksi: 'ubah' } : null,
+                  boleh ? { ikon: 'pinjam', warna: 'kuning',
+                            judul: r.dipinjam ? 'Sedang dipinjam' : 'Catat peminjaman',
+                            aksi: 'pinjam', nonaktif: !!r.dipinjam } : null,
+                  boleh ? { ikon: 'hapus', warna: 'merah',
+                            judul: r.dipinjam ? 'Tidak bisa dihapus saat dipinjam' : 'Hapus arsip',
+                            aksi: 'hapus', nonaktif: !!r.dipinjam } : null
+                ]); } }
+          ],
+          onRow: function (row) { detailArsip(row.id); },
+          onAksi: function (aksi, row, tombol, tabelApi) {
+            if (!row) return;
+            if (aksi === 'detail') { detailArsip(row.id); return; }
+            if (aksi === 'berkas' && row.file_url) { window.open(row.file_url, '_blank', 'noopener'); return; }
+            if (aksi === 'ubah') { formArsip(tabelApi, row); return; }
+            if (aksi === 'pinjam') { formPinjam(tabelApi, row); return; }
+            if (aksi === 'hapus') hapusArsip(row, tabelApi);
+          }
         });
 
         tabel.load();
 
-        var btnTambah = container.querySelector('#btn-tambah-arsip');
+        var btnTambah = tabel.akar.querySelector('#btn-tambah-arsip');
         if (btnTambah) btnTambah.addEventListener('click', function () { formArsip(tabel); });
 
-        var btnPratinjau = container.querySelector('#btn-pratinjau');
-        var btnSync = container.querySelector('#btn-sync');
-        var kotak = container.querySelector('#sync-hasil');
+        var btnPratinjau = tabel.akar.querySelector('#btn-pratinjau');
+        var btnSync = tabel.akar.querySelector('#btn-sync');
+        var kotak = tabel.akar.querySelector('#sync-hasil');
 
         function jalankan(dryRun) {
-          var sumber = container.querySelector('#sync-sumber').value;
+          var sumber = tabel.akar.querySelector('#sync-sumber').value;
           btnPratinjau.disabled = btnSync.disabled = true;
           kotak.classList.remove('hidden');
           kotak.innerHTML = '<span class="text-slate-500">Memproses…</span>';
@@ -262,8 +310,38 @@
     });
   }
 
-  function formArsip(tabel) {
-    S.modalLoading('Tambah Berkas Arsip');
+  function hapusArsip(row, tabel) {
+    S.openModal('Hapus Berkas Arsip',
+      '<p class="text-sm leading-relaxed text-slate-600">Berkas arsip ' +
+      '<b>' + esc(row.noarsip || '') + '</b> akan dihapus permanen dari modul arsip. ' +
+      'Surat aslinya di e-surat tidak ikut terhapus.</p>' +
+      '<p id="hapus-error" class="mt-4 hidden rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700"></p>' +
+      '<div class="mt-6 flex justify-end gap-2 border-t border-slate-100 pt-4">' +
+        '<button type="button" class="btn-ghost" data-modal-close>Batal</button>' +
+        '<button type="button" id="btn-hapus-ya" class="btn-primary !bg-rose-600 hover:!bg-rose-700">Ya, hapus</button>' +
+      '</div>');
+
+    var tombol = document.getElementById('btn-hapus-ya');
+    tombol.addEventListener('click', function () {
+      var galat = document.getElementById('hapus-error');
+      tombol.disabled = true;
+      tombol.textContent = 'Menghapus…';
+      request('/arteri/arsip/' + row.id, { method: 'DELETE' }).then(function () {
+        S.closeModal();
+        S.toast('Berkas arsip dihapus.', 'ok');
+        if (tabel) tabel.reload();
+      }).catch(function (err) {
+        galat.textContent = err.message;
+        galat.classList.remove('hidden');
+        tombol.disabled = false;
+        tombol.textContent = 'Ya, hapus';
+      });
+    });
+  }
+
+  function formArsip(tabel, arsipAwal) {
+    var ubah = !!(arsipAwal && arsipAwal.id);
+    S.modalLoading(ubah ? 'Ubah Berkas Arsip' : 'Tambah Berkas Arsip');
     Promise.all([
       request('/arteri/master/klasifikasi' + query({ limit: 2000 })),
       request('/arteri/master/pencipta' + query({ limit: 2000 })),
@@ -272,46 +350,62 @@
       request('/arteri/master/media')
     ]).then(function (res) {
       var klas = res[0], pencipta = res[1], pengolah = res[2], lokasi = res[3], media = res[4];
+      var awal = arsipAwal || {};
       var hariIni = new Date().toISOString().slice(0, 10);
 
-      S.openModal('Tambah Berkas Arsip',
+      /* Tandai pilihan yang sesuai data lama saat mengubah arsip. */
+      function pilihan(daftar, terpilih, kosong) {
+        return '<option value="">' + esc(kosong) + '</option>' + daftar.map(function (x) {
+          return '<option value="' + esc(x.id) + '"' +
+            (String(x.id) === String(terpilih || '') ? ' selected' : '') + '>' +
+            esc(x.nama) + '</option>';
+        }).join('');
+      }
+
+      S.openModal(ubah ? 'Ubah Berkas Arsip — ' + (awal.noarsip || '') : 'Tambah Berkas Arsip',
         '<form id="form-arsip" class="space-y-4" novalidate>' +
           '<div class="grid gap-4 sm:grid-cols-2">' +
             '<div><label class="mb-1.5 block text-sm font-medium text-slate-700">Nomor arsip *</label>' +
-              '<input name="noarsip" class="field" required placeholder="mis. 103/D1.1/SDM.01/2026"></div>' +
+              '<input name="noarsip" class="field" required placeholder="mis. 103/D1.1/SDM.01/2026" value="' +
+              esc(awal.noarsip || '') + '"></div>' +
             '<div><label class="mb-1.5 block text-sm font-medium text-slate-700">Tanggal arsip *</label>' +
-              '<input name="tanggal" type="date" class="field" required value="' + hariIni + '"></div>' +
+              '<input name="tanggal" type="date" class="field" required value="' +
+              esc(awal.tanggal || hariIni) + '"></div>' +
           '</div>' +
           '<div><label class="mb-1.5 block text-sm font-medium text-slate-700">Uraian</label>' +
-            '<textarea name="uraian" rows="3" class="field" placeholder="Ringkasan isi arsip"></textarea></div>' +
+            '<textarea name="uraian" rows="3" class="field" placeholder="Ringkasan isi arsip">' +
+            esc(awal.uraian || '') + '</textarea></div>' +
           '<div class="grid gap-4 sm:grid-cols-2">' +
             '<div><label class="mb-1.5 block text-sm font-medium text-slate-700">Klasifikasi</label>' +
               '<select name="kode_id" class="field">' +
-              options(klas.map(function (k) {
-                return { id: k.id, teks: k.kode + (k.nama ? ' — ' + k.nama : '') };
-              }), 'id', 'teks', 'Pilih klasifikasi') + '</select></div>' +
+              pilihan(klas.map(function (k) {
+                return { id: k.id, nama: k.kode + (k.nama ? ' — ' + k.nama : '') };
+              }), awal.kode_id, 'Pilih klasifikasi') + '</select></div>' +
             '<div><label class="mb-1.5 block text-sm font-medium text-slate-700">Media</label>' +
-              '<select name="media_id" class="field">' + options(media, 'id', 'nama', 'Pilih media') + '</select></div>' +
+              '<select name="media_id" class="field">' + pilihan(media, awal.media_id, 'Pilih media') + '</select></div>' +
             '<div><label class="mb-1.5 block text-sm font-medium text-slate-700">Pencipta</label>' +
-              '<select name="pencipta_id" class="field">' + options(pencipta, 'id', 'nama', 'Pilih pencipta') + '</select></div>' +
+              '<select name="pencipta_id" class="field">' + pilihan(pencipta, awal.pencipta_id, 'Pilih pencipta') + '</select></div>' +
             '<div><label class="mb-1.5 block text-sm font-medium text-slate-700">Unit pengolah</label>' +
-              '<select name="pengolah_id" class="field">' + options(pengolah, 'id', 'nama', 'Pilih unit pengolah') + '</select></div>' +
+              '<select name="pengolah_id" class="field">' + pilihan(pengolah, awal.pengolah_id, 'Pilih unit pengolah') + '</select></div>' +
             '<div><label class="mb-1.5 block text-sm font-medium text-slate-700">Lokasi simpan</label>' +
-              '<select name="lokasi_id" class="field">' + options(lokasi, 'id', 'nama', 'Pilih lokasi') + '</select></div>' +
+              '<select name="lokasi_id" class="field">' + pilihan(lokasi, awal.lokasi_id, 'Pilih lokasi') + '</select></div>' +
             '<div><label class="mb-1.5 block text-sm font-medium text-slate-700">Nomor boks</label>' +
-              '<input name="nobox" class="field" placeholder="mis. B01001"></div>' +
+              '<input name="nobox" class="field" placeholder="mis. B01001" value="' + esc(awal.nobox || '') + '"></div>' +
             '<div><label class="mb-1.5 block text-sm font-medium text-slate-700">Jumlah berkas</label>' +
-              '<input name="jumlah" type="number" min="1" value="1" class="field"></div>' +
+              '<input name="jumlah" type="number" min="1" value="' + esc(awal.jumlah || 1) + '" class="field"></div>' +
             '<div><label class="mb-1.5 block text-sm font-medium text-slate-700">Tingkat perkembangan</label>' +
               '<select name="ket" class="field">' +
-                '<option value="asli">Asli</option><option value="tembusan">Tembusan</option>' +
-                '<option value="salinan">Salinan</option><option value="pertinggal">Pertinggal</option>' +
-              '</select></div>' +
+              ['asli', 'tembusan', 'salinan', 'pertinggal'].map(function (x) {
+                return '<option value="' + x + '"' +
+                  (String(awal.ket || 'asli') === x ? ' selected' : '') + '>' +
+                  x.charAt(0).toUpperCase() + x.slice(1) + '</option>';
+              }).join('') + '</select></div>' +
           '</div>' +
           '<p id="arsip-error" class="hidden rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700"></p>' +
           '<div class="flex justify-end gap-2 border-t border-slate-100 pt-4">' +
             '<button type="button" class="btn-ghost" data-modal-close>Batal</button>' +
-            '<button type="submit" class="btn-primary">Simpan arsip</button>' +
+            '<button type="submit" class="btn-primary">' +
+              (ubah ? 'Simpan perubahan' : 'Simpan arsip') + '</button>' +
           '</div>' +
         '</form>');
 
@@ -341,22 +435,32 @@
           return;
         }
 
+        // Saat mengubah, kolom pilihan yang dikosongkan dikirim sebagai null
+        // agar relasi lama benar-benar dilepas.
+        if (ubah) {
+          ['kode_id', 'media_id', 'pencipta_id', 'pengolah_id', 'lokasi_id'].forEach(function (key) {
+            if (payload[key] === undefined) payload[key] = null;
+          });
+        }
+
         var submit = form.querySelector('button[type=submit]');
+        var labelSimpan = submit.textContent;
         submit.disabled = true;
         submit.textContent = 'Menyimpan…';
-        request('/arteri/arsip', { method: 'POST', body: payload }).then(function () {
+        request(ubah ? '/arteri/arsip/' + arsipAwal.id : '/arteri/arsip',
+                { method: ubah ? 'PUT' : 'POST', body: payload }).then(function () {
           S.closeModal();
-          S.toast('Berkas arsip tersimpan.', 'ok');
-          tabel.reload();
+          S.toast(ubah ? 'Perubahan arsip tersimpan.' : 'Berkas arsip tersimpan.', 'ok');
+          if (tabel) tabel.reload();
         }).catch(function (err) {
           error.textContent = err.message;
           error.classList.remove('hidden');
           submit.disabled = false;
-          submit.textContent = 'Simpan arsip';
+          submit.textContent = labelSimpan;
         });
       });
     }).catch(function (err) {
-      S.openModal('Tambah Berkas Arsip',
+      S.openModal(ubah ? 'Ubah Berkas Arsip' : 'Tambah Berkas Arsip',
         '<p class="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">' + esc(err.message) + '</p>');
     });
   }
@@ -377,13 +481,20 @@
             { value: 'true', label: 'Belum dikembalikan' }
           ] }
         ],
+        lanjutan: [
+          { name: 'terlambat', label: 'Keterlambatan', type: 'select', options: [
+            { value: '', label: 'Tidak dibatasi' },
+            { value: 'true', label: 'Hanya yang terlambat' }
+          ] }
+        ],
         columns: [
-          { title: 'No. Arsip', tdClass: 'whitespace-nowrap', render: function (r) {
+          { title: 'No. Arsip', tdClass: 'nomor min-w-[9rem]', render: function (r) {
               return '<span class="font-medium text-slate-800">' + dash(r.noarsip) + '</span>'; } },
-          { title: 'Uraian', tdClass: 'max-w-xs', render: function (r) {
+          { title: 'Uraian', tdClass: 'max-w-[11rem]', render: function (r) {
               return '<span class="clamp-2">' + dash(r.uraian) + '</span>'; } },
-          { title: 'Peminjam', render: function (r) { return dash(r.username_peminjam); } },
-          { title: 'Keperluan', tdClass: 'max-w-xs', render: function (r) {
+          { title: 'Peminjam', tdClass: 'min-w-[11rem]', render: function (r) {
+              return S.avatar(r.username_peminjam); } },
+          { title: 'Keperluan', tdClass: 'max-w-[11rem]', render: function (r) {
               return '<span class="clamp-2">' + dash(r.keperluan) + '</span>'; } },
           { title: 'Pinjam', tdClass: 'whitespace-nowrap', render: function (r) { return tanggal(r.tgl_pinjam); } },
           { title: 'Harus kembali', tdClass: 'whitespace-nowrap', render: function (r) {
@@ -391,39 +502,55 @@
                 (r.terlambat ? '<br>' + badge('Telat ' + r.hari_terlambat + ' hari', 'rose') : ''); } },
           { title: 'Status', render: function (r) {
               return badge(r.status_label, toneStatusSurat(r.status_label)); } },
-          { title: '', tdClass: 'text-right whitespace-nowrap', render: function (r) {
-              if (!boleh || r.tgl_pengembalian) return '';
-              return '<button class="btn-ghost btn-sm" data-kembali="' + r.id + '">Kembalikan</button>'; } }
-        ]
+          { title: 'Aksi', thClass: 'text-right kolom-aksi', tdClass: 'whitespace-nowrap kolom-aksi', render: function (r) {
+              var sudah = !!r.tgl_pengembalian;
+              return S.tombolAksi([
+                { ikon: 'detail', warna: 'hijau', judul: 'Lihat detail arsip', aksi: 'detail',
+                  nonaktif: !r.arsip_id },
+                boleh ? { ikon: 'kembali', warna: 'kuning',
+                          judul: sudah ? 'Sudah dikembalikan' : 'Catat pengembalian',
+                          aksi: 'kembalikan', nonaktif: sudah } : null,
+                { ikon: 'salin', warna: 'abu', judul: 'Salin nomor arsip', aksi: 'salin' }
+              ]); } }
+        ],
+        onAksi: function (aksi, row, tombol, tabelApi) {
+          if (!row) return;
+          if (aksi === 'detail' && row.arsip_id) { detailArsip(row.arsip_id); return; }
+          if (aksi === 'salin') { S.salinTeks(row.noarsip || ''); return; }
+          if (aksi !== 'kembalikan') return;
+
+          tombol.disabled = true;
+          request('/arteri/sirkulasi/' + row.id + '/kembalikan',
+                  { method: 'POST', body: { catatan: 'Dikembalikan melalui SIMPERA v2' } })
+            .then(function () { S.toast('Arsip dikembalikan.', 'ok'); tabelApi.reload(); })
+            .catch(function (err) { S.toast(err.message, 'err'); tombol.disabled = false; });
+        }
       });
 
       tabel.load();
 
-      container.addEventListener('click', function (event) {
-        var kembali = event.target.closest('[data-kembali]');
-        if (kembali) {
-          kembali.disabled = true;
-          request('/arteri/sirkulasi/' + kembali.getAttribute('data-kembali') + '/kembalikan',
-                  { method: 'POST', body: { catatan: 'Dikembalikan melalui SIMPERA v2' } })
-            .then(function () { S.toast('Arsip dikembalikan.', 'ok'); tabel.reload(); })
-            .catch(function (err) { S.toast(err.message, 'err'); kembali.disabled = false; });
-          return;
-        }
+      tabel.akar.addEventListener('click', function (event) {
         if (event.target.closest('#btn-pinjam')) formPinjam(tabel);
       });
     });
   };
 
-  function formPinjam(tabel) {
+  function formPinjam(tabel, arsipAwal) {
     var hariIni = new Date();
     var kembali = new Date(hariIni.getTime() + 7 * 86400000);
     S.openModal('Catat Peminjaman Arsip',
       '<form id="form-pinjam" class="space-y-4" novalidate>' +
         '<div>' +
           '<label class="mb-1.5 block text-sm font-medium text-slate-700">Cari berkas arsip *</label>' +
-          '<input id="cari-arsip" class="field" placeholder="Ketik nomor arsip atau uraian…" autocomplete="off">' +
-          '<input type="hidden" name="arsip_id">' +
-          '<div id="hasil-arsip" class="mt-2 max-h-48 overflow-y-auto rounded-xl border border-slate-100"></div>' +
+          '<input id="cari-arsip" class="field" placeholder="Ketik nomor arsip atau uraian…" autocomplete="off" value="' +
+          esc(arsipAwal ? (arsipAwal.noarsip || '') : '') + '">' +
+          '<input type="hidden" name="arsip_id" value="' + esc(arsipAwal ? arsipAwal.id : '') + '">' +
+          '<div id="hasil-arsip" class="mt-2 max-h-48 overflow-y-auto rounded-xl border border-slate-100">' +
+          (arsipAwal
+            ? '<p class="px-3 py-2.5 text-sm text-brand-700">Arsip dipilih: ' +
+              esc(arsipAwal.noarsip || '') + '</p>'
+            : '') +
+          '</div>' +
         '</div>' +
         '<div><label class="mb-1.5 block text-sm font-medium text-slate-700">Nama / username peminjam *</label>' +
           '<input name="username_peminjam" class="field" required></div>' +
@@ -538,12 +665,12 @@
           ] }
         ],
         columns: [
-          { title: 'No. Arsip', tdClass: 'whitespace-nowrap', render: function (r) {
+          { title: 'No. Arsip', tdClass: 'nomor min-w-[9rem]', render: function (r) {
               return '<span class="font-medium text-slate-800">' + dash(r.noarsip) + '</span>'; } },
-          { title: 'Uraian', thClass: 'w-[22%]', tdClass: 'min-w-[9rem]', render: function (r) {
+          { title: 'Uraian', thClass: 'w-[20%]', tdClass: 'min-w-[8rem]', render: function (r) {
               return '<span class="clamp-2">' + dash(r.uraian) + '</span>'; } },
-          { title: 'Klasifikasi', render: function (r) {
-              return esc(r.kode || '—') + '<br><span class="text-xs text-slate-500">' +
+          { title: 'Klasifikasi', tdClass: 'max-w-[10rem]', render: function (r) {
+              return esc(r.kode || '—') + '<span class="clamp-2 block text-xs text-slate-500">' +
                      esc(r.nama_klasifikasi || '') + '</span>'; } },
           { title: 'Tgl arsip', tdClass: 'whitespace-nowrap', render: function (r) { return tanggal(r.tanggal); } },
           { title: 'Retensi', tdClass: 'text-center', render: function (r) { return esc(r.retensi) + ' th'; } },
@@ -553,9 +680,19 @@
               return sisa < 0 ? '<span class="text-rose-600">lewat ' + Math.abs(sisa) + ' hari</span>'
                               : sisa + ' hari lagi'; } },
           { title: 'Status', render: function (r) {
-              return badge(r.status_label, toneStatusSurat(r.status_label)); } }
+              return badge(r.status_label, toneStatusSurat(r.status_label)); } },
+          { title: 'Aksi', thClass: 'text-right kolom-aksi', tdClass: 'whitespace-nowrap kolom-aksi', render: function () {
+              return S.tombolAksi([
+                { ikon: 'detail', warna: 'hijau', judul: 'Lihat detail arsip', aksi: 'detail' },
+                { ikon: 'salin', warna: 'abu', judul: 'Salin nomor arsip', aksi: 'salin' }
+              ]); } }
         ],
-        onRow: function (row) { detailArsip(row.id); }
+        onRow: function (row) { detailArsip(row.id); },
+        onAksi: function (aksi, row) {
+          if (!row) return;
+          if (aksi === 'detail') detailArsip(row.id);
+          else if (aksi === 'salin') S.salinTeks(row.noarsip || '');
+        }
       }).load();
     });
   };
@@ -657,7 +794,9 @@
       }
     }
 
-    container.addEventListener('click', function (event) {
+    // Dipasang pada bungkus yang baru dibuat, supaya tidak menumpuk saat
+    // halaman ini dibuka berulang kali.
+    container.firstElementChild.addEventListener('click', function (event) {
       var tab = event.target.closest('[data-tab]');
       if (tab) pilih(tab.getAttribute('data-tab'));
     });

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
@@ -15,7 +16,13 @@ router = APIRouter(tags=["disposisi"])
 @router.get("/disposisi")
 def daftar_disposisi(
     q: str | None = None,
+    nomor: str | None = Query(default=None, description="Nomor surat"),
+    perihal: str | None = None,
+    isi: str | None = Query(default=None, description="Isi disposisi"),
     tahun: int | None = None,
+    tgl_awal: dt.date | None = None,
+    tgl_akhir: dt.date | None = None,
+    id_jabatan: int | None = Query(default=None, description="Jabatan tujuan disposisi"),
     selesai: bool | None = Query(default=None, description="true = sudah selesai"),
     page: int = 1,
     per_page: int = 25,
@@ -40,6 +47,26 @@ def daftar_disposisi(
         where.append("d.status_selesai IS NOT NULL AND d.status_selesai <> ''")
     elif selesai is False:
         where.append("(d.status_selesai IS NULL OR d.status_selesai = '')")
+
+    for column, nilai in (
+        ("s.nomor_surat", nomor),
+        ("s.perihal", perihal),
+        ("d.isi_disposisi", isi),
+    ):
+        cocok = like(nilai)
+        if cocok:
+            where.append(f"{column} LIKE %s")
+            params.append(cocok)
+
+    if id_jabatan:
+        where.append("d.id_jabatan = %s")
+        params.append(id_jabatan)
+    if tgl_awal:
+        where.append("COALESCE(d.tgl_disposisi, DATE(d.created_at)) >= %s")
+        params.append(tgl_awal)
+    if tgl_akhir:
+        where.append("COALESCE(d.tgl_disposisi, DATE(d.created_at)) <= %s")
+        params.append(tgl_akhir)
 
     clause = " AND ".join(where)
     total = db.fetch_value(

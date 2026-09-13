@@ -144,6 +144,154 @@
       '<div class="skeleton h-4 w-5/6"></div><div class="skeleton h-24 w-full"></div></div>');
   }
 
+
+  // ------------------------------------------------------- inisial & avatar
+  /* Kata yang tidak membawa identitas, dilewati saat menyusun inisial. */
+  var KATA_UMUM = {
+    'dan': 1, 'di': 1, 'ke': 1, 'dari': 1, 'untuk': 1, 'pada': 1, 'yang': 1,
+    'the': 1, 'of': 1, 'pt': 1, 'cv': 1, 'up': 1, 'kpd': 1
+  };
+
+  /* Gelar akademik/profesi yang sering menempel pada nama orang. */
+  var GELAR = /\b(a\.?md|s\.?t|s\.?e|s\.?h|s\.?pd|s\.?kom|s\.?si|s\.?sos|s\.?ag|m\.?m|m\.?t|m\.?pd|m\.?si|m\.?kom|m\.?h|dr|drs|dra|ir|prof|h|hj|se|mm)\b\.?/gi;
+
+  function inisial(nama) {
+    var teks = String(nama || '').trim();
+    if (!teks) return '?';
+
+    teks = teks.replace(/\([^)]*\)/g, ' ');   // buang keterangan dalam kurung
+    teks = teks.split(',')[0];                // buang gelar setelah koma
+    teks = teks.replace(GELAR, ' ');
+    teks = teks.replace(/[^A-Za-z0-9\s]/g, ' ');
+
+    var kata = teks.split(/\s+/).filter(function (w) {
+      return w.length > 1 && !KATA_UMUM[w.toLowerCase()];
+    });
+
+    if (kata.length >= 2) return (kata[0].charAt(0) + kata[1].charAt(0)).toUpperCase();
+    if (kata.length === 1) return kata[0].slice(0, 2).toUpperCase();
+
+    var sisa = String(nama).replace(/[^A-Za-z0-9]/g, '');
+    return (sisa.slice(0, 2) || '?').toUpperCase();
+  }
+
+  /* Sepuluh pasangan warna lembut. Dipilih dari nama sehingga satu pengirim
+     selalu memakai warna yang sama di seluruh halaman. */
+  var WARNA_AVATAR = [
+    { bg: '#d1fae5', fg: '#065f46' }, { bg: '#dbeafe', fg: '#1e40af' },
+    { bg: '#fef3c7', fg: '#92400e' }, { bg: '#ede9fe', fg: '#5b21b6' },
+    { bg: '#ffe4e6', fg: '#9f1239' }, { bg: '#ccfbf1', fg: '#115e59' },
+    { bg: '#e0f2fe', fg: '#075985' }, { bg: '#fae8ff', fg: '#86198f' },
+    { bg: '#ffedd5', fg: '#9a3412' }, { bg: '#ecfccb', fg: '#3f6212' }
+  ];
+
+  function warnaDari(teks) {
+    var kunci = String(teks || '?').toUpperCase();
+    var jumlah = 0;
+    for (var i = 0; i < kunci.length; i++) {
+      jumlah = (jumlah * 31 + kunci.charCodeAt(i)) % 100000;
+    }
+    return WARNA_AVATAR[jumlah % WARNA_AVATAR.length];
+  }
+
+  /* Lencana inisial berwarna, dipakai pada kolom pengirim/tujuan. */
+  function avatar(nama, opsi) {
+    opsi = opsi || {};
+    var teks = String(nama || '').trim();
+    var kode = inisial(teks);
+    var warna = warnaDari(kode + (teks.charAt(0) || ''));
+    var ukuran = opsi.besar ? 'h-9 w-9 text-xs' : 'h-8 w-8 text-[11px]';
+    var lencana =
+      '<span class="grid ' + ukuran + ' shrink-0 place-items-center rounded-lg font-semibold" ' +
+      'style="background:' + warna.bg + ';color:' + warna.fg + '" title="' + esc(teks) + '">' +
+      esc(kode) + '</span>';
+
+    if (opsi.tanpaLabel) return lencana;
+    return '<span class="flex items-center gap-2.5">' + lencana +
+      '<span class="min-w-0 flex-1">' +
+      '<span class="clamp-2 block leading-snug text-slate-700">' + (teks ? esc(teks) : '—') + '</span>' +
+      (opsi.keterangan
+        ? '<span class="block text-[11px] leading-tight text-slate-400">' + esc(opsi.keterangan) + '</span>'
+        : '') +
+      '</span></span>';
+  }
+
+  // ----------------------------------------------------------- tombol aksi
+  /* Ikon garis tipis untuk tombol baris tabel. */
+  var IKON_AKSI = {
+    detail: '<path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>',
+    berkas: '<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>',
+    disposisi: '<path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z"/>',
+    salin: '<path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/>',
+    ubah: '<path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125"/>',
+    hapus: '<path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.2v.917m7.5 0a48.667 48.667 0 0 0-7.5 0"/>',
+    pinjam: '<path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"/>',
+    kembali: '<path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"/>'
+  };
+
+  var WARNA_AKSI = {
+    hijau: 'bg-brand-50 text-brand-600 hover:bg-brand-600 hover:text-white',
+    biru: 'bg-sky-50 text-sky-600 hover:bg-sky-600 hover:text-white',
+    kuning: 'bg-amber-50 text-amber-600 hover:bg-amber-500 hover:text-white',
+    ungu: 'bg-violet-50 text-violet-600 hover:bg-violet-600 hover:text-white',
+    merah: 'bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white',
+    abu: 'bg-slate-100 text-slate-500 hover:bg-slate-600 hover:text-white'
+  };
+
+  /**
+   * Deretan tombol ikon untuk satu baris tabel.
+   * daftar = [{ ikon, warna, judul, aksi, nilai, nonaktif }]
+   * Tombol yang nonaktif tetap ditampilkan agar kolom tidak "melompat".
+   */
+  function tombolAksi(daftar) {
+    var isi = daftar.filter(Boolean).map(function (t) {
+      var mati = !!t.nonaktif;
+      var kelas = mati
+        ? 'bg-slate-50 text-slate-300 cursor-not-allowed'
+        : (WARNA_AKSI[t.warna] || WARNA_AKSI.abu);
+      return '<button type="button" class="grid h-8 w-8 place-items-center rounded-lg transition ' +
+        kelas + '"' + (mati ? ' disabled' : '') +
+        ' title="' + esc(t.judul || '') + '" aria-label="' + esc(t.judul || '') + '"' +
+        (t.aksi ? ' data-aksi="' + esc(t.aksi) + '"' : '') +
+        (t.nilai !== undefined && t.nilai !== null ? ' data-nilai="' + esc(t.nilai) + '"' : '') +
+        '><svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">' +
+        (IKON_AKSI[t.ikon] || '') + '</svg></button>';
+    }).join('');
+    return '<div class="flex items-center justify-end gap-1.5">' + isi + '</div>';
+  }
+
+  /* Salin teks ke papan klip, dengan cadangan untuk peramban lama atau
+     halaman yang tidak dilayani lewat HTTPS. */
+  function salinTeks(teks) {
+    function lapor(berhasil) {
+      if (berhasil) toast('Nomor disalin: ' + teks, 'ok');
+      else toast('Peramban tidak mengizinkan penyalinan otomatis.', 'err');
+    }
+
+    function cadangan() {
+      var kotak = document.createElement('textarea');
+      kotak.value = teks;
+      kotak.setAttribute('readonly', '');
+      kotak.style.position = 'fixed';
+      kotak.style.opacity = '0';
+      document.body.appendChild(kotak);
+      kotak.select();
+      var berhasil = false;
+      try { berhasil = document.execCommand('copy'); } catch (e) { berhasil = false; }
+      document.body.removeChild(kotak);
+      return berhasil;
+    }
+
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(teks).then(
+        function () { lapor(true); },
+        function () { lapor(cadangan()); }
+      );
+      return;
+    }
+    lapor(cadangan());
+  }
+
   // ------------------------------------------------------------------ komponen
   function statCard(opts) {
     return '' +
@@ -331,6 +479,7 @@
     toast: toast, debounce: debounce, request: request, query: query,
     openModal: openModal, closeModal: closeModal, modalLoading: modalLoading,
     statCard: statCard, badge: badge, toneStatusSurat: toneStatusSurat,
+    avatar: avatar, inisial: inisial, tombolAksi: tombolAksi, salinTeks: salinTeks,
     skeletonTable: skeletonTable, emptyRow: emptyRow, pagination: pagination,
     barChart: barChart, donutChart: donutChart, unduh: unduh,
     state: state, BASE: BASE, API: API
@@ -388,20 +537,32 @@
     doc: '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>'
   };
 
+  /* Warna aksen ikon sidebar: cukup pekat agar terbaca di atas hijau tua,
+     tetapi tetap satu keluarga sehingga tidak ramai. */
   var MENU = [
     { section: 'Persuratan' },
-    { id: 'dashboard', label: 'Dashboard', icon: ICONS.dashboard, subtitle: 'Ringkasan aktivitas persuratan' },
-    { id: 'surat-masuk', label: 'Surat Masuk', icon: ICONS.inbox, subtitle: 'Agenda surat masuk' },
-    { id: 'surat-keluar', label: 'Surat Keluar', icon: ICONS.send, subtitle: 'Surat keluar & persetujuan' },
-    { id: 'disposisi', label: 'Disposisi', icon: ICONS.share, subtitle: 'Disposisi surat masuk' },
-    { id: 'monitoring', label: 'Monitoring', icon: ICONS.chart, subtitle: 'Tindak lanjut disposisi' },
+    { id: 'dashboard', label: 'Dashboard', icon: ICONS.dashboard, warna: '#6ee7b7',
+      subtitle: 'Ringkasan aktivitas persuratan' },
+    { id: 'surat-masuk', label: 'Surat Masuk', icon: ICONS.inbox, warna: '#7dd3fc',
+      subtitle: 'Agenda surat masuk' },
+    { id: 'surat-keluar', label: 'Surat Keluar', icon: ICONS.send, warna: '#c4b5fd',
+      subtitle: 'Surat keluar & persetujuan' },
+    { id: 'disposisi', label: 'Disposisi', icon: ICONS.share, warna: '#fcd34d',
+      subtitle: 'Disposisi surat masuk' },
+    { id: 'monitoring', label: 'Monitoring', icon: ICONS.chart, warna: '#fda4af',
+      subtitle: 'Tindak lanjut disposisi' },
     { section: 'Arsip Terintegrasi' },
-    { id: 'arsip', label: 'Berkas Arsip', icon: ICONS.archive, subtitle: 'Arsip terintegrasi (model ARTERI)' },
-    { id: 'sirkulasi', label: 'Peminjaman', icon: ICONS.swap, subtitle: 'Sirkulasi peminjaman arsip' },
-    { id: 'retensi', label: 'Retensi', icon: ICONS.clock, subtitle: 'Jadwal retensi arsip' },
+    { id: 'arsip', label: 'Berkas Arsip', icon: ICONS.archive, warna: '#5eead4',
+      subtitle: 'Arsip terintegrasi (model ARTERI)' },
+    { id: 'sirkulasi', label: 'Peminjaman', icon: ICONS.swap, warna: '#a5b4fc',
+      subtitle: 'Sirkulasi peminjaman arsip' },
+    { id: 'retensi', label: 'Retensi', icon: ICONS.clock, warna: '#fdba74',
+      subtitle: 'Jadwal retensi arsip' },
     { section: 'Lainnya' },
-    { id: 'master', label: 'Data Referensi', icon: ICONS.grid, subtitle: 'Master data e-surat & arsip' },
-    { id: 'laporan', label: 'Laporan', icon: ICONS.doc, subtitle: 'Rekapitulasi & ekspor data' }
+    { id: 'master', label: 'Data Referensi', icon: ICONS.grid, warna: '#67e8f9',
+      subtitle: 'Master data e-surat & arsip' },
+    { id: 'laporan', label: 'Laporan', icon: ICONS.doc, warna: '#bef264',
+      subtitle: 'Rekapitulasi & ekspor data' }
   ];
 
   function buildNav() {
@@ -409,7 +570,8 @@
     nav.innerHTML = MENU.map(function (item) {
       if (item.section) return '<p class="nav-section">' + esc(item.section) + '</p>';
       return '<a class="nav-link" href="#/' + item.id + '" data-route="' + item.id + '">' +
-             item.icon + '<span class="truncate">' + esc(item.label) + '</span></a>';
+             '<span class="nav-icon" style="--aksen:' + item.warna + '">' + item.icon + '</span>' +
+             '<span class="truncate">' + esc(item.label) + '</span></a>';
     }).join('');
   }
 

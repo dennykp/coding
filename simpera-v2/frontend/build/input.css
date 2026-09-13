@@ -85,7 +85,32 @@ body { -webkit-font-smoothing: antialiased; }
 }
 .nav-link:hover { background: rgba(255,255,255,.08); color: #fff; }
 .nav-link.active { background: rgba(255,255,255,.14); color: #fff; box-shadow: inset 3px 0 0 #6ee7b7; }
-.nav-link svg { width: 1.15rem; height: 1.15rem; flex: none; }
+
+/* Ikon sidebar: kotak kecil bernuansa warna aksen menu masing-masing.
+   Saat menu aktif, kotak terisi penuh warna aksennya. */
+.nav-icon {
+  display: grid; place-items: center; flex: none;
+  width: 2rem; height: 2rem; border-radius: .625rem;
+  background: color-mix(in srgb, var(--aksen) 20%, transparent);
+  color: var(--aksen);
+  transition: background .15s, color .15s, box-shadow .15s;
+}
+.nav-link:hover .nav-icon {
+  background: color-mix(in srgb, var(--aksen) 32%, transparent);
+}
+.nav-link.active .nav-icon {
+  background: var(--aksen);
+  color: #064e3b;
+  box-shadow: 0 4px 12px -4px color-mix(in srgb, var(--aksen) 70%, transparent);
+}
+.nav-icon svg { width: 1.05rem; height: 1.05rem; flex: none; }
+
+/* Cadangan untuk peramban tanpa color-mix(): tetap terbaca, tanpa nuansa. */
+@supports not (background: color-mix(in srgb, red 20%, transparent)) {
+  .nav-icon { background: rgba(255,255,255,.12); }
+  .nav-link:hover .nav-icon { background: rgba(255,255,255,.2); }
+  .nav-link.active .nav-icon { background: var(--aksen); color: #064e3b; }
+}
 
 .nav-section {
   padding: 1rem .75rem .35rem; font-size: .65rem; font-weight: 600;
@@ -124,6 +149,20 @@ table.data tbody td { padding: .7rem .9rem; border-bottom: 1px solid #f1f5f9; ve
 table.data tbody tr:last-child td { border-bottom: 0; }
 table.data tbody tr:hover { background: #f8fafc; }
 .clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* Kolom aksi tetap terlihat walau tabel digeser ke samping. Latar diberi
+   warna sendiri supaya isi kolom lain tidak menembus di belakangnya. */
+table.data th.kolom-aksi,
+table.data td.kolom-aksi {
+  position: sticky; right: 0; z-index: 1;
+  background: #fff;
+  box-shadow: -6px 0 10px -9px rgba(15, 23, 42, .22);
+}
+table.data thead th.kolom-aksi { background: #f8fafc; z-index: 2; }
+table.data tbody tr:hover td.kolom-aksi { background: #f8fafc; }
+
+/* Nomor surat / nomor arsip: boleh patah di pemisah agar kolom tidak melebar. */
+.nomor { overflow-wrap: anywhere; word-break: break-word; }
 
 /* --- keadaan memuat & pemberitahuan --- */
 .skeleton {

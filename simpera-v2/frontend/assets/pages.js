@@ -19,10 +19,18 @@
    */
   function listPage(container, cfg) {
     var page = 1;
-    var filterValues = {};
-    (cfg.filters || []).forEach(function (f) { filterValues[f.name] = f.value || ''; });
+    var nilaiCepat = {};      // filter yang langsung diterapkan saat diubah
+    var nilaiLanjut = {};     // filter panel, diterapkan saat tombol ditekan
+    var draftLanjut = {};     // isi panel yang belum diterapkan
+    var baris = [];           // data halaman yang sedang tampil
 
-    var filterHtml = (cfg.filters || []).map(function (f) {
+    (cfg.filters || []).forEach(function (f) { nilaiCepat[f.name] = f.value || ''; });
+    (cfg.lanjutan || []).forEach(function (f) {
+      nilaiLanjut[f.name] = f.value || '';
+      draftLanjut[f.name] = f.value || '';
+    });
+
+    function kolomFilter(f) {
       if (f.type === 'select') {
         return '<select data-filter="' + f.name + '" class="field h-10 w-full sm:w-48">' +
           f.options.map(function (o) {
@@ -36,16 +44,60 @@
         '<input data-filter="' + f.name + '" type="search" class="field field-search h-10" placeholder="' +
         esc(f.placeholder || 'Cari…') + '">' +
         '</div>';
-    }).join('');
+    }
+
+    function kolomLanjut(f) {
+      var isi;
+      if (f.type === 'select') {
+        isi = '<select data-lanjut="' + f.name + '" class="field h-10">' +
+          f.options.map(function (o) {
+            return '<option value="' + esc(o.value) + '"' +
+                   (String(o.value) === String(draftLanjut[f.name] || '') ? ' selected' : '') +
+                   '>' + esc(o.label) + '</option>';
+          }).join('') + '</select>';
+      } else {
+        isi = '<input data-lanjut="' + f.name + '" type="' + (f.type || 'text') +
+          '" class="field h-10" value="' + esc(draftLanjut[f.name] || '') +
+          '" placeholder="' + esc(f.placeholder || '') + '">';
+      }
+      return '<div class="' + (f.span || '') + '">' +
+        '<label class="mb-1.5 block text-xs font-medium text-slate-600">' + esc(f.label) + '</label>' +
+        isi + '</div>';
+    }
+
+    var punyaPanel = (cfg.lanjutan || []).length > 0;
 
     container.innerHTML =
       '<div class="space-y-4">' +
         (cfg.header || '') +
         '<div class="card overflow-hidden">' +
-          '<div class="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:flex-wrap sm:items-center">' +
-            filterHtml +
-            '<div class="sm:ml-auto flex items-center gap-2">' + (cfg.toolbar || '') + '</div>' +
+          '<div class="border-b border-slate-100 p-4">' +
+            '<div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">' +
+              (cfg.filters || []).map(kolomFilter).join('') +
+              '<div class="flex flex-wrap items-center gap-2 sm:ml-auto">' +
+                (punyaPanel
+                  ? '<button type="button" data-toggle-panel class="btn-ghost">' +
+                    '<svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z"/></svg>' +
+                    'Filter lanjutan<span data-jumlah-filter class="hidden ml-1 rounded-full bg-brand-600 px-1.5 text-[11px] font-semibold text-white"></span>' +
+                    '</button>'
+                  : '') +
+                (cfg.toolbar || '') +
+              '</div>' +
+            '</div>' +
+            '<div data-chips class="mt-3 hidden flex-wrap items-center gap-2"></div>' +
           '</div>' +
+
+          (punyaPanel
+            ? '<div data-panel class="hidden border-b border-slate-100 bg-slate-50/70 p-4">' +
+              '<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">' +
+              (cfg.lanjutan || []).map(kolomLanjut).join('') +
+              '</div>' +
+              '<div class="mt-4 flex flex-wrap justify-end gap-2">' +
+                '<button type="button" data-reset class="btn-ghost">Kosongkan</button>' +
+                '<button type="button" data-terapkan class="btn-primary">Terapkan filter</button>' +
+              '</div></div>'
+            : '') +
+
           '<div class="table-wrap"><table class="data">' +
             '<thead><tr>' + cfg.columns.map(function (c) {
                 return '<th' + (c.thClass ? ' class="' + c.thClass + '"' : '') + '>' + esc(c.title) + '</th>';
@@ -56,36 +108,79 @@
         '</div>' +
       '</div>';
 
-    var body = container.querySelector('[data-body]');
-    var pager = container.querySelector('[data-pager]');
+    /* Elemen pembungkus ini baru dibuat setiap kali halaman dirender.
+       Semua listener dipasang di sini, bukan pada `container` (#page) yang
+       dipakai ulang oleh seluruh rute — kalau tidak, listener halaman lama
+       ikut menyala pada halaman berikutnya. */
+    var akar = container.firstElementChild;
+    var body = akar.querySelector('[data-body]');
+    var pager = akar.querySelector('[data-pager]');
+    var panel = akar.querySelector('[data-panel]');
+    var chips = akar.querySelector('[data-chips]');
+    var lencana = akar.querySelector('[data-jumlah-filter]');
     var cols = cfg.columns.length;
+
+    function labelFilter(nama) {
+      var f = (cfg.lanjutan || []).filter(function (x) { return x.name === nama; })[0];
+      return f ? f.label : nama;
+    }
+
+    function tampilanNilai(nama, nilai) {
+      var f = (cfg.lanjutan || []).filter(function (x) { return x.name === nama; })[0];
+      if (f && f.type === 'select') {
+        var o = (f.options || []).filter(function (x) { return String(x.value) === String(nilai); })[0];
+        return o ? o.label : nilai;
+      }
+      if (f && f.type === 'date') return tanggal(nilai);
+      return nilai;
+    }
+
+    function gambarChips() {
+      var aktif = Object.keys(nilaiLanjut).filter(function (k) { return nilaiLanjut[k] !== ''; });
+      if (lencana) {
+        lencana.textContent = aktif.length;
+        lencana.classList.toggle('hidden', aktif.length === 0);
+      }
+      if (!chips) return;
+      if (!aktif.length) {
+        chips.classList.add('hidden');
+        chips.innerHTML = '';
+        return;
+      }
+      chips.classList.remove('hidden');
+      chips.classList.add('flex');
+      chips.innerHTML =
+        '<span class="text-xs text-slate-500">Filter aktif:</span>' +
+        aktif.map(function (k) {
+          return '<span class="inline-flex items-center gap-1.5 rounded-full bg-brand-50 py-1 pl-3 pr-1.5 text-xs font-medium text-brand-800">' +
+            esc(labelFilter(k)) + ': ' + esc(tampilanNilai(k, nilaiLanjut[k])) +
+            '<button type="button" data-buang="' + esc(k) + '" aria-label="Hapus filter ' + esc(labelFilter(k)) +
+            '" class="grid h-4 w-4 place-items-center rounded-full text-brand-700 hover:bg-brand-600 hover:text-white">' +
+            '<svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>' +
+            '</button></span>';
+        }).join('') +
+        '<button type="button" data-buang-semua class="text-xs font-medium text-slate-500 underline hover:text-slate-700">Kosongkan semua</button>';
+    }
 
     function load() {
       body.innerHTML = S.skeletonTable(cols, 6);
       pager.innerHTML = '';
+      gambarChips();
+
       var params = Object.assign({ page: page, per_page: cfg.perPage || 25 },
-                                 cfg.params ? cfg.params() : {}, filterValues);
+                                 cfg.params ? cfg.params() : {}, nilaiCepat, nilaiLanjut);
       return request(cfg.endpoint + query(params)).then(function (data) {
-        var items = data.items || [];
-        if (!items.length) {
+        baris = data.items || [];
+        if (!baris.length) {
           body.innerHTML = S.emptyRow(cols, cfg.empty);
           return;
         }
-        body.innerHTML = items.map(function (row, index) {
-          var clickable = cfg.onRow ? ' class="cursor-pointer" data-index="' + index + '"' : '';
-          return '<tr' + clickable + '>' + cfg.columns.map(function (c) {
-            return '<td' + (c.tdClass ? ' class="' + c.tdClass + '"' : '') + '>' + c.render(row) + '</td>';
-          }).join('') + '</tr>';
+        body.innerHTML = baris.map(function (row, index) {
+          return '<tr data-index="' + index + '"' + (cfg.onRow ? ' class="cursor-pointer"' : '') + '>' +
+            cfg.columns.map(function (c) {
+              return '<td' + (c.tdClass ? ' class="' + c.tdClass + '"' : '') + '>' + c.render(row) + '</td>';
+            }).join('') + '</tr>';
         }).join('');
-
-        if (cfg.onRow) {
-          body.querySelectorAll('tr[data-index]').forEach(function (tr) {
-            tr.addEventListener('click', function (event) {
-              if (event.target.closest('a,button')) return;
-              cfg.onRow(items[parseInt(tr.getAttribute('data-index'), 10)]);
-            });
-          });
-        }
         pager.appendChild(S.pagination(data, function (next) { page = next; load(); }));
       }).catch(function (err) {
         body.innerHTML = '<tr><td colspan="' + cols + '" class="py-10 text-center text-sm text-rose-600">' +
@@ -93,18 +188,84 @@
       });
     }
 
-    container.querySelectorAll('[data-filter]').forEach(function (input) {
-      var name = input.getAttribute('data-filter');
-      var handler = function () {
-        filterValues[name] = input.value;
+    // Filter cepat: langsung menjalankan pencarian.
+    akar.querySelectorAll('[data-filter]').forEach(function (input) {
+      var nama = input.getAttribute('data-filter');
+      var jalan = function () {
+        nilaiCepat[nama] = input.value;
         page = 1;
         load();
       };
       input.addEventListener(input.tagName === 'SELECT' ? 'change' : 'input',
-                             input.tagName === 'SELECT' ? handler : S.debounce(handler, 400));
+                             input.tagName === 'SELECT' ? jalan : S.debounce(jalan, 400));
     });
 
-    return { reload: function () { page = 1; return load(); }, load: load };
+    // Panel filter lanjutan.
+    akar.querySelectorAll('[data-lanjut]').forEach(function (input) {
+      input.addEventListener('input', function () {
+        draftLanjut[input.getAttribute('data-lanjut')] = input.value;
+      });
+      input.addEventListener('change', function () {
+        draftLanjut[input.getAttribute('data-lanjut')] = input.value;
+      });
+      input.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') { event.preventDefault(); terapkan(); }
+      });
+    });
+
+    function terapkan() {
+      nilaiLanjut = Object.assign({}, draftLanjut);
+      page = 1;
+      load();
+    }
+
+    function kosongkan() {
+      Object.keys(draftLanjut).forEach(function (k) { draftLanjut[k] = ''; });
+      akar.querySelectorAll('[data-lanjut]').forEach(function (input) { input.value = ''; });
+      terapkan();
+    }
+
+    akar.addEventListener('click', function (event) {
+      if (event.target.closest('[data-toggle-panel]') && panel) {
+        panel.classList.toggle('hidden');
+        return;
+      }
+      if (event.target.closest('[data-terapkan]')) { terapkan(); return; }
+      if (event.target.closest('[data-reset]')) { kosongkan(); return; }
+      if (event.target.closest('[data-buang-semua]')) { kosongkan(); return; }
+
+      var buang = event.target.closest('[data-buang]');
+      if (buang) {
+        var nama = buang.getAttribute('data-buang');
+        draftLanjut[nama] = '';
+        var kolom = akar.querySelector('[data-lanjut="' + nama + '"]');
+        if (kolom) kolom.value = '';
+        terapkan();
+        return;
+      }
+
+      // Tombol aksi pada baris tabel.
+      var tombol = event.target.closest('[data-aksi]');
+      if (tombol) {
+        event.stopPropagation();
+        var tr = tombol.closest('tr[data-index]');
+        var data = tr ? baris[parseInt(tr.getAttribute('data-index'), 10)] : null;
+        if (cfg.onAksi) {
+          cfg.onAksi(tombol.getAttribute('data-aksi'), data, tombol, api);
+        }
+        return;
+      }
+
+      // Klik pada baris membuka detail.
+      if (!cfg.onRow) return;
+      var barisKlik = event.target.closest('tr[data-index]');
+      if (barisKlik && !event.target.closest('a,button') && body.contains(barisKlik)) {
+        cfg.onRow(baris[parseInt(barisKlik.getAttribute('data-index'), 10)]);
+      }
+    });
+
+    var api = { reload: function () { page = 1; return load(); }, load: load, akar: akar };
+    return api;
   }
 
   function fieldRow(label, value) {
@@ -202,35 +363,91 @@
 
   // =============================================================== SURAT MASUK
   pages['surat-masuk'] = function (container) {
-    listPage(container, {
-      endpoint: '/surat-masuk',
-      params: function () { return { tahun: state.tahun }; },
-      empty: 'Tidak ada surat masuk pada filter ini.',
-      filters: [
-        { name: 'q', type: 'search', placeholder: 'Cari nomor, perihal, pengirim…' },
-        { name: 'status', type: 'select', options: [
-          { value: '', label: 'Semua status' },
-          { value: '1', label: 'Sudah diverifikasi' },
-          { value: '0', label: 'Belum diverifikasi' },
-          { value: '2', label: 'Ditolak' }
-        ] }
-      ],
-      columns: [
-        { title: 'No. Agenda', tdClass: 'whitespace-nowrap', render: function (r) {
-            return '<span class="font-medium text-slate-800">' + dash(r.nomor_agenda) + '</span>'; } },
-        { title: 'Nomor Surat', tdClass: 'whitespace-nowrap', render: function (r) { return dash(r.nomor_surat); } },
-        { title: 'Perihal', thClass: 'w-[26%]', tdClass: 'min-w-[16rem]', render: function (r) {
-            return '<span class="clamp-2">' + dash(r.perihal) + '</span>'; } },
-        { title: 'Dari', render: function (r) { return dash(r.dari); } },
-        { title: 'Tujuan', render: function (r) { return dash(r.tujuan_jabatan); } },
-        { title: 'Diterima', tdClass: 'whitespace-nowrap', render: function (r) { return tanggal(r.tgl_surat_terima); } },
-        { title: 'Disposisi', tdClass: 'text-center', render: function (r) {
-            return r.jumlah_disposisi ? badge(r.jumlah_disposisi + '×', 'sky') : '<span class="text-slate-300">—</span>'; } },
-        { title: 'Status', render: function (r) {
-            return badge(r.status_label, toneStatusSurat(r.status_label)); } }
-      ],
-      onRow: function (row) { detailSuratMasuk(row.id_surat); }
-    }).load();
+    return Promise.all([
+      request('/master/jenis-surat').catch(function () { return []; }),
+      request('/master/kategori-surat').catch(function () { return []; })
+    ]).then(function (res) {
+      var jenis = res[0], kategori = res[1];
+
+      listPage(container, {
+        endpoint: '/surat-masuk',
+        params: function () { return { tahun: state.tahun }; },
+        empty: 'Tidak ada surat masuk yang cocok dengan pencarian ini.',
+        filters: [
+          { name: 'q', type: 'search', placeholder: 'Cari nomor, perihal, pengirim…' },
+          { name: 'status', type: 'select', options: [
+            { value: '', label: 'Semua status' },
+            { value: '1', label: 'Sudah diverifikasi' },
+            { value: '0', label: 'Belum diverifikasi' },
+            { value: '2', label: 'Ditolak' }
+          ] }
+        ],
+        lanjutan: [
+          { name: 'nomor', label: 'Nomor surat', placeholder: 'mis. 066/O117/U.01' },
+          { name: 'agenda', label: 'Nomor agenda', placeholder: 'mis. 4625.2026' },
+          { name: 'dari', label: 'Pengirim', placeholder: 'mis. Fakultas Agama Islam' },
+          { name: 'perihal', label: 'Perihal mengandung', placeholder: 'mis. yudisium' },
+          { name: 'tgl_awal', label: 'Diterima dari tanggal', type: 'date' },
+          { name: 'tgl_akhir', label: 'Sampai tanggal', type: 'date' },
+          { name: 'id_jenis', label: 'Jenis surat', type: 'select',
+            options: [{ value: '', label: 'Semua jenis' }].concat(jenis.map(function (j) {
+              return { value: j.id_jenis, label: j.nama };
+            })) },
+          { name: 'id_kategori', label: 'Kategori', type: 'select',
+            options: [{ value: '', label: 'Semua kategori' }].concat(kategori.map(function (k) {
+              return { value: k.id_kategori, label: k.kategori };
+            })) },
+          { name: 'ada_berkas', label: 'Lampiran', type: 'select', options: [
+            { value: '', label: 'Tidak dibatasi' },
+            { value: 'true', label: 'Ada lampiran' },
+            { value: 'false', label: 'Tanpa lampiran' }
+          ] },
+          { name: 'ada_disposisi', label: 'Disposisi', type: 'select', options: [
+            { value: '', label: 'Tidak dibatasi' },
+            { value: 'true', label: 'Sudah didisposisikan' },
+            { value: 'false', label: 'Belum didisposisikan' }
+          ] },
+          { name: 'urut', label: 'Urutan', type: 'select', options: [
+            { value: '', label: 'Terbaru diinput' },
+            { value: 'terlama', label: 'Terlama diinput' },
+            { value: 'tanggal_desc', label: 'Tanggal terima terbaru' },
+            { value: 'tanggal_asc', label: 'Tanggal terima terlama' }
+          ] }
+        ],
+        columns: [
+          { title: 'No. Agenda', tdClass: 'whitespace-nowrap', render: function (r) {
+              return '<span class="font-medium text-slate-800">' + dash(r.nomor_agenda) + '</span>'; } },
+          { title: 'Nomor Surat', tdClass: 'nomor min-w-[9rem]', render: function (r) { return dash(r.nomor_surat); } },
+          { title: 'Perihal', thClass: 'w-[22%]', tdClass: 'min-w-[13rem]', render: function (r) {
+              return '<span class="clamp-2">' + dash(r.perihal) + '</span>'; } },
+          { title: 'Pengirim / Tujuan', tdClass: 'min-w-[11rem]', render: function (r) {
+              return S.avatar(r.dari, {
+                keterangan: r.tujuan_jabatan ? '→ ' + r.tujuan_jabatan : ''
+              }); } },
+          { title: 'Diterima', tdClass: 'whitespace-nowrap', render: function (r) { return tanggal(r.tgl_surat_terima); } },
+          { title: 'Status', render: function (r) {
+              return badge(r.status_label, toneStatusSurat(r.status_label)); } },
+          { title: 'Aksi', thClass: 'text-right kolom-aksi', tdClass: 'whitespace-nowrap kolom-aksi', render: function (r) {
+              return S.tombolAksi([
+                { ikon: 'detail', warna: 'hijau', judul: 'Lihat detail surat', aksi: 'detail' },
+                { ikon: 'berkas', warna: 'biru', judul: r.file_url ? 'Buka lampiran' : 'Tidak ada lampiran',
+                  aksi: 'berkas', nonaktif: !r.file_url },
+                { ikon: 'disposisi', warna: 'kuning',
+                  judul: r.jumlah_disposisi ? 'Lihat jejak disposisi' : 'Belum ada disposisi',
+                  aksi: 'disposisi', nonaktif: !r.jumlah_disposisi },
+                { ikon: 'salin', warna: 'abu', judul: 'Salin nomor surat', aksi: 'salin' }
+              ]); } }
+        ],
+        onRow: function (row) { detailSuratMasuk(row.id_surat); },
+        onAksi: function (aksi, row) {
+          if (!row) return;
+          if (aksi === 'detail') detailSuratMasuk(row.id_surat);
+          else if (aksi === 'berkas' && row.file_url) window.open(row.file_url, '_blank', 'noopener');
+          else if (aksi === 'disposisi') detailMonitoring(row);
+          else if (aksi === 'salin') S.salinTeks(row.nomor_surat || '');
+        }
+      }).load();
+    });
   };
 
   function detailSuratMasuk(id) {
@@ -277,34 +494,77 @@
 
   // ============================================================== SURAT KELUAR
   pages['surat-keluar'] = function (container) {
-    listPage(container, {
-      endpoint: '/surat-keluar',
-      params: function () { return { tahun: state.tahun }; },
-      empty: 'Tidak ada surat keluar pada filter ini.',
-      filters: [
-        { name: 'q', type: 'search', placeholder: 'Cari nomor, perihal, tujuan…' },
-        { name: 'status', type: 'select', options: [
-          { value: '', label: 'Semua status' },
-          { value: '0', label: 'Menunggu persetujuan' },
-          { value: '1', label: 'Disetujui' },
-          { value: '2', label: 'Ditolak' },
-          { value: '3', label: 'Diarsipkan' }
-        ] }
-      ],
-      columns: [
-        { title: 'Nomor', tdClass: 'whitespace-nowrap', render: function (r) {
-            return '<span class="font-medium text-slate-800">' + dash(r.nomor) + '</span>'; } },
-        { title: 'Perihal', thClass: 'w-[28%]', tdClass: 'min-w-[16rem]', render: function (r) {
-            return '<span class="clamp-2">' + dash(r.perihal) + '</span>'; } },
-        { title: 'Tujuan', tdClass: 'max-w-xs', render: function (r) {
-            return '<span class="clamp-2">' + dash(r.tujuan || r.tujuan_lainnya) + '</span>'; } },
-        { title: 'Penanda tangan', render: function (r) { return dash(r.tanda_tangan); } },
-        { title: 'Tanggal', tdClass: 'whitespace-nowrap', render: function (r) { return tanggal(r.tgl_suratkel); } },
-        { title: 'Status', render: function (r) {
-            return badge(r.status_label, toneStatusSurat(r.status_label)); } }
-      ],
-      onRow: function (row) { detailSuratKeluar(row.id_suratkel); }
-    }).load();
+    return request('/master/jenis-surat').catch(function () { return []; }).then(function (jenis) {
+      listPage(container, {
+        endpoint: '/surat-keluar',
+        params: function () { return { tahun: state.tahun }; },
+        empty: 'Tidak ada surat keluar yang cocok dengan pencarian ini.',
+        filters: [
+          { name: 'q', type: 'search', placeholder: 'Cari nomor, perihal, tujuan…' },
+          { name: 'status', type: 'select', options: [
+            { value: '', label: 'Semua status' },
+            { value: '0', label: 'Menunggu persetujuan' },
+            { value: '1', label: 'Disetujui' },
+            { value: '2', label: 'Ditolak' },
+            { value: '3', label: 'Diarsipkan' }
+          ] }
+        ],
+        lanjutan: [
+          { name: 'nomor', label: 'Nomor surat', placeholder: 'mis. 0033/O13/U.UPK' },
+          { name: 'perihal', label: 'Perihal mengandung', placeholder: 'mis. perjalanan dinas' },
+          { name: 'tujuan', label: 'Tujuan', placeholder: 'mis. Kepala Biro' },
+          { name: 'tanda_tangan', label: 'Penanda tangan', placeholder: 'mis. Rektor' },
+          { name: 'tgl_awal', label: 'Tanggal surat dari', type: 'date' },
+          { name: 'tgl_akhir', label: 'Sampai tanggal', type: 'date' },
+          { name: 'id_jenis', label: 'Jenis surat', type: 'select',
+            options: [{ value: '', label: 'Semua jenis' }].concat(jenis.map(function (j) {
+              return { value: j.id_jenis, label: j.nama };
+            })) },
+          { name: 'ada_berkas', label: 'Lampiran', type: 'select', options: [
+            { value: '', label: 'Tidak dibatasi' },
+            { value: 'true', label: 'Ada berkas' },
+            { value: 'false', label: 'Tanpa berkas' }
+          ] },
+          { name: 'urut', label: 'Urutan', type: 'select', options: [
+            { value: '', label: 'Terbaru diinput' },
+            { value: 'terlama', label: 'Terlama diinput' },
+            { value: 'tanggal_desc', label: 'Tanggal surat terbaru' },
+            { value: 'tanggal_asc', label: 'Tanggal surat terlama' }
+          ] }
+        ],
+        columns: [
+          { title: 'Nomor', tdClass: 'nomor min-w-[9rem]', render: function (r) {
+              return '<span class="font-medium text-slate-800">' + dash(r.nomor) + '</span>'; } },
+          { title: 'Perihal', thClass: 'w-[24%]', tdClass: 'min-w-[14rem]', render: function (r) {
+              return '<span class="clamp-2">' + dash(r.perihal) + '</span>'; } },
+          { title: 'Unit pembuat', tdClass: 'min-w-[11rem]', render: function (r) {
+              return S.avatar(r.jabatan_pembuat, {
+                keterangan: r.tanda_tangan ? 'TTD: ' + r.tanda_tangan : ''
+              }); } },
+          { title: 'Tanggal', tdClass: 'whitespace-nowrap', render: function (r) { return tanggal(r.tgl_suratkel); } },
+          { title: 'Status', render: function (r) {
+              return badge(r.status_label, toneStatusSurat(r.status_label)); } },
+          { title: 'Aksi', thClass: 'text-right kolom-aksi', tdClass: 'whitespace-nowrap kolom-aksi', render: function (r) {
+              return S.tombolAksi([
+                { ikon: 'detail', warna: 'hijau', judul: 'Lihat detail surat', aksi: 'detail' },
+                { ikon: 'berkas', warna: 'biru', judul: r.file_url ? 'Buka berkas surat' : 'Tidak ada berkas',
+                  aksi: 'berkas', nonaktif: !r.file_url },
+                { ikon: 'ubah', warna: 'ungu',
+                  judul: r.file_arsip_url ? 'Buka berkas arsip' : 'Belum ada berkas arsip',
+                  aksi: 'arsip', nonaktif: !r.file_arsip_url },
+                { ikon: 'salin', warna: 'abu', judul: 'Salin nomor surat', aksi: 'salin' }
+              ]); } }
+        ],
+        onRow: function (row) { detailSuratKeluar(row.id_suratkel); },
+        onAksi: function (aksi, row) {
+          if (!row) return;
+          if (aksi === 'detail') detailSuratKeluar(row.id_suratkel);
+          else if (aksi === 'berkas' && row.file_url) window.open(row.file_url, '_blank', 'noopener');
+          else if (aksi === 'arsip' && row.file_arsip_url) window.open(row.file_arsip_url, '_blank', 'noopener');
+          else if (aksi === 'salin') S.salinTeks(row.nomor || '');
+        }
+      }).load();
+    });
   };
 
   function detailSuratKeluar(id) {
@@ -346,7 +606,7 @@
     listPage(container, {
       endpoint: '/disposisi',
       params: function () { return { tahun: state.tahun }; },
-      empty: 'Belum ada disposisi pada filter ini.',
+      empty: 'Belum ada disposisi yang cocok dengan pencarian ini.',
       filters: [
         { name: 'q', type: 'search', placeholder: 'Cari nomor surat, perihal, isi disposisi…' },
         { name: 'selesai', type: 'select', options: [
@@ -355,19 +615,41 @@
           { value: 'true', label: 'Sudah selesai' }
         ] }
       ],
+      lanjutan: [
+        { name: 'nomor', label: 'Nomor surat', placeholder: 'mis. 498/K22/U.04' },
+        { name: 'perihal', label: 'Perihal mengandung', placeholder: 'mis. pelaporan' },
+        { name: 'isi', label: 'Isi disposisi mengandung', placeholder: 'mis. diproses' },
+        { name: 'tgl_awal', label: 'Disposisi dari tanggal', type: 'date' },
+        { name: 'tgl_akhir', label: 'Sampai tanggal', type: 'date' }
+      ],
       columns: [
-        { title: 'Nomor surat', tdClass: 'whitespace-nowrap', render: function (r) {
+        { title: 'Nomor surat', tdClass: 'nomor min-w-[9rem]', render: function (r) {
             return '<span class="font-medium text-slate-800">' + dash(r.nomor_surat) + '</span>'; } },
-        { title: 'Perihal', thClass: 'w-[24%]', tdClass: 'min-w-[14rem]', render: function (r) {
+        { title: 'Perihal', thClass: 'w-[20%]', tdClass: 'min-w-[12rem]', render: function (r) {
             return '<span class="clamp-2">' + dash(r.perihal) + '</span>'; } },
-        { title: 'Tujuan disposisi', render: function (r) { return dash(r.tujuan_jabatan); } },
-        { title: 'Isi', tdClass: 'max-w-xs', render: function (r) {
+        { title: 'Tujuan disposisi', tdClass: 'min-w-[11rem]', render: function (r) {
+            return S.avatar(r.tujuan_jabatan); } },
+        { title: 'Isi', tdClass: 'max-w-[12rem]', render: function (r) {
             return '<span class="clamp-2">' + dash(r.isi_disposisi) + '</span>'; } },
         { title: 'Tanggal', tdClass: 'whitespace-nowrap', render: function (r) { return tanggal(r.tgl_disposisi); } },
         { title: 'Status', render: function (r) {
-            return badge(r.status_label, toneStatusSurat(r.status_label)); } }
+            return badge(r.status_label, toneStatusSurat(r.status_label)); } },
+        { title: 'Aksi', thClass: 'text-right kolom-aksi', tdClass: 'whitespace-nowrap kolom-aksi', render: function (r) {
+            return S.tombolAksi([
+              { ikon: 'detail', warna: 'hijau', judul: 'Lihat detail surat', aksi: 'detail',
+                nonaktif: !r.id_surat },
+              { ikon: 'disposisi', warna: 'kuning', judul: 'Lihat jejak disposisi', aksi: 'jejak',
+                nonaktif: !r.id_surat },
+              { ikon: 'salin', warna: 'abu', judul: 'Salin nomor surat', aksi: 'salin' }
+            ]); } }
       ],
-      onRow: function (row) { if (row.id_surat) detailSuratMasuk(row.id_surat); }
+      onRow: function (row) { if (row.id_surat) detailSuratMasuk(row.id_surat); },
+      onAksi: function (aksi, row) {
+        if (!row) return;
+        if (aksi === 'detail' && row.id_surat) detailSuratMasuk(row.id_surat);
+        else if (aksi === 'jejak' && row.id_surat) detailMonitoring(row);
+        else if (aksi === 'salin') S.salinTeks(row.nomor_surat || '');
+      }
     }).load();
   };
 
@@ -379,11 +661,11 @@
       empty: 'Belum ada surat yang didisposisikan.',
       filters: [{ name: 'q', type: 'search', placeholder: 'Cari nomor surat atau perihal…' }],
       columns: [
-        { title: 'Nomor surat', tdClass: 'whitespace-nowrap', render: function (r) {
+        { title: 'Nomor surat', tdClass: 'nomor min-w-[9rem]', render: function (r) {
             return '<span class="font-medium text-slate-800">' + dash(r.nomor_surat) + '</span>'; } },
-        { title: 'Perihal', thClass: 'w-[30%]', tdClass: 'min-w-[16rem]', render: function (r) {
+        { title: 'Perihal', thClass: 'w-[24%]', tdClass: 'min-w-[13rem]', render: function (r) {
             return '<span class="clamp-2">' + dash(r.perihal) + '</span>'; } },
-        { title: 'Dari', render: function (r) { return dash(r.dari); } },
+        { title: 'Dari', tdClass: 'min-w-[11rem]', render: function (r) { return S.avatar(r.dari); } },
         { title: 'Tanggal', tdClass: 'whitespace-nowrap', render: function (r) { return tanggal(r.tgl_surat_terima); } },
         { title: 'Progres', tdClass: 'w-48', render: function (r) {
             return '<div class="flex items-center gap-2">' +
@@ -391,9 +673,21 @@
               '<div class="h-full rounded-full bg-brand-500" style="width:' + r.persen_selesai + '%"></div></div>' +
               '<span class="text-xs text-slate-500">' + r.total_selesai + '/' + r.total_disposisi + '</span></div>'; } },
         { title: 'Status', render: function (r) {
-            return badge(r.status_label, toneStatusSurat(r.status_label)); } }
+            return badge(r.status_label, toneStatusSurat(r.status_label)); } },
+        { title: 'Aksi', thClass: 'text-right kolom-aksi', tdClass: 'whitespace-nowrap kolom-aksi', render: function (r) {
+            return S.tombolAksi([
+              { ikon: 'disposisi', warna: 'kuning', judul: 'Lihat jejak tindak lanjut', aksi: 'jejak' },
+              { ikon: 'detail', warna: 'hijau', judul: 'Lihat detail surat', aksi: 'detail' },
+              { ikon: 'salin', warna: 'abu', judul: 'Salin nomor surat', aksi: 'salin' }
+            ]); } }
       ],
-      onRow: function (row) { detailMonitoring(row); }
+      onRow: function (row) { detailMonitoring(row); },
+      onAksi: function (aksi, row) {
+        if (!row) return;
+        if (aksi === 'jejak') detailMonitoring(row);
+        else if (aksi === 'detail') detailSuratMasuk(row.id_surat);
+        else if (aksi === 'salin') S.salinTeks(row.nomor_surat || '');
+      }
     }).load();
   };
 
@@ -425,12 +719,19 @@
           }).join('') + '</ul>'
         : '';
 
+      // Baris dari halaman monitoring membawa rekap progres; baris dari
+      // halaman surat masuk / disposisi tidak, jadi dihitung dari jejaknya.
+      var jumlah = (d.disposisi || []).length;
+      var tuntas = (d.disposisi || []).filter(function (x) { return !!x.status_selesai; }).length;
+      var persen = jumlah ? Math.round(tuntas / jumlah * 100) : 0;
+
       S.openModal('Monitoring — ' + (row.nomor_surat || '#' + row.id_surat),
         '<dl class="mb-6">' +
           fieldRow('Perihal', dash(row.perihal)) +
           fieldRow('Pengirim', dash(row.dari)) +
-          fieldRow('Progres', row.total_selesai + ' dari ' + row.total_disposisi +
-                   ' disposisi selesai (' + row.persen_selesai + '%)') +
+          fieldRow('Progres', jumlah
+            ? tuntas + ' dari ' + jumlah + ' disposisi selesai (' + persen + '%)'
+            : '<span class="text-slate-400">Belum ada disposisi</span>') +
         '</dl>' +
         '<h4 class="mb-3 text-sm font-semibold text-slate-900">Jejak disposisi</h4>' + jejak +
         (arahan ? '<h4 class="mb-1 mt-6 text-sm font-semibold text-slate-900">Permintaan arahan</h4>' + arahan : ''));

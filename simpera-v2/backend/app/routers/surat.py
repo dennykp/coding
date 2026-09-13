@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -21,6 +22,21 @@ from ..common import (
 
 router = APIRouter(tags=["surat"])
 
+# Pilihan pengurutan. Nilai ditulis eksplisit agar tidak ada masukan pengguna
+# yang pernah masuk ke dalam klausa ORDER BY.
+URUTAN_SURAT_MASUK = {
+    "terbaru": "s.id_surat DESC",
+    "terlama": "s.id_surat ASC",
+    "tanggal_desc": "COALESCE(s.tgl_surat_terima, s.tgl_entry) DESC, s.id_surat DESC",
+    "tanggal_asc": "COALESCE(s.tgl_surat_terima, s.tgl_entry) ASC, s.id_surat ASC",
+}
+URUTAN_SURAT_KELUAR = {
+    "terbaru": "k.id_suratkel DESC",
+    "terlama": "k.id_suratkel ASC",
+    "tanggal_desc": "COALESCE(k.tgl_suratkel, k.tgl_entry) DESC, k.id_suratkel DESC",
+    "tanggal_asc": "COALESCE(k.tgl_suratkel, k.tgl_entry) ASC, k.id_suratkel ASC",
+}
+
 
 def _scope(user: dict[str, Any], column: str) -> tuple[str, list[Any]]:
     if user.get("can_view_all") or not user.get("jabatan_id"):
@@ -30,12 +46,23 @@ def _scope(user: dict[str, Any], column: str) -> tuple[str, list[Any]]:
 
 @router.get("/surat-masuk")
 def surat_masuk(
-    q: str | None = Query(default=None, description="Cari nomor surat, perihal, atau pengirim"),
+    q: str | None = Query(default=None, description="Cari cepat: nomor, agenda, perihal, pengirim"),
+    nomor: str | None = Query(default=None, description="Nomor surat"),
+    agenda: str | None = Query(default=None, description="Nomor agenda"),
+    perihal: str | None = None,
+    dari: str | None = Query(default=None, description="Nama pengirim"),
+    catatan: str | None = None,
     tahun: int | None = None,
+    tgl_awal: dt.date | None = Query(default=None, description="Tanggal terima mulai"),
+    tgl_akhir: dt.date | None = Query(default=None, description="Tanggal terima sampai"),
     status: int | None = Query(default=None, ge=0, le=2),
     id_jenis: int | None = None,
     id_kategori: int | None = None,
     id_jabatan: int | None = None,
+    id_kode_arsip: int | None = None,
+    ada_berkas: bool | None = Query(default=None, description="Hanya surat yang punya lampiran"),
+    ada_disposisi: bool | None = None,
+    urut: str = Query(default="terbaru", pattern="^(terbaru|terlama|tanggal_asc|tanggal_desc)$"),
     page: int = 1,
     per_page: int = 25,
     user: dict[str, Any] = Depends(security.current_user),
@@ -73,8 +100,41 @@ def surat_masuk(
     if id_jabatan:
         where.append("s.id_jabatan = %s")
         params.append(id_jabatan)
+    if id_kode_arsip:
+        where.append("s.id_kode_arsip = %s")
+        params.append(str(id_kode_arsip))
+
+    # Pencarian per kolom: dipakai panel "filter lanjutan" di antarmuka.
+    for column, nilai in (
+        ("s.nomor_surat", nomor),
+        ("s.nomor_agenda", agenda),
+        ("s.perihal", perihal),
+        ("s.dari", dari),
+        ("s.catatan", catatan),
+    ):
+        cocok = like(nilai)
+        if cocok:
+            where.append(f"{column} LIKE %s")
+            params.append(cocok)
+
+    if tgl_awal:
+        where.append("COALESCE(s.tgl_surat_terima, s.tgl_entry, DATE(s.created_at)) >= %s")
+        params.append(tgl_awal)
+    if tgl_akhir:
+        where.append("COALESCE(s.tgl_surat_terima, s.tgl_entry, DATE(s.created_at)) <= %s")
+        params.append(tgl_akhir)
+
+    if ada_berkas is True:
+        where.append("s.file_upload IS NOT NULL AND s.file_upload <> ''")
+    elif ada_berkas is False:
+        where.append("(s.file_upload IS NULL OR s.file_upload = '')")
+
+    if ada_disposisi is not None:
+        ada = "EXISTS" if ada_disposisi else "NOT EXISTS"
+        where.append(f"{ada} (SELECT 1 FROM tt_disposisi d WHERE d.id_surat = s.id_surat)")
 
     clause = " AND ".join(where)
+    order = URUTAN_SURAT_MASUK[urut]
     total = db.fetch_value(
         f"SELECT COUNT(*) FROM tt_suratmasuk s WHERE {clause}", params, default=0
     )
@@ -93,7 +153,7 @@ def surat_masuk(
         LEFT JOIN tm_kategori kt ON kt.id_kategori = s.id_kategori
         LEFT JOIN tm_jabatan jb ON jb.id_jabatan = s.id_jabatan
         WHERE {clause}
-        ORDER BY s.id_surat DESC
+        ORDER BY {order}
         LIMIT %s OFFSET %s
         """,
         [*params, per_page, offset],
@@ -152,8 +212,19 @@ def detail_surat_masuk(
 @router.get("/surat-keluar")
 def surat_keluar(
     q: str | None = None,
+    nomor: str | None = None,
+    perihal: str | None = None,
+    tujuan: str | None = None,
+    tanda_tangan: str | None = Query(default=None, description="Nama penanda tangan"),
     tahun: int | None = None,
+    tgl_awal: dt.date | None = None,
+    tgl_akhir: dt.date | None = None,
     status: int | None = Query(default=None, ge=0, le=3),
+    id_jenis: int | None = None,
+    id_kode_arsip: int | None = None,
+    jabatan_id: int | None = Query(default=None, description="Jabatan pembuat surat"),
+    ada_berkas: bool | None = None,
+    urut: str = Query(default="terbaru", pattern="^(terbaru|terlama|tanggal_asc|tanggal_desc)$"),
     page: int = 1,
     per_page: int = 25,
     user: dict[str, Any] = Depends(security.current_user),
@@ -180,8 +251,51 @@ def surat_keluar(
     if status is not None:
         where.append("k.status_surat = %s")
         params.append(status)
+    if id_jenis:
+        where.append("k.id_jenis = %s")
+        params.append(id_jenis)
+    if id_kode_arsip:
+        where.append("k.id_kode_arsip = %s")
+        params.append(str(id_kode_arsip))
+    if jabatan_id:
+        where.append("k.jabatan_id_suratkeluar = %s")
+        params.append(jabatan_id)
+
+    for column, nilai in (
+        ("k.nomor", nomor),
+        ("k.perihal", perihal),
+        ("k.tanda_tangan", tanda_tangan),
+    ):
+        cocok = like(nilai)
+        if cocok:
+            where.append(f"{column} LIKE %s")
+            params.append(cocok)
+
+    cocok_tujuan = like(tujuan)
+    if cocok_tujuan:
+        where.append("(k.tujuan LIKE %s OR k.tujuan_lainnya LIKE %s)")
+        params.extend([cocok_tujuan, cocok_tujuan])
+
+    if tgl_awal:
+        where.append("COALESCE(k.tgl_suratkel, k.tgl_entry, DATE(k.created_at)) >= %s")
+        params.append(tgl_awal)
+    if tgl_akhir:
+        where.append("COALESCE(k.tgl_suratkel, k.tgl_entry, DATE(k.created_at)) <= %s")
+        params.append(tgl_akhir)
+
+    if ada_berkas is True:
+        where.append(
+            "((k.file_upload IS NOT NULL AND k.file_upload <> '') "
+            "OR (k.file_upload_arsip IS NOT NULL AND k.file_upload_arsip <> ''))"
+        )
+    elif ada_berkas is False:
+        where.append(
+            "(k.file_upload IS NULL OR k.file_upload = '') "
+            "AND (k.file_upload_arsip IS NULL OR k.file_upload_arsip = '')"
+        )
 
     clause = " AND ".join(where)
+    order = URUTAN_SURAT_KELUAR[urut]
     total = db.fetch_value(
         f"SELECT COUNT(*) FROM tt_suratkeluar k WHERE {clause}", params, default=0
     )
@@ -198,7 +312,7 @@ def surat_keluar(
         LEFT JOIN tm_jabatan jb ON jb.id_jabatan = k.jabatan_id_suratkeluar
         LEFT JOIN users u ON u.id = k.user_id
         WHERE {clause}
-        ORDER BY k.id_suratkel DESC
+        ORDER BY {order}
         LIMIT %s OFFSET %s
         """,
         [*params, per_page, offset],
