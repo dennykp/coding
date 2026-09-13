@@ -33,7 +33,7 @@
       }
       return '<div class="relative w-full sm:max-w-xs">' +
         '<svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>' +
-        '<input data-filter="' + f.name + '" type="search" class="field h-10 pl-9" placeholder="' +
+        '<input data-filter="' + f.name + '" type="search" class="field field-search h-10" placeholder="' +
         esc(f.placeholder || 'Cari…') + '">' +
         '</div>';
     }).join('');
@@ -176,7 +176,7 @@
             '<div class="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">' +
               '<div><h2 class="text-sm font-semibold text-slate-900">Surat masuk terbaru</h2>' +
               '<p class="text-xs text-slate-500">Delapan entri terakhir</p></div>' +
-              '<a href="#/surat-masuk" class="btn-ghost px-3 py-1.5 text-xs">Lihat semua</a>' +
+              '<a href="#/surat-masuk" class="btn-ghost btn-sm">Lihat semua</a>' +
             '</div>' +
             '<div class="table-wrap"><table class="data"><thead><tr>' +
               '<th>Nomor</th><th>Perihal</th><th>Dari</th><th>Tujuan</th><th>Tanggal</th><th>Status</th>' +
@@ -219,7 +219,7 @@
         { title: 'No. Agenda', tdClass: 'whitespace-nowrap', render: function (r) {
             return '<span class="font-medium text-slate-800">' + dash(r.nomor_agenda) + '</span>'; } },
         { title: 'Nomor Surat', tdClass: 'whitespace-nowrap', render: function (r) { return dash(r.nomor_surat); } },
-        { title: 'Perihal', tdClass: 'max-w-sm', render: function (r) {
+        { title: 'Perihal', thClass: 'w-[26%]', tdClass: 'min-w-[16rem]', render: function (r) {
             return '<span class="clamp-2">' + dash(r.perihal) + '</span>'; } },
         { title: 'Dari', render: function (r) { return dash(r.dari); } },
         { title: 'Tujuan', render: function (r) { return dash(r.tujuan_jabatan); } },
@@ -294,7 +294,7 @@
       columns: [
         { title: 'Nomor', tdClass: 'whitespace-nowrap', render: function (r) {
             return '<span class="font-medium text-slate-800">' + dash(r.nomor) + '</span>'; } },
-        { title: 'Perihal', tdClass: 'max-w-sm', render: function (r) {
+        { title: 'Perihal', thClass: 'w-[28%]', tdClass: 'min-w-[16rem]', render: function (r) {
             return '<span class="clamp-2">' + dash(r.perihal) + '</span>'; } },
         { title: 'Tujuan', tdClass: 'max-w-xs', render: function (r) {
             return '<span class="clamp-2">' + dash(r.tujuan || r.tujuan_lainnya) + '</span>'; } },
@@ -358,7 +358,7 @@
       columns: [
         { title: 'Nomor surat', tdClass: 'whitespace-nowrap', render: function (r) {
             return '<span class="font-medium text-slate-800">' + dash(r.nomor_surat) + '</span>'; } },
-        { title: 'Perihal', tdClass: 'max-w-sm', render: function (r) {
+        { title: 'Perihal', thClass: 'w-[24%]', tdClass: 'min-w-[14rem]', render: function (r) {
             return '<span class="clamp-2">' + dash(r.perihal) + '</span>'; } },
         { title: 'Tujuan disposisi', render: function (r) { return dash(r.tujuan_jabatan); } },
         { title: 'Isi', tdClass: 'max-w-xs', render: function (r) {
@@ -381,7 +381,7 @@
       columns: [
         { title: 'Nomor surat', tdClass: 'whitespace-nowrap', render: function (r) {
             return '<span class="font-medium text-slate-800">' + dash(r.nomor_surat) + '</span>'; } },
-        { title: 'Perihal', tdClass: 'max-w-sm', render: function (r) {
+        { title: 'Perihal', thClass: 'w-[30%]', tdClass: 'min-w-[16rem]', render: function (r) {
             return '<span class="clamp-2">' + dash(r.perihal) + '</span>'; } },
         { title: 'Dari', render: function (r) { return dash(r.dari); } },
         { title: 'Tanggal', tdClass: 'whitespace-nowrap', render: function (r) { return tanggal(r.tgl_surat_terima); } },

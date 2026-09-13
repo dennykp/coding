@@ -18,8 +18,15 @@ from .config import settings
 
 WRITE_PREFIX = "arteri_"
 _WRITE_STATEMENT = re.compile(r"^\s*(insert|update|delete|replace)\b", re.IGNORECASE)
+# Pengubah opsional yang boleh muncul antara INSERT/REPLACE dan INTO,
+# misalnya "INSERT IGNORE INTO" atau "INSERT LOW_PRIORITY INTO".
+_MODIFIERS = r"(?:\s+(?:low_priority|delayed|high_priority|ignore|quick))*"
 _TARGET_TABLE = re.compile(
-    r"^\s*(?:insert\s+into|replace\s+into|update|delete\s+from)\s+`?([a-z0-9_]+)`?",
+    r"^\s*(?:"
+    r"(?:insert|replace)" + _MODIFIERS + r"(?:\s+into)?"
+    r"|update" + _MODIFIERS +
+    r"|delete" + _MODIFIERS + r"\s+from"
+    r")\s+`?([a-z0-9_]+)`?",
     re.IGNORECASE,
 )
 

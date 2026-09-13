@@ -14,6 +14,15 @@ if [ -f "$PID" ] && kill -0 "$(cat "$PID")" 2>/dev/null; then
 fi
 
 cd "$ROOT/backend"
+
+# Muat konfigurasi (JWT_SECRET, BIND_PORT, dll) bila tersedia.
+if [ -f "$ROOT/backend/.env" ]; then
+  set -a
+  # shellcheck disable=SC1091
+  . "$ROOT/backend/.env"
+  set +a
+fi
+
 nohup "$VENV/bin/python" -m uvicorn app.main:app \
   --host 127.0.0.1 --port "${BIND_PORT:-8123}" >> "$LOG" 2>&1 &
 echo $! > "$PID"

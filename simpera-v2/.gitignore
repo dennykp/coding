@@ -6,4 +6,4 @@ venv/
 *.pyc
 *.log
 *.pid
-frontend/assets/tailwind.js
+frontend/build/node_modules/

@@ -116,8 +116,8 @@
           '</div>' : '');
 
         var toolbar = boleh
-          ? '<button id="btn-tambah-arsip" class="btn-primary px-3 py-1.5 text-xs">Tambah arsip</button>' +
-            '<button class="btn-ghost px-3 py-1.5 text-xs" data-unduh="/laporan/export/arsip" ' +
+          ? '<button id="btn-tambah-arsip" class="btn-primary btn-sm">Tambah arsip</button>' +
+            '<button class="btn-ghost btn-sm" data-unduh="/laporan/export/arsip" ' +
             'data-nama="daftar-arsip.csv">Ekspor CSV</button>'
           : '';
 
@@ -142,7 +142,7 @@
           columns: [
             { title: 'No. Arsip', tdClass: 'whitespace-nowrap', render: function (r) {
                 return '<span class="font-medium text-slate-800">' + dash(r.noarsip) + '</span>'; } },
-            { title: 'Uraian', tdClass: 'max-w-sm', render: function (r) {
+            { title: 'Uraian', thClass: 'w-[24%]', tdClass: 'min-w-[10rem]', render: function (r) {
                 return '<span class="clamp-2">' + dash(r.uraian) + '</span>'; } },
             { title: 'Klasifikasi', render: function (r) {
                 return r.kode ? '<span class="font-medium text-slate-700">' + esc(r.kode) + '</span>' +
@@ -369,7 +369,7 @@
       var tabel = H.listPage(container, {
         endpoint: '/arteri/sirkulasi',
         empty: 'Belum ada transaksi peminjaman arsip.',
-        toolbar: boleh ? '<button id="btn-pinjam" class="btn-primary px-3 py-1.5 text-xs">Catat peminjaman</button>' : '',
+        toolbar: boleh ? '<button id="btn-pinjam" class="btn-primary btn-sm">Catat peminjaman</button>' : '',
         filters: [
           { name: 'q', type: 'search', placeholder: 'Cari nomor arsip atau peminjam…' },
           { name: 'hanya_dipinjam', type: 'select', options: [
@@ -393,7 +393,7 @@
               return badge(r.status_label, toneStatusSurat(r.status_label)); } },
           { title: '', tdClass: 'text-right whitespace-nowrap', render: function (r) {
               if (!boleh || r.tgl_pengembalian) return '';
-              return '<button class="btn-ghost px-2.5 py-1 text-xs" data-kembali="' + r.id + '">Kembalikan</button>'; } }
+              return '<button class="btn-ghost btn-sm" data-kembali="' + r.id + '">Kembalikan</button>'; } }
         ]
       });
 
@@ -540,7 +540,7 @@
         columns: [
           { title: 'No. Arsip', tdClass: 'whitespace-nowrap', render: function (r) {
               return '<span class="font-medium text-slate-800">' + dash(r.noarsip) + '</span>'; } },
-          { title: 'Uraian', tdClass: 'max-w-sm', render: function (r) {
+          { title: 'Uraian', thClass: 'w-[22%]', tdClass: 'min-w-[9rem]', render: function (r) {
               return '<span class="clamp-2">' + dash(r.uraian) + '</span>'; } },
           { title: 'Klasifikasi', render: function (r) {
               return esc(r.kode || '—') + '<br><span class="text-xs text-slate-500">' +

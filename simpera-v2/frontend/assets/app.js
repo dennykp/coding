@@ -205,9 +205,9 @@
       '<p class="text-xs text-slate-500">Menampilkan <b>' + angka(dari) + '</b>–<b>' + angka(sampai) +
       '</b> dari <b>' + angka(meta.total) + '</b> data</p>' +
       '<div class="flex items-center gap-2">' +
-      '<button class="btn-ghost px-3 py-1.5 text-xs" data-go="prev"' + (meta.page <= 1 ? ' disabled' : '') + '>Sebelumnya</button>' +
+      '<button class="btn-ghost btn-sm" data-go="prev"' + (meta.page <= 1 ? ' disabled' : '') + '>Sebelumnya</button>' +
       '<span class="text-xs text-slate-500">Hal. ' + meta.page + ' / ' + meta.total_pages + '</span>' +
-      '<button class="btn-ghost px-3 py-1.5 text-xs" data-go="next"' + (meta.page >= meta.total_pages ? ' disabled' : '') + '>Berikutnya</button>' +
+      '<button class="btn-ghost btn-sm" data-go="next"' + (meta.page >= meta.total_pages ? ' disabled' : '') + '>Berikutnya</button>' +
       '</div>';
     wrap.addEventListener('click', function (event) {
       var button = event.target.closest('[data-go]');
@@ -283,17 +283,17 @@
     svg += '</g><text x="70" y="66" text-anchor="middle" font-size="11" fill="#94a3b8">Total</text>' +
            '<text x="70" y="84" text-anchor="middle" font-size="18" font-weight="600" fill="#0f172a">' + angka(total) + '</text></svg>';
 
-    var legend = '<ul class="min-w-0 flex-1 space-y-2">';
+    var legend = '<ul class="w-full space-y-2">';
     items.forEach(function (it, i) {
       var persen = Math.round(Number(it.jumlah || 0) / total * 100);
       legend += '<li class="flex items-center gap-3 text-sm">' +
         '<span class="h-2.5 w-2.5 shrink-0 rounded-full" style="background:' + palette[i % palette.length] + '"></span>' +
-        '<span class="min-w-0 flex-1 truncate text-slate-600">' + esc(it.nama) + '</span>' +
-        '<span class="font-medium text-slate-800">' + angka(it.jumlah) + '</span>' +
-        '<span class="w-9 text-right text-xs text-slate-400">' + persen + '%</span></li>';
+        '<span class="min-w-0 flex-1 break-words text-slate-600">' + esc(it.nama) + '</span>' +
+        '<span class="shrink-0 font-medium text-slate-800">' + angka(it.jumlah) + '</span>' +
+        '<span class="w-9 shrink-0 text-right text-xs text-slate-400">' + persen + '%</span></li>';
     });
     legend += '</ul>';
-    return '<div class="flex flex-col items-center gap-6 sm:flex-row">' + svg + legend + '</div>';
+    return '<div class="flex flex-col items-center gap-5">' + svg + legend + '</div>';
   }
 
 
@@ -478,7 +478,7 @@
     select.innerHTML = state.tahunList.map(function (y) {
       return '<option value="' + y + '"' + (y === state.tahun ? ' selected' : '') + '>Tahun ' + y + '</option>';
     }).join('');
-    select.classList.remove('hidden');
+    select.classList.add('is-ready');
   }
 
   // ------------------------------------------------------------------ peristiwa
