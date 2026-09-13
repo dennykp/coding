@@ -25,6 +25,7 @@
     route: 'dashboard',
     arteriSiap: false,
     notifTotal: null,
+    notifData: null,
     notifTimer: null
   };
 
@@ -599,7 +600,9 @@
     return request('/notifikasi?limit=12').then(function (data) {
       var sebelum = state.notifTotal;
       state.notifTotal = Number(data.total) || 0;
+      state.notifData = data;
       gambarNotif(data);
+      gambarHitungMenu();
       // Beri tahu sekali saja ketika ada tambahan baru, bukan tiap penyegaran.
       if (sebelum !== null && state.notifTotal > sebelum) {
         toast('Ada ' + (state.notifTotal - sebelum) + ' notifikasi baru.', 'info');
@@ -696,8 +699,27 @@
       if (item.section) return '<p class="nav-section">' + esc(item.section) + '</p>';
       return '<a class="nav-link" href="#/' + item.id + '" data-route="' + item.id + '">' +
              '<span class="nav-icon" style="--aksen:' + item.warna + '">' + item.icon + '</span>' +
-             '<span class="truncate">' + esc(item.label) + '</span></a>';
+             '<span class="nav-teks">' + esc(item.label) + '</span>' +
+             '<span class="nav-hitung hidden" data-hitung="' + item.id + '"></span></a>';
     }).join('');
+    gambarHitungMenu();
+  }
+
+  /* Tempelkan jumlah pekerjaan yang menunggu pada menu terkait. */
+  function gambarHitungMenu() {
+    var j = (state.notifData && state.notifData.jumlah) || {};
+    var peta = {
+      verifikasi: j.verifikasi || 0,
+      disposisi: j.disposisi || 0,
+      'surat-masuk': j.surat_masuk || 0
+    };
+    Object.keys(peta).forEach(function (rute) {
+      var lencana = document.querySelector('[data-hitung="' + rute + '"]');
+      if (!lencana) return;
+      var n = peta[rute];
+      lencana.textContent = n > 99 ? '99+' : String(n);
+      lencana.classList.toggle('hidden', !n);
+    });
   }
 
   function markActive(route) {

@@ -443,9 +443,8 @@
                                                   : 'Surat belum diverifikasi',
                       aksi: 'kirim-disposisi', nonaktif: r.status_surat !== 1 }
                   : null,
-                { ikon: 'disposisi', warna: 'kuning',
-                  judul: r.jumlah_disposisi ? 'Lihat jejak disposisi' : 'Belum ada disposisi',
-                  aksi: 'disposisi', nonaktif: !r.jumlah_disposisi },
+                // Jejak disposisi sudah tampil di jendela detail saat baris
+                // diklik, jadi tidak perlu tombolnya sendiri di sini.
                 { ikon: 'salin', warna: 'abu', judul: 'Salin nomor surat', aksi: 'salin' }
               ]); } }
         ],
