@@ -23,7 +23,9 @@
     tahun: new Date().getFullYear(),
     tahunList: [],
     route: 'dashboard',
-    arteriSiap: false
+    arteriSiap: false,
+    notifTotal: null,
+    notifTimer: null
   };
 
   // ------------------------------------------------------------------ utilitas
@@ -226,7 +228,10 @@
     ubah: '<path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125"/>',
     hapus: '<path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.2v.917m7.5 0a48.667 48.667 0 0 0-7.5 0"/>',
     pinjam: '<path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"/>',
-    kembali: '<path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"/>'
+    kembali: '<path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"/>',
+    verifikasi: '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>',
+    kirim: '<path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"/>',
+    selesai: '<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>'
   };
 
   var WARNA_AKSI = {
@@ -293,19 +298,23 @@
   }
 
   // ------------------------------------------------------------------ komponen
+  /* Kartu ringkasan bernuansa pastel, mengikuti gaya dasbor Metronic. */
   function statCard(opts) {
+    var nuansa = opts.tile || 'tile-green';
+    var ikonWarna = opts.tone || 'text-brand-600';
     return '' +
-      '<div class="card p-5">' +
+      '<div class="tile ' + nuansa + '">' +
         '<div class="flex items-start justify-between gap-3">' +
-          '<div class="min-w-0">' +
-            '<p class="text-xs font-medium uppercase tracking-wide text-slate-500">' + esc(opts.label) + '</p>' +
-            '<p class="mt-2 text-3xl font-semibold tracking-tight text-slate-900">' + angka(opts.value) + '</p>' +
-            (opts.hint ? '<p class="mt-1.5 text-xs text-slate-500">' + esc(opts.hint) + '</p>' : '') +
-          '</div>' +
-          '<span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl ' + (opts.tone || 'bg-brand-50 text-brand-600') + '">' +
-            opts.icon +
-          '</span>' +
+          '<span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white shadow-sm ' +
+            ikonWarna + '">' + opts.icon + '</span>' +
+          (opts.trend
+            ? '<span class="rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-semibold text-slate-600">' +
+              esc(opts.trend) + '</span>'
+            : '') +
         '</div>' +
+        '<p class="mt-4 text-3xl font-semibold tracking-tight text-slate-900">' + angka(opts.value) + '</p>' +
+        '<p class="mt-1 text-sm font-medium text-slate-700">' + esc(opts.label) + '</p>' +
+        (opts.hint ? '<p class="mt-0.5 text-xs text-slate-500">' + esc(opts.hint) + '</p>' : '') +
       '</div>';
   }
 
@@ -480,6 +489,7 @@
     openModal: openModal, closeModal: closeModal, modalLoading: modalLoading,
     statCard: statCard, badge: badge, toneStatusSurat: toneStatusSurat,
     avatar: avatar, inisial: inisial, tombolAksi: tombolAksi, salinTeks: salinTeks,
+    boleh: boleh, muatNotif: muatNotif,
     skeletonTable: skeletonTable, emptyRow: emptyRow, pagination: pagination,
     barChart: barChart, donutChart: donutChart, unduh: unduh,
     state: state, BASE: BASE, API: API
@@ -501,6 +511,8 @@
   function logout(silent) {
     state.token = null;
     state.user = null;
+    state.notifTotal = null;
+    if (state.notifTimer) { clearInterval(state.notifTimer); state.notifTimer = null; }
     try { window.localStorage.removeItem(TOKEN_KEY); } catch (e) { /* storage diblokir */ }
     showLogin();
     if (!silent) toast('Anda telah keluar.', 'info');
@@ -516,11 +528,90 @@
 
   function applyUser(user) {
     state.user = user;
-    el('user-avatar').textContent = initialsOf(user.name || user.username);
-    el('user-name').textContent = user.name || user.username || '—';
+    var inisialUser = initialsOf(user.name || user.username);
+    var nama = user.name || user.username || '—';
+    var jabatan = user.nama_jabatan || user.bagian || 'Tanpa jabatan';
+
+    el('user-avatar').textContent = inisialUser;
+    el('user-name').textContent = nama;
     el('user-role').textContent = user.role_label || '—';
-    el('menu-name').textContent = user.name || user.username || '—';
-    el('menu-jabatan').textContent = user.nama_jabatan || user.bagian || 'Tanpa jabatan';
+    el('menu-name').textContent = nama;
+    el('menu-jabatan').textContent = jabatan;
+    el('side-avatar').textContent = inisialUser;
+    el('side-name').textContent = nama;
+    el('side-role').textContent = user.role_label || '—';
+  }
+
+  // ------------------------------------------------------------- notifikasi
+  var IKON_NOTIF = {
+    surat_masuk: { warna: 'bg-sky-50 text-sky-600', d: 'M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859M2.25 13.838V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162' },
+    disposisi: { warna: 'bg-amber-50 text-amber-600', d: 'M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z' },
+    verifikasi: { warna: 'bg-brand-50 text-brand-600', d: 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z' }
+  };
+
+  var RUTE_NOTIF = {
+    surat_masuk: 'surat-masuk',
+    disposisi: 'disposisi',
+    verifikasi: 'verifikasi'
+  };
+
+  function gambarNotif(data) {
+    var badge = el('bell-badge');
+    var total = Number(data && data.total) || 0;
+    badge.textContent = total > 99 ? '99+' : String(total);
+    badge.classList.toggle('hidden', total === 0);
+
+    var hitung = el('bell-count');
+    var j = (data && data.jumlah) || {};
+    hitung.textContent = total
+      ? [
+          j.verifikasi ? j.verifikasi + ' verifikasi' : '',
+          j.surat_masuk ? j.surat_masuk + ' surat' : '',
+          j.disposisi ? j.disposisi + ' disposisi' : ''
+        ].filter(Boolean).join(' · ')
+      : 'Tidak ada yang baru';
+
+    var kotak = el('bell-list');
+    var items = (data && data.items) || [];
+    if (!items.length) {
+      kotak.innerHTML =
+        '<p class="px-4 py-10 text-center text-sm text-slate-400">Belum ada notifikasi.</p>';
+      return;
+    }
+    kotak.innerHTML = items.map(function (n) {
+      var ikon = IKON_NOTIF[n.jenis] || IKON_NOTIF.surat_masuk;
+      return '<button type="button" class="notif-item" data-notif="' + esc(n.jenis) + '"' +
+        (n.id_surat ? ' data-surat="' + esc(n.id_surat) + '"' : '') + '>' +
+        '<span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl ' + ikon.warna + '">' +
+        '<svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">' +
+        '<path stroke-linecap="round" stroke-linejoin="round" d="' + ikon.d + '"/></svg></span>' +
+        '<span class="min-w-0 flex-1">' +
+        '<span class="block text-sm font-medium text-slate-800">' + esc(n.judul) + '</span>' +
+        '<span class="clamp-2 block text-xs text-slate-500">' + esc(n.ringkas || '') + '</span>' +
+        '<span class="mt-0.5 block text-[11px] text-slate-400">' +
+        (n.dari ? esc(n.dari) + ' · ' : '') + tanggal(n.tanggal) + '</span>' +
+        '</span></button>';
+    }).join('');
+  }
+
+  function muatNotif() {
+    if (!state.token) return Promise.resolve();
+    return request('/notifikasi?limit=12').then(function (data) {
+      var sebelum = state.notifTotal;
+      state.notifTotal = Number(data.total) || 0;
+      gambarNotif(data);
+      // Beri tahu sekali saja ketika ada tambahan baru, bukan tiap penyegaran.
+      if (sebelum !== null && state.notifTotal > sebelum) {
+        toast('Ada ' + (state.notifTotal - sebelum) + ' notifikasi baru.', 'info');
+      }
+      return data;
+    }).catch(function () { /* lonceng tidak boleh menjatuhkan halaman */ });
+  }
+
+  function mulaiPantauNotif() {
+    muatNotif();
+    if (state.notifTimer) clearInterval(state.notifTimer);
+    state.notifTimer = setInterval(muatNotif, 60000);
   }
 
   // ------------------------------------------------------------------- navigasi
@@ -534,7 +625,9 @@
     swap: '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"/></svg>',
     clock: '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>',
     grid: '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 6.878V6a2.25 2.25 0 0 1 2.25-2.25h7.5A2.25 2.25 0 0 1 18 6v.878m-12 0c.235-.083.487-.128.75-.128h10.5c.263 0 .515.045.75.128m-12 0A2.25 2.25 0 0 0 4.5 9v.878m13.5-3A2.25 2.25 0 0 1 19.5 9v.878m0 0a2.246 2.246 0 0 0-.75-.128H5.25c-.263 0-.515.045-.75.128m15 0A2.25 2.25 0 0 1 21 12v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6c0-.98.626-1.813 1.5-2.122"/></svg>',
-    doc: '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>'
+    doc: '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>',
+    verifikasi: '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>',
+    tulis: '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"/></svg>'
   };
 
   /* Warna aksen ikon sidebar: cukup pekat agar terbaca di atas hijau tua,
@@ -551,6 +644,11 @@
       subtitle: 'Disposisi surat masuk' },
     { id: 'monitoring', label: 'Monitoring', icon: ICONS.chart, warna: '#fda4af',
       subtitle: 'Tindak lanjut disposisi' },
+    { section: 'Alur Kerja' },
+    { id: 'verifikasi', label: 'Verifikasi Surat', icon: ICONS.verifikasi, warna: '#86efac',
+      subtitle: 'Surat masuk yang menunggu verifikasi', izin: 'verifikasi' },
+    { id: 'buat-surat', label: 'Buat Surat Keluar', icon: ICONS.tulis, warna: '#93c5fd',
+      subtitle: 'Susun surat keluar baru', izin: 'buat_surat' },
     { section: 'Arsip Terintegrasi' },
     { id: 'arsip', label: 'Berkas Arsip', icon: ICONS.archive, warna: '#5eead4',
       subtitle: 'Arsip terintegrasi (model ARTERI)' },
@@ -565,9 +663,36 @@
       subtitle: 'Rekapitulasi & ekspor data' }
   ];
 
+  /* Kewenangan per role, disamakan dengan pembatasan di API. */
+  var IZIN = {
+    verifikasi: [1, 3, 5],
+    buat_surat: [1, 3, 5],
+    disposisi: [1, 2, 10]
+  };
+
+  function boleh(nama) {
+    var role = state.user ? Number(state.user.role_id) : 0;
+    return (IZIN[nama] || []).indexOf(role) !== -1;
+  }
+
+  function menuTampil() {
+    var hasil = [];
+    MENU.forEach(function (item) {
+      if (item.section) { hasil.push(item); return; }
+      if (item.izin && !boleh(item.izin)) return;
+      hasil.push(item);
+    });
+    // Buang judul kelompok yang seluruh isinya tersembunyi.
+    return hasil.filter(function (item, i) {
+      if (!item.section) return true;
+      var berikut = hasil[i + 1];
+      return berikut && !berikut.section;
+    });
+  }
+
   function buildNav() {
     var nav = el('nav');
-    nav.innerHTML = MENU.map(function (item) {
+    nav.innerHTML = menuTampil().map(function (item) {
       if (item.section) return '<p class="nav-section">' + esc(item.section) + '</p>';
       return '<a class="nav-link" href="#/' + item.id + '" data-route="' + item.id + '">' +
              '<span class="nav-icon" style="--aksen:' + item.warna + '">' + item.icon + '</span>' +
@@ -598,7 +723,8 @@
   function navigate() {
     var hash = (window.location.hash || '').replace(/^#\/?/, '') || 'dashboard';
     var route = hash.split('?')[0];
-    if (!MENU.some(function (m) { return m.id === route; })) route = 'dashboard';
+    var cocok = MENU.filter(function (m) { return m.id === route; })[0];
+    if (!cocok || (cocok.izin && !boleh(cocok.izin))) route = 'dashboard';
     state.route = route;
     markActive(route);
     closeSidebar();
@@ -695,9 +821,37 @@
 
     el('user-button').addEventListener('click', function (event) {
       event.stopPropagation();
+      el('bell-menu').classList.add('hidden');
       el('user-menu').classList.toggle('hidden');
     });
-    document.addEventListener('click', function () { el('user-menu').classList.add('hidden'); });
+
+    el('bell-button').addEventListener('click', function (event) {
+      event.stopPropagation();
+      el('user-menu').classList.add('hidden');
+      var menu = el('bell-menu');
+      menu.classList.toggle('hidden');
+      if (!menu.classList.contains('hidden')) muatNotif();
+    });
+
+    el('bell-menu').addEventListener('click', function (event) {
+      event.stopPropagation();
+      var baris = event.target.closest('[data-notif]');
+      if (!baris) return;
+      el('bell-menu').classList.add('hidden');
+      var rute = RUTE_NOTIF[baris.getAttribute('data-notif')] || 'surat-masuk';
+      var surat = baris.getAttribute('data-surat');
+      window.location.hash = '#/' + rute;
+      if (surat && window.__simperaHelpers) {
+        setTimeout(function () {
+          window.__simperaHelpers.detailSuratMasuk(parseInt(surat, 10));
+        }, 700);
+      }
+    });
+
+    document.addEventListener('click', function () {
+      el('user-menu').classList.add('hidden');
+      el('bell-menu').classList.add('hidden');
+    });
 
     // Delegasi tombol unduh di seluruh halaman.
     document.addEventListener('click', function (event) {
@@ -735,7 +889,10 @@
           .then(function (s) { state.arteriSiap = !!s.siap; })
           .catch(function () { state.arteriSiap = false; });
       })
-      .then(function () { navigate(); });
+      .then(function () {
+        mulaiPantauNotif();
+        navigate();
+      });
   }
 
   function boot() {

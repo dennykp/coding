@@ -303,16 +303,17 @@
         '<div class="space-y-5">' +
           '<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">' +
             S.statCard({ label: 'Surat Masuk ' + tahun, value: sum.surat_masuk.total,
-                         hint: angka(sum.surat_masuk.belum) + ' belum diverifikasi', icon: ICON.in }) +
+                         hint: angka(sum.surat_masuk.belum) + ' belum diverifikasi',
+                         icon: ICON.in, tile: 'tile-green', tone: 'text-brand-600' }) +
             S.statCard({ label: 'Surat Keluar ' + tahun, value: sum.surat_keluar.total,
                          hint: angka(sum.surat_keluar.disetujui) + ' disetujui',
-                         icon: ICON.out, tone: 'bg-sky-50 text-sky-600' }) +
+                         icon: ICON.out, tile: 'tile-sky', tone: 'text-sky-600' }) +
             S.statCard({ label: 'Disposisi ' + tahun, value: sum.disposisi.total,
                          hint: angka(sum.disposisi.berjalan) + ' masih berjalan',
-                         icon: ICON.disp, tone: 'bg-amber-50 text-amber-600' }) +
+                         icon: ICON.disp, tile: 'tile-amber', tone: 'text-amber-600' }) +
             S.statCard({ label: 'Berkas Arsip', value: sum.arsip.total,
                          hint: angka(sum.arsip.dipinjam) + ' sedang dipinjam',
-                         icon: ICON.arc, tone: 'bg-violet-50 text-violet-600' }) +
+                         icon: ICON.arc, tile: 'tile-violet', tone: 'text-violet-600' }) +
           '</div>' +
 
           '<div class="grid gap-5 xl:grid-cols-3">' +
@@ -432,6 +433,16 @@
                 { ikon: 'detail', warna: 'hijau', judul: 'Lihat detail surat', aksi: 'detail' },
                 { ikon: 'berkas', warna: 'biru', judul: r.file_url ? 'Buka lampiran' : 'Tidak ada lampiran',
                   aksi: 'berkas', nonaktif: !r.file_url },
+                S.boleh('verifikasi')
+                  ? { ikon: 'verifikasi', warna: 'hijau',
+                      judul: 'Verifikasi surat', aksi: 'verifikasi' }
+                  : null,
+                S.boleh('disposisi')
+                  ? { ikon: 'kirim', warna: 'ungu',
+                      judul: r.status_surat === 1 ? 'Disposisikan surat'
+                                                  : 'Surat belum diverifikasi',
+                      aksi: 'kirim-disposisi', nonaktif: r.status_surat !== 1 }
+                  : null,
                 { ikon: 'disposisi', warna: 'kuning',
                   judul: r.jumlah_disposisi ? 'Lihat jejak disposisi' : 'Belum ada disposisi',
                   aksi: 'disposisi', nonaktif: !r.jumlah_disposisi },
@@ -439,10 +450,13 @@
               ]); } }
         ],
         onRow: function (row) { detailSuratMasuk(row.id_surat); },
-        onAksi: function (aksi, row) {
+        onAksi: function (aksi, row, tombol, tabel) {
           if (!row) return;
+          var alur = window.__simperaAlur || {};
           if (aksi === 'detail') detailSuratMasuk(row.id_surat);
           else if (aksi === 'berkas' && row.file_url) window.open(row.file_url, '_blank', 'noopener');
+          else if (aksi === 'verifikasi') alur.formVerifikasi(row, tabel);
+          else if (aksi === 'kirim-disposisi') alur.formDisposisi(row.id_surat, tabel);
           else if (aksi === 'disposisi') detailMonitoring(row);
           else if (aksi === 'salin') S.salinTeks(row.nomor_surat || '');
         }
@@ -638,17 +652,37 @@
             return S.tombolAksi([
               { ikon: 'detail', warna: 'hijau', judul: 'Lihat detail surat', aksi: 'detail',
                 nonaktif: !r.id_surat },
-              { ikon: 'disposisi', warna: 'kuning', judul: 'Lihat jejak disposisi', aksi: 'jejak',
-                nonaktif: !r.id_surat },
+              S.boleh('disposisi')
+                ? { ikon: 'kirim', warna: 'ungu', judul: 'Teruskan disposisi',
+                    aksi: 'teruskan', nonaktif: !r.id_surat }
+                : null,
+              !r.selesai
+                ? { ikon: 'selesai', warna: 'hijau', judul: 'Tandai selesai', aksi: 'selesai' }
+                : { ikon: 'selesai', warna: 'hijau', judul: 'Sudah selesai',
+                    aksi: 'selesai', nonaktif: true },
               { ikon: 'salin', warna: 'abu', judul: 'Salin nomor surat', aksi: 'salin' }
             ]); } }
       ],
       onRow: function (row) { if (row.id_surat) detailSuratMasuk(row.id_surat); },
-      onAksi: function (aksi, row) {
+      onAksi: function (aksi, row, tombol, tabel) {
         if (!row) return;
+        var alur = window.__simperaAlur || {};
         if (aksi === 'detail' && row.id_surat) detailSuratMasuk(row.id_surat);
-        else if (aksi === 'jejak' && row.id_surat) detailMonitoring(row);
+        else if (aksi === 'teruskan' && row.id_surat) alur.formDisposisi(row.id_surat, tabel);
         else if (aksi === 'salin') S.salinTeks(row.nomor_surat || '');
+        else if (aksi === 'selesai') {
+          tombol.disabled = true;
+          request('/disposisi/' + row.id_disposisi + '/selesai', {
+            method: 'POST', body: { catatan: 'Diselesaikan melalui SIMPERA v2' }
+          }).then(function () {
+            S.toast('Disposisi ditandai selesai.', 'ok');
+            tabel.reload();
+            S.muatNotif();
+          }).catch(function (err) {
+            S.toast(err.message, 'err');
+            tombol.disabled = false;
+          });
+        }
       }
     }).load();
   };

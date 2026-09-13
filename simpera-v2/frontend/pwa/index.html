@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#047857">
+<meta name="description" content="Verifikasi dan disposisi surat UNISMA dari ponsel.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SIMPERA">
+<title>SIMPERA v2 Mobile</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="../assets/app.css">
+</head>
+<body class="h-full bg-canvas text-slate-700 antialiased">
+
+<!-- ===================== MASUK ===================== -->
+<section id="m-login" class="hidden min-h-full">
+  <div class="relative min-h-screen overflow-hidden bg-brand-700 px-6 pb-10 pt-16 text-white">
+    <div class="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full border-[32px] border-white/10"></div>
+    <div class="pointer-events-none absolute -left-16 top-56 h-56 w-56 rounded-full border-[24px] border-white/5"></div>
+
+    <div class="relative">
+      <div class="grid h-14 w-14 place-items-center rounded-2xl bg-white/15 ring-1 ring-white/25 backdrop-blur">
+        <svg class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"/></svg>
+      </div>
+      <h1 class="mt-6 text-3xl font-semibold leading-tight tracking-tight">SIMPERA v2</h1>
+      <p class="mt-2 max-w-xs text-emerald-50/90">
+        Verifikasi dan disposisi surat langsung dari ponsel, memakai akun e-surat Anda.
+      </p>
+    </div>
+
+    <form id="m-form-login" class="relative mt-10 space-y-4" novalidate>
+      <div>
+        <label for="m-username" class="mb-1.5 block text-sm font-medium text-emerald-50">Username</label>
+        <input id="m-username" name="username" type="text" autocomplete="username" required
+               class="w-full rounded-2xl border border-white/25 bg-white/15 px-4 py-3.5 text-white placeholder-emerald-100/60 backdrop-blur focus:border-white/60 focus:outline-none focus:ring-2 focus:ring-white/30"
+               placeholder="username e-surat">
+      </div>
+      <div>
+        <label for="m-password" class="mb-1.5 block text-sm font-medium text-emerald-50">Kata sandi</label>
+        <div class="relative">
+          <input id="m-password" name="password" type="password" autocomplete="current-password" required
+                 class="w-full rounded-2xl border border-white/25 bg-white/15 px-4 py-3.5 pr-12 text-white placeholder-emerald-100/60 backdrop-blur focus:border-white/60 focus:outline-none focus:ring-2 focus:ring-white/30"
+                 placeholder="••••••••">
+          <button type="button" id="m-lihat-sandi" aria-label="Tampilkan kata sandi"
+                  class="absolute inset-y-0 right-0 grid w-12 place-items-center text-emerald-100/80">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <p id="m-login-error" class="hidden rounded-2xl bg-rose-500/20 px-4 py-3 text-sm text-rose-50 ring-1 ring-rose-200/40"></p>
+
+      <button type="submit" id="m-login-submit"
+              class="flex w-full items-center justify-center gap-2 rounded-2xl bg-white py-3.5 text-base font-semibold text-brand-700 shadow-lg shadow-brand-900/20 active:scale-[.99]">
+        <span class="m-label">Masuk</span>
+        <svg class="m-spin hidden h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"/></svg>
+      </button>
+    </form>
+
+    <p class="relative mt-8 text-center text-xs text-emerald-100/70">
+      Tambahkan ke layar utama untuk membukanya seperti aplikasi biasa.
+    </p>
+  </div>
+</section>
+
+<!-- ===================== APLIKASI ===================== -->
+<section id="m-app" class="hidden min-h-full pb-24">
+  <header class="sticky top-0 z-20 bg-brand-700 px-5 pb-5 pt-[calc(env(safe-area-inset-top)+1rem)] text-white">
+    <div class="flex items-center gap-3">
+      <span id="m-avatar" class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/20 text-sm font-semibold ring-1 ring-white/25">?</span>
+      <div class="min-w-0 flex-1">
+        <p id="m-salam" class="text-xs text-emerald-100/80">Selamat datang</p>
+        <p id="m-nama" class="truncate text-base font-semibold leading-tight">—</p>
+      </div>
+      <button id="m-bell" class="relative grid h-10 w-10 place-items-center rounded-xl bg-white/15" aria-label="Notifikasi">
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/></svg>
+        <span id="m-bell-badge" class="absolute -right-1 -top-1 hidden min-w-[1.25rem] rounded-full bg-rose-500 px-1 text-center text-[10px] font-bold leading-5 text-white ring-2 ring-brand-700"></span>
+      </button>
+    </div>
+    <p id="m-jabatan" class="mt-3 truncate text-xs text-emerald-100/70">—</p>
+  </header>
+
+  <main id="m-page" class="px-4 pt-4"></main>
+</section>
+
+<!-- Navigasi bawah -->
+<nav id="m-nav" class="fixed inset-x-0 bottom-0 z-30 hidden border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
+  <div class="grid grid-cols-4"></div>
+</nav>
+
+<!-- Lembar geser & toast -->
+<div id="m-sheet" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" data-sheet-close></div>
+  <div class="absolute inset-x-0 bottom-0 max-h-[92vh] overflow-hidden rounded-t-3xl bg-white">
+    <div class="flex items-start gap-3 border-b border-slate-100 px-5 py-4">
+      <div class="min-w-0 flex-1">
+        <span class="mx-auto mb-3 block h-1 w-10 rounded-full bg-slate-200"></span>
+        <h2 id="m-sheet-title" class="truncate text-base font-semibold text-slate-900">Detail</h2>
+      </div>
+      <button data-sheet-close class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" aria-label="Tutup">
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div id="m-sheet-body" class="max-h-[75vh] overflow-y-auto px-5 py-5"></div>
+  </div>
+</div>
+
+<div id="m-toasts" class="pointer-events-none fixed inset-x-4 bottom-24 z-[60] flex flex-col gap-2"></div>
+
+<div id="m-boot" class="grid min-h-screen place-items-center">
+  <div class="flex items-center gap-3 text-slate-400">
+    <svg class="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"/></svg>
+    <span class="text-sm">Memuat…</span>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

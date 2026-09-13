@@ -80,15 +80,15 @@
               icon: '<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z"/></svg>' }) +
             S.statCard({ label: 'Dari surat keluar', value: stat.arsip.dari_surat_keluar,
               hint: angka(prevKeluar.belum_tersalin) + ' surat belum tersalin',
-              tone: 'bg-sky-50 text-sky-600',
+              tile: 'tile-sky', tone: 'text-sky-600',
               icon: '<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"/></svg>' }) +
             S.statCard({ label: 'Dari surat masuk', value: stat.arsip.dari_surat_masuk,
               hint: angka(prevMasuk.belum_tersalin) + ' surat belum tersalin',
-              tone: 'bg-amber-50 text-amber-600',
+              tile: 'tile-amber', tone: 'text-amber-600',
               icon: '<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859M2.25 13.838V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162"/></svg>' }) +
             S.statCard({ label: 'Sedang dipinjam', value: stat.sirkulasi.sedang_dipinjam,
               hint: angka(stat.sirkulasi.terlambat) + ' melewati batas kembali',
-              tone: 'bg-violet-50 text-violet-600',
+              tile: 'tile-violet', tone: 'text-violet-600',
               icon: '<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"/></svg>' }) +
           '</div>' +
 

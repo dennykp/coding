@@ -42,6 +42,11 @@ body { -webkit-font-smoothing: antialiased; }
 .field-search { padding-left: 2.25rem; }
 .field-eye { padding-right: 2.75rem; }
 
+/* Kotak centang dan tombol pilihan memakai warna tema, bukan biru bawaan
+   peramban. Utilitas text-* Tailwind tidak berpengaruh tanpa plugin forms. */
+input[type="checkbox"],
+input[type="radio"] { accent-color: #059669; }
+
 /* --- tombol --- */
 .btn-primary {
   display: inline-flex; align-items: center; gap: .5rem;
@@ -77,45 +82,64 @@ body { -webkit-font-smoothing: antialiased; }
   box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 8px 24px -14px rgba(15,23,42,.12);
 }
 
+/* Sidebar terang bergaya Metronic: menu aktif memakai pil hijau lembut,
+   bukan blok gelap. */
 .nav-link {
   display: flex; align-items: center; gap: .75rem;
-  border-radius: .75rem; padding: .6rem .75rem;
-  font-size: .875rem; font-weight: 500; color: rgba(209,250,229,.78);
+  border-radius: .75rem; padding: .55rem .7rem;
+  font-size: .875rem; font-weight: 500; color: #475569;
   transition: background .15s, color .15s;
 }
-.nav-link:hover { background: rgba(255,255,255,.08); color: #fff; }
-.nav-link.active { background: rgba(255,255,255,.14); color: #fff; box-shadow: inset 3px 0 0 #6ee7b7; }
+.nav-link:hover { background: #f1f5f9; color: #0f172a; }
+.nav-link.active { background: #ecfdf5; color: #065f46; font-weight: 600; }
 
 /* Ikon sidebar: kotak kecil bernuansa warna aksen menu masing-masing.
    Saat menu aktif, kotak terisi penuh warna aksennya. */
 .nav-icon {
   display: grid; place-items: center; flex: none;
   width: 2rem; height: 2rem; border-radius: .625rem;
-  background: color-mix(in srgb, var(--aksen) 20%, transparent);
-  color: var(--aksen);
+  background: color-mix(in srgb, var(--aksen) 22%, #fff);
+  color: color-mix(in srgb, var(--aksen) 75%, #0f172a);
   transition: background .15s, color .15s, box-shadow .15s;
 }
 .nav-link:hover .nav-icon {
-  background: color-mix(in srgb, var(--aksen) 32%, transparent);
+  background: color-mix(in srgb, var(--aksen) 36%, #fff);
 }
 .nav-link.active .nav-icon {
-  background: var(--aksen);
-  color: #064e3b;
-  box-shadow: 0 4px 12px -4px color-mix(in srgb, var(--aksen) 70%, transparent);
+  background: color-mix(in srgb, var(--aksen) 85%, #0f172a);
+  color: #fff;
+  box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--aksen) 80%, transparent);
 }
 .nav-icon svg { width: 1.05rem; height: 1.05rem; flex: none; }
 
-/* Cadangan untuk peramban tanpa color-mix(): tetap terbaca, tanpa nuansa. */
-@supports not (background: color-mix(in srgb, red 20%, transparent)) {
-  .nav-icon { background: rgba(255,255,255,.12); }
-  .nav-link:hover .nav-icon { background: rgba(255,255,255,.2); }
-  .nav-link.active .nav-icon { background: var(--aksen); color: #064e3b; }
+/* Cadangan untuk peramban tanpa color-mix(). */
+@supports not (background: color-mix(in srgb, red 20%, #fff)) {
+  .nav-icon { background: #f1f5f9; color: #475569; }
+  .nav-link:hover .nav-icon { background: #e2e8f0; }
+  .nav-link.active .nav-icon { background: #059669; color: #fff; }
 }
 
 .nav-section {
-  padding: 1rem .75rem .35rem; font-size: .65rem; font-weight: 600;
-  letter-spacing: .12em; text-transform: uppercase; color: rgba(167,243,208,.55);
+  padding: 1rem .7rem .35rem; font-size: .65rem; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase; color: #94a3b8;
 }
+
+/* Kartu ringkasan bernuansa pastel (gaya dasbor Metronic terbaru). */
+.tile { border-radius: 1.25rem; padding: 1.25rem; border: 1px solid transparent; }
+.tile-green  { background: #ecfdf5; border-color: #a7f3d0; }
+.tile-sky    { background: #eff6ff; border-color: #bfdbfe; }
+.tile-amber  { background: #fffbeb; border-color: #fde68a; }
+.tile-violet { background: #f5f3ff; border-color: #ddd6fe; }
+.tile-rose   { background: #fff1f2; border-color: #fecdd3; }
+
+/* Baris notifikasi pada lonceng. */
+.notif-item {
+  display: flex; gap: .75rem; width: 100%; text-align: left;
+  padding: .75rem 1rem; border-bottom: 1px solid #f1f5f9;
+  transition: background .15s;
+}
+.notif-item:last-child { border-bottom: 0; }
+.notif-item:hover { background: #f8fafc; }
 
 /* Pemilih tahun: baru tampil setelah daftar tahun siap, dan hanya pada
    layar lebar agar judul halaman tidak terpotong di ponsel. */

@@ -4,7 +4,10 @@ module.exports = {
     '../index.html',
     '../assets/app.js',
     '../assets/pages.js',
-    '../assets/pages2.js'
+    '../assets/pages2.js',
+    '../assets/pages3.js',
+    '../pwa/index.html',
+    '../pwa/app.js'
   ],
   theme: {
     extend: {
