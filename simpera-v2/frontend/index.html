@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="SIMPERA v2 — Sistem Informasi Persuratan & Arsip Terintegrasi UNISMA">
+<title>SIMPERA v2 — Persuratan &amp; Arsip Terintegrasi</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23059669'/><path d='M22 34h56v34H22z' fill='none' stroke='white' stroke-width='7' stroke-linejoin='round'/><path d='M22 36l28 20 28-20' fill='none' stroke='white' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<script src="assets/tailwind.js"></script>
+<script src="assets/tailwind.config.js"></script>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body class="h-full bg-canvas text-slate-700 antialiased">
+
+<!-- ===================== LAYAR MASUK ===================== -->
+<section id="view-login" class="min-h-full hidden">
+  <div class="min-h-screen grid lg:grid-cols-2">
+    <div class="relative hidden lg:flex flex-col justify-between overflow-hidden bg-brand-700 p-12 text-white">
+      <div class="pointer-events-none absolute inset-0 opacity-60"
+           style="background:radial-gradient(1000px 500px at 10% -10%,#10b981 0%,transparent 55%),radial-gradient(800px 500px at 110% 110%,#047857 0%,transparent 60%)"></div>
+      <div class="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full border-[36px] border-white/10"></div>
+      <div class="pointer-events-none absolute -left-16 bottom-10 h-72 w-72 rounded-full border-[28px] border-white/5"></div>
+
+      <div class="relative flex items-center gap-3">
+        <div class="grid h-11 w-11 place-items-center rounded-2xl bg-white/15 ring-1 ring-white/25 backdrop-blur">
+          <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"/></svg>
+        </div>
+        <div>
+          <p class="text-lg font-semibold tracking-tight">SIMPERA v2</p>
+          <p class="text-xs text-emerald-100/80">Universitas Islam Malang</p>
+        </div>
+      </div>
+
+      <div class="relative max-w-md">
+        <h1 class="text-4xl font-semibold leading-tight tracking-tight">
+          Persuratan dan kearsipan dalam satu alur kerja.
+        </h1>
+        <p class="mt-5 text-emerald-50/90 leading-relaxed">
+          Surat masuk, surat keluar, dan disposisi dari e-surat berlanjut mulus
+          ke pengelolaan arsip: klasifikasi, boks, lokasi simpan, masa retensi,
+          hingga peminjaman berkas.
+        </p>
+        <dl class="mt-10 grid grid-cols-3 gap-4 text-center">
+          <div class="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15 backdrop-blur">
+            <dt class="text-[11px] uppercase tracking-wider text-emerald-100/70">Modul</dt>
+            <dd class="mt-1 text-2xl font-semibold" id="login-stat-modul">9</dd>
+          </div>
+          <div class="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15 backdrop-blur">
+            <dt class="text-[11px] uppercase tracking-wider text-emerald-100/70">Sumber</dt>
+            <dd class="mt-1 text-2xl font-semibold">2</dd>
+          </div>
+          <div class="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15 backdrop-blur">
+            <dt class="text-[11px] uppercase tracking-wider text-emerald-100/70">Akun</dt>
+            <dd class="mt-1 text-2xl font-semibold">e-surat</dd>
+          </div>
+        </dl>
+      </div>
+
+      <p class="relative text-xs text-emerald-100/70">
+        Memakai akun e-surat yang sudah Anda miliki. Data persuratan dibaca tanpa perubahan.
+      </p>
+    </div>
+
+    <div class="flex items-center justify-center p-6 sm:p-12">
+      <div class="w-full max-w-sm">
+        <div class="mb-8 flex items-center gap-3 lg:hidden">
+          <div class="grid h-11 w-11 place-items-center rounded-2xl bg-brand-600 text-white">
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"/></svg>
+          </div>
+          <div>
+            <p class="text-lg font-semibold text-slate-800">SIMPERA v2</p>
+            <p class="text-xs text-slate-500">Universitas Islam Malang</p>
+          </div>
+        </div>
+
+        <h2 class="text-2xl font-semibold tracking-tight text-slate-900">Masuk ke akun Anda</h2>
+        <p class="mt-2 text-sm text-slate-500">Gunakan username dan kata sandi e-surat.</p>
+
+        <form id="form-login" class="mt-8 space-y-5" novalidate>
+          <div>
+            <label for="login-username" class="mb-1.5 block text-sm font-medium text-slate-700">Username</label>
+            <input id="login-username" name="username" type="text" autocomplete="username" required
+                   class="field" placeholder="username e-surat">
+          </div>
+          <div>
+            <label for="login-password" class="mb-1.5 block text-sm font-medium text-slate-700">Kata sandi</label>
+            <div class="relative">
+              <input id="login-password" name="password" type="password" autocomplete="current-password" required
+                     class="field pr-11" placeholder="••••••••">
+              <button type="button" id="toggle-password" aria-label="Tampilkan kata sandi"
+                      class="absolute inset-y-0 right-0 grid w-11 place-items-center text-slate-400 hover:text-brand-600">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <p id="login-error" class="hidden rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"></p>
+
+          <button type="submit" id="login-submit" class="btn-primary w-full justify-center py-3 text-base">
+            <span class="login-label">Masuk</span>
+            <svg class="login-spin hidden h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"/></svg>
+          </button>
+        </form>
+
+        <p class="mt-8 text-center text-xs text-slate-400">
+          SIMPERA v2 &middot; API Python &middot; Arsip Terintegrasi
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== APLIKASI ===================== -->
+<section id="view-app" class="hidden min-h-full">
+  <div class="flex min-h-screen">
+
+    <!-- Sidebar -->
+    <aside id="sidebar"
+           class="fixed inset-y-0 left-0 z-40 w-72 -translate-x-full bg-brand-800 text-emerald-50 transition-transform duration-200 lg:translate-x-0">
+      <div class="flex h-16 items-center gap-3 px-5">
+        <div class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/15 ring-1 ring-white/20">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"/></svg>
+        </div>
+        <div class="min-w-0">
+          <p class="truncate text-sm font-semibold tracking-tight">SIMPERA v2</p>
+          <p class="truncate text-[11px] text-emerald-200/70">e-surat &times; Arteri</p>
+        </div>
+        <button id="sidebar-close" class="ml-auto rounded-lg p-1.5 text-emerald-200 hover:bg-white/10 lg:hidden" aria-label="Tutup menu">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <nav id="nav" class="h-[calc(100vh-4rem)] space-y-1 overflow-y-auto px-3 pb-8"></nav>
+    </aside>
+    <div id="sidebar-backdrop" class="fixed inset-0 z-30 hidden bg-slate-900/50 lg:hidden"></div>
+
+    <!-- Konten -->
+    <div class="flex min-w-0 flex-1 flex-col lg:pl-72">
+      <header class="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-slate-200/80 bg-white/85 px-4 backdrop-blur sm:px-6">
+        <button id="sidebar-open" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden" aria-label="Buka menu">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg>
+        </button>
+        <div class="min-w-0">
+          <h1 id="page-title" class="truncate text-base font-semibold tracking-tight text-slate-900">Dashboard</h1>
+          <p id="page-subtitle" class="truncate text-xs text-slate-500"></p>
+        </div>
+
+        <div class="ml-auto flex items-center gap-2 sm:gap-3">
+          <select id="filter-tahun" class="hidden h-9 rounded-xl border-slate-200 bg-white pl-3 pr-8 text-sm text-slate-600 focus:border-brand-500 focus:ring-brand-500 sm:block"></select>
+          <div class="relative">
+            <button id="user-button" class="flex items-center gap-2 rounded-xl py-1.5 pl-1.5 pr-2 hover:bg-slate-100">
+              <span id="user-avatar" class="grid h-8 w-8 place-items-center rounded-lg bg-brand-600 text-xs font-semibold text-white">?</span>
+              <span class="hidden text-left sm:block">
+                <span id="user-name" class="block max-w-[10rem] truncate text-sm font-medium leading-tight text-slate-800">—</span>
+                <span id="user-role" class="block text-[11px] leading-tight text-slate-500">—</span>
+              </span>
+              <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
+            </button>
+            <div id="user-menu" class="absolute right-0 mt-2 hidden w-60 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl shadow-slate-900/5">
+              <div class="rounded-xl bg-slate-50 px-3 py-2.5">
+                <p id="menu-name" class="truncate text-sm font-medium text-slate-800">—</p>
+                <p id="menu-jabatan" class="mt-0.5 truncate text-xs text-slate-500">—</p>
+              </div>
+              <button id="btn-logout" class="mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-rose-600 hover:bg-rose-50">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75"/></svg>
+                Keluar
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main id="page" class="flex-1 p-4 sm:p-6"></main>
+
+      <footer class="border-t border-slate-200/80 px-6 py-4 text-center text-xs text-slate-400">
+        SIMPERA v2 &middot; Universitas Islam Malang &middot; API Python (FastAPI) &amp; modul Arsip Terintegrasi
+      </footer>
+    </div>
+  </div>
+</section>
+
+<!-- Toast + Modal -->
+<div id="toasts" class="pointer-events-none fixed bottom-5 right-5 z-[60] flex w-80 flex-col gap-2"></div>
+<div id="modal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" data-modal-close></div>
+  <div class="relative mx-auto flex min-h-full max-w-3xl items-center p-4">
+    <div class="w-full overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div class="flex items-start gap-4 border-b border-slate-100 px-6 py-4">
+        <h3 id="modal-title" class="min-w-0 flex-1 truncate text-base font-semibold text-slate-900">Detail</h3>
+        <button class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600" data-modal-close aria-label="Tutup">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div id="modal-body" class="max-h-[70vh] overflow-y-auto px-6 py-5"></div>
+    </div>
+  </div>
+</div>
+
+<div id="boot" class="grid min-h-screen place-items-center">
+  <div class="flex items-center gap-3 text-slate-400">
+    <svg class="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"/></svg>
+    <span class="text-sm">Memuat SIMPERA v2…</span>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script src="assets/pages.js"></script>
+<script src="assets/pages2.js"></script>
+</body>
+</html>

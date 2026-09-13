@@ -1,0 +1,34 @@
+# ============================================================================
+# SIMPERA v2 — hanya berlaku untuk folder /simpera-v2.
+# Aturan mod_rewrite pada .htaccess anak menggantikan aturan induk untuk
+# folder ini, sehingga permintaan /simpera-v2/api/... tidak lagi jatuh ke
+# index.php Laravel. Berkas .htaccess milik aplikasi lain tidak disentuh.
+# ============================================================================
+
+RewriteEngine On
+RewriteBase /simpera-v2/
+
+# Teruskan header Authorization (dibutuhkan JWT).
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# Proksi /simpera-v2/api/... ke layanan Python (uvicorn) di port 8123.
+RewriteRule ^api/(.*)$ http://127.0.0.1:8123/api/$1 [P,L,QSA]
+RewriteRule ^api$      http://127.0.0.1:8123/api/health [P,L]
+
+# Sisanya dilayani sebagai berkas statis; rute SPA memakai hash (#/...)
+# sehingga tidak memerlukan fallback tambahan.
+DirectoryIndex index.html
+
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set Referrer-Policy "same-origin"
+  <FilesMatch "\.(js|css)$">
+    Header set Cache-Control "public, max-age=3600"
+  </FilesMatch>
+</IfModule>
+
+# Jangan pernah sajikan berkas konfigurasi dari folder ini.
+<FilesMatch "^\.(env|git)">
+  Require all denied
+</FilesMatch>
