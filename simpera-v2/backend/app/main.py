@@ -42,7 +42,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-for module in (auth, dashboard, surat, disposisi, master, laporan, aksi, arteri):
+# `aksi` didaftarkan sebelum `surat` supaya rute tetap seperti
+# /surat-keluar/nomor-berikutnya tidak keburu tertangkap oleh rute
+# berparameter /surat-keluar/{id_suratkel}.
+for module in (auth, dashboard, aksi, surat, disposisi, master, laporan, arteri):
     app.include_router(module.router, prefix="/api")
 
 

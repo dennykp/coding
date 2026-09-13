@@ -16,6 +16,7 @@ Tidak ada berkas aplikasi Laravel yang diubah.
 from __future__ import annotations
 
 import datetime as dt
+import re
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -275,11 +276,11 @@ def nomor_berikutnya(user: dict[str, Any] = Depends(security.current_user)) -> A
     """Usulan nomor surat berikutnya, memakai rumus yang sama dengan Laravel."""
     _wajib_role(user, ROLE_BUAT_SURAT, "membuat surat keluar")
     terbesar = db.fetch_value("SELECT MAX(nomor) FROM tt_suratkeluar", default="0")
-    try:
-        angka = int(str(terbesar or "0")[:10])
-    except ValueError:
-        angka = 0
-    return {"nomor": str(angka + 1)}
+    # Laravel memakai `(int) substr($kode, 0, 10)`; pemeran (int) di PHP
+    # mengambil deretan angka di awal teks, jadi perilakunya ditiru di sini.
+    awal = re.match(r"\s*(\d+)", str(terbesar or "")[:10])
+    angka = int(awal.group(1)) if awal else 0
+    return {"nomor": str(angka + 1), "dasar": terbesar}
 
 
 @router.post("/surat-keluar", status_code=201)
