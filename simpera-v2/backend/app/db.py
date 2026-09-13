@@ -150,6 +150,87 @@ def run_schema(path: str) -> list[str]:
     return applied
 
 
+# ============================================================================
+# Penulisan terbatas ke tabel e-surat
+#
+# Verifikasi, disposisi, dan pembuatan surat keluar memang harus menulis ke
+# tabel milik aplikasi Laravel. Supaya tetap terkendali, hanya pernyataan
+# yang terdaftar di bawah ini yang boleh dijalankan — tidak ada SQL bebas
+# yang bisa menyentuh tabel e-surat. Setiap pernyataan disalin dari perilaku
+# controller Laravel yang bersangkutan agar hasilnya identik dengan aplikasi
+# lama (lihat docs/ALUR.md).
+# ============================================================================
+
+ESURAT_WRITES: dict[str, str] = {
+    # SuratMasukController@update_approve
+    "verifikasi_surat_masuk": (
+        "UPDATE tt_suratmasuk SET status_surat = %s, catatan_approve = %s, "
+        "updated_at = NOW() WHERE id_surat = %s"
+    ),
+    # Penanda surat sudah dibuka oleh jabatan tujuan (dipakai lonceng notifikasi).
+    "tandai_surat_dibaca": (
+        "UPDATE tt_suratmasuk SET read_surat = 1 WHERE id_surat = %s AND id_jabatan = %s"
+    ),
+    # DisposisiSuratController@simpan
+    "tutup_disposisi_induk": (
+        "UPDATE tt_disposisi SET status_selesai = 1 WHERE id_disposisi = %s"
+    ),
+    "tambah_disposisi": (
+        "INSERT INTO tt_disposisi "
+        "(id_surat, tgl_disposisi, id_jabatan, isi_disposisi, jam_disposisi, "
+        " id_usrz, opsi, tujuan_disposisi_lainnya, dilihat, created_at) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 0, NOW())"
+    ),
+    "tandai_disposisi_dilihat": (
+        "UPDATE tt_disposisi SET dilihat = 1 WHERE id_disposisi = %s AND id_jabatan = %s"
+    ),
+    # DisposisiSuratController@update_status_selesai_disposisi
+    "selesaikan_disposisi": (
+        "UPDATE tt_disposisi SET status_selesai = 1, catatan_selesai = %s "
+        "WHERE id_disposisi = %s AND id_jabatan = %s"
+    ),
+    # SuratKeluarController@simpan (jalur tipe_surat = 1)
+    # Kolom dan nilainya mengikuti Laravel apa adanya: tgl_entry dibiarkan
+    # kosong dan status_surat dibiarkan 0 (menunggu persetujuan), persis
+    # seperti surat yang dibuat lewat aplikasi lama.
+    "tambah_surat_keluar": (
+        "INSERT INTO tt_suratkeluar "
+        "(id_suratkel, tgl_suratkel, id_jenis, nomor, id_kode_arsip, "
+        " perihal, keterangan_perihal, tujuan, tujuan_lainnya, tembusan, "
+        " tanda_tangan, jabatan_id_suratkeluar, user_id, tipe_surat, "
+        " status_surat, created_at) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 1, 0, NOW())"
+    ),
+    "tambah_penandatangan_surat_keluar": (
+        "INSERT INTO tc_suratkeluar (id_suratkel, id_jabatan, approve_id_jabatan) "
+        "VALUES (%s, %s, %s)"
+    ),
+    "tambah_tujuan_surat_keluar": (
+        "INSERT INTO tt_suratkeluar_tujuan (surat_id, jabatan_tujuan_id) VALUES (%s, %s)"
+    ),
+    "tambah_tembusan_surat_keluar": (
+        "INSERT INTO tt_suratkeluar_tembusan (surat_id_tembusan, jabatan_id_tembusan) "
+        "VALUES (%s, %s)"
+    ),
+}
+
+
+def execute_esurat(nama: str, params: Sequence[Any]) -> int:
+    """Jalankan satu pernyataan tulis e-surat yang sudah terdaftar.
+
+    `nama` harus ada di ESURAT_WRITES; SQL-nya tidak pernah datang dari
+    pemanggil, hanya parameternya.
+    """
+    sql = ESURAT_WRITES.get(nama)
+    if sql is None:
+        raise ReadOnlyTableError(
+            f"Operasi tulis '{nama}' tidak terdaftar dan ditolak."
+        )
+    with cursor() as cur:
+        cur.execute(sql, tuple(params))
+        return cur.lastrowid or cur.rowcount
+
+
 def table_exists(name: str) -> bool:
     row = fetch_one(
         "SELECT COUNT(*) AS n FROM information_schema.tables "

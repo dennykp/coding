@@ -301,16 +301,18 @@ def surat_keluar(
     )
     rows = db.fetch_all(
         f"""
-        SELECT k.id_suratkel, k.nomor, k.perihal, k.tujuan, k.tujuan_lainnya,
+        SELECT k.id_suratkel, k.nomor, k.perihal, k.keterangan_perihal,
+               k.tujuan, k.tujuan_lainnya,
                k.tgl_suratkel, k.tgl_entry, k.status_surat, k.tanda_tangan,
                k.file_upload, k.file_upload_arsip, k.id_kode_arsip,
                k.jabatan_id_suratkeluar,
                j.nama AS jenis_surat, jb.nama_jabatan AS jabatan_pembuat,
-               u.name AS dibuat_oleh
+               u.name AS dibuat_oleh, kp.keterangan AS perihal_teks
         FROM tt_suratkeluar k
         LEFT JOIN tm_jenis_surat j ON j.id_jenis = k.id_jenis
         LEFT JOIN tm_jabatan jb ON jb.id_jabatan = k.jabatan_id_suratkeluar
         LEFT JOIN users u ON u.id = k.user_id
+        LEFT JOIN tm_kode_perihal_surat kp ON kp.id_perihal = k.perihal
         WHERE {clause}
         ORDER BY {order}
         LIMIT %s OFFSET %s
@@ -325,6 +327,12 @@ def surat_keluar(
         )
         item["file_url"] = file_url("FILESURATKELUAR", item.get("file_upload"))
         item["file_arsip_url"] = file_url("ARSIPSURAT", item.get("file_upload_arsip"))
+        # Kolom `perihal` menyimpan id kode perihal, bukan teksnya.
+        item["perihal"] = (
+            item.get("perihal_teks")
+            or (item.get("keterangan_perihal") or "").strip()
+            or item.get("perihal")
+        )
     return page_response(items, int(total or 0), page, per_page)
 
 
@@ -335,12 +343,14 @@ def detail_surat_keluar(
     row = db.fetch_one(
         """
         SELECT k.*, j.nama AS jenis_surat, jb.nama_jabatan AS jabatan_pembuat,
-               ka.kode_arsip, ka.keterangan_kode_arsip, u.name AS dibuat_oleh
+               ka.kode_arsip, ka.keterangan_kode_arsip, u.name AS dibuat_oleh,
+               kp.kode AS perihal_kode, kp.keterangan AS perihal_teks
         FROM tt_suratkeluar k
         LEFT JOIN tm_jenis_surat j ON j.id_jenis = k.id_jenis
         LEFT JOIN tm_jabatan jb ON jb.id_jabatan = k.jabatan_id_suratkeluar
         LEFT JOIN tm_kode_arsip ka ON ka.id_kode_arsip = k.id_kode_arsip
         LEFT JOIN users u ON u.id = k.user_id
+        LEFT JOIN tm_kode_perihal_surat kp ON kp.id_perihal = k.perihal
         WHERE k.id_suratkel = %s
         """,
         (id_suratkel,),
@@ -352,6 +362,11 @@ def detail_surat_keluar(
     detail["status_label"] = label_status(STATUS_SURAT_KELUAR, detail.get("status_surat"))
     detail["file_url"] = file_url("FILESURATKELUAR", detail.get("file_upload"))
     detail["file_arsip_url"] = file_url("ARSIPSURAT", detail.get("file_upload_arsip"))
+    detail["perihal"] = (
+        detail.get("perihal_teks")
+        or (detail.get("keterangan_perihal") or "").strip()
+        or detail.get("perihal")
+    )
 
     detail["tujuan_jabatan"] = clean_all(
         db.fetch_all(

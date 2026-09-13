@@ -18,7 +18,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from . import db
 from .config import settings
 from .db import ReadOnlyTableError
-from .routers import arteri, auth, dashboard, disposisi, laporan, master, surat
+from .routers import aksi, arteri, auth, dashboard, disposisi, laporan, master, surat
 
 logger = logging.getLogger("simpera")
 
@@ -42,7 +42,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-for module in (auth, dashboard, surat, disposisi, master, laporan, arteri):
+for module in (auth, dashboard, surat, disposisi, master, laporan, aksi, arteri):
     app.include_router(module.router, prefix="/api")
 
 
