@@ -210,8 +210,8 @@
           petak.map(function (p, i) {
             return '<button type="button" data-pergi="' + p.rute + '" class="tile ' + p.nuansa +
               ' text-left' + (i === 0 && petak.length === 3 ? ' col-span-2' : '') + '">' +
-              '<p class="text-3xl font-semibold tracking-tight text-slate-900">' + angka(p.nilai) + '</p>' +
-              '<p class="mt-1 text-sm font-medium text-slate-700">' + esc(p.label) + '</p></button>';
+              '<p class="tile-angka text-3xl font-bold tracking-tight">' + angka(p.nilai) + '</p>' +
+              '<p class="tile-label mt-1 text-sm font-semibold">' + esc(p.label) + '</p></button>';
           }).join('') +
         '</div>' +
 
@@ -373,8 +373,9 @@
   }
 
   // ------------------------------------------------------- tindakan pada surat
+  /* User Input (role 5) memasukkan surat, bukan memverifikasinya. */
   function bolehVerifikasi() {
-    return [1, 3, 5].indexOf(Number(state.user && state.user.role_id)) !== -1;
+    return [1, 3].indexOf(Number(state.user && state.user.role_id)) !== -1;
   }
 
   function bolehDisposisi() {

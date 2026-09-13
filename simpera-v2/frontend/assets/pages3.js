@@ -178,13 +178,13 @@
       params: function () { return { status: 0, urut: 'terbaru' }; },
       empty: 'Tidak ada surat yang menunggu verifikasi. Semua sudah diproses.',
       header:
-        '<div class="tile tile-green">' +
+        '<div class="panel panel-green">' +
           '<div class="flex flex-wrap items-center gap-4">' +
             '<span class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white text-brand-600 shadow-sm">' +
             '<svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg></span>' +
             '<div class="min-w-0 flex-1">' +
               '<h2 class="text-sm font-semibold text-brand-900">Antrean verifikasi surat masuk</h2>' +
-              '<p class="mt-1 text-xs leading-relaxed text-brand-800/80">' +
+              '<p class="mt-1 text-xs leading-relaxed text-brand-800">' +
               'Surat yang diterima akan tampil pada jabatan tujuannya dan bisa didisposisikan. ' +
               'Surat yang ditolak tidak diteruskan. Perubahan langsung tersimpan ke e-surat.' +
               '</p>' +
@@ -374,13 +374,13 @@
 
       container.innerHTML =
         '<div class="mx-auto max-w-4xl space-y-5">' +
-          '<div class="tile tile-sky">' +
+          '<div class="panel panel-sky">' +
             '<div class="flex flex-wrap items-center gap-4">' +
               '<span class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white text-sky-600 shadow-sm">' +
               '<svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"/></svg></span>' +
               '<div class="min-w-0 flex-1">' +
                 '<h2 class="text-sm font-semibold text-sky-900">Surat keluar baru</h2>' +
-                '<p class="mt-1 text-xs leading-relaxed text-sky-800/80">' +
+                '<p class="mt-1 text-xs leading-relaxed text-sky-800">' +
                 'Surat tersimpan dengan status <b>menunggu persetujuan</b>, sama seperti surat ' +
                 'yang dibuat lewat aplikasi lama. Berkas .docx dan unggahan lampiran tetap ' +
                 'dikerjakan di e-surat.' +

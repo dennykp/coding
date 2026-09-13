@@ -145,17 +145,25 @@ Dokumentasi interaktif OpenAPI tersedia di `/simpera-v2/api/docs`.
 
 Role diambil apa adanya dari kolom `users.role_id` milik e-surat:
 
-| role_id | Label | Melihat seluruh surat | Mengubah arsip |
-|---|---|---|---|
-| 1 | Superadmin | ya | ya |
-| 2 | Kepala | hanya jabatannya | tidak |
-| 3 | Admin Verifikasi | ya | ya |
-| 4 | Admin | hanya jabatannya | ya |
-| 5 | User Input | ya | ya |
-| 6 / 7 | Karyawan / Dosen | hanya jabatannya | tidak |
-| 10 / 30 | Admin khusus / gudang surat | ya | ya |
+| role_id | Label | Melihat seluruh surat | Verifikasi | Disposisi | Buat surat keluar | Mengubah arsip |
+|---|---|---|---|---|---|---|
+| 1 | Superadmin | ya | ya | ya | ya | ya |
+| 2 | Kepala | hanya jabatannya | tidak | ya | tidak | tidak |
+| 3 | Admin Verifikasi | ya | ya | tidak | ya | ya |
+| 4 | Admin | hanya jabatannya | tidak | tidak | tidak | ya |
+| 5 | User Input | ya | tidak | tidak | ya | ya |
+| 6 / 7 | Karyawan / Dosen | hanya jabatannya | tidak | tidak | tidak | tidak |
+| 10 | Admin khusus | ya | tidak | ya | tidak | ya |
+| 30 | Admin gudang surat | ya | tidak | tidak | tidak | ya |
 
-Akun dengan `role_id = 0` ditolak saat login.
+Pembagian tugasnya mengikuti aplikasi lama: **User Input** (mis. akun
+`fitri`) memasukkan surat dan membuat surat keluar, sedangkan **Admin
+Verifikasi** (mis. akun `anik`) yang memverifikasi surat masuk. Disposisi
+adalah wewenang pemegang jabatan (**Kepala**).
+
+Akun dengan `role_id = 0` ditolak saat login. Kewenangan ini ditegakkan di
+API; menu yang tidak sesuai role juga disembunyikan di antarmuka dan
+rutenya ditolak saat diakses langsung lewat tautan.
 
 ---
 

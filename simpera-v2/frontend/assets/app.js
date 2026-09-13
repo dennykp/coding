@@ -235,13 +235,15 @@
     selesai: '<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>'
   };
 
+  /* Warna padat dengan ikon putih: tombol langsung terbaca tanpa harus
+     didekati, dan hover-nya menggelap satu tingkat. */
   var WARNA_AKSI = {
-    hijau: 'bg-brand-50 text-brand-600 hover:bg-brand-600 hover:text-white',
-    biru: 'bg-sky-50 text-sky-600 hover:bg-sky-600 hover:text-white',
-    kuning: 'bg-amber-50 text-amber-600 hover:bg-amber-500 hover:text-white',
-    ungu: 'bg-violet-50 text-violet-600 hover:bg-violet-600 hover:text-white',
-    merah: 'bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white',
-    abu: 'bg-slate-100 text-slate-500 hover:bg-slate-600 hover:text-white'
+    hijau: 'bg-brand-600 text-white hover:bg-brand-700 shadow-sm shadow-brand-600/30',
+    biru: 'bg-sky-500 text-white hover:bg-sky-600 shadow-sm shadow-sky-500/30',
+    kuning: 'bg-amber-500 text-white hover:bg-amber-600 shadow-sm shadow-amber-500/30',
+    ungu: 'bg-violet-600 text-white hover:bg-violet-700 shadow-sm shadow-violet-600/30',
+    merah: 'bg-rose-600 text-white hover:bg-rose-700 shadow-sm shadow-rose-600/30',
+    abu: 'bg-slate-500 text-white hover:bg-slate-600 shadow-sm shadow-slate-500/30'
   };
 
   /**
@@ -253,7 +255,7 @@
     var isi = daftar.filter(Boolean).map(function (t) {
       var mati = !!t.nonaktif;
       var kelas = mati
-        ? 'bg-slate-50 text-slate-300 cursor-not-allowed'
+        ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
         : (WARNA_AKSI[t.warna] || WARNA_AKSI.abu);
       return '<button type="button" class="grid h-8 w-8 place-items-center rounded-lg transition ' +
         kelas + '"' + (mati ? ' disabled' : '') +
@@ -299,23 +301,22 @@
   }
 
   // ------------------------------------------------------------------ komponen
-  /* Kartu ringkasan bernuansa pastel, mengikuti gaya dasbor Metronic. */
+  /* Kartu ringkasan berwarna padat: angka dan label putih di atas gradasi. */
   function statCard(opts) {
     var nuansa = opts.tile || 'tile-green';
-    var ikonWarna = opts.tone || 'text-brand-600';
     return '' +
       '<div class="tile ' + nuansa + '">' +
         '<div class="flex items-start justify-between gap-3">' +
-          '<span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white shadow-sm ' +
-            ikonWarna + '">' + opts.icon + '</span>' +
+          '<span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/20 text-white ring-1 ring-white/30">' +
+            opts.icon + '</span>' +
           (opts.trend
-            ? '<span class="rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-semibold text-slate-600">' +
+            ? '<span class="rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-semibold text-white ring-1 ring-white/30">' +
               esc(opts.trend) + '</span>'
             : '') +
         '</div>' +
-        '<p class="mt-4 text-3xl font-semibold tracking-tight text-slate-900">' + angka(opts.value) + '</p>' +
-        '<p class="mt-1 text-sm font-medium text-slate-700">' + esc(opts.label) + '</p>' +
-        (opts.hint ? '<p class="mt-0.5 text-xs text-slate-500">' + esc(opts.hint) + '</p>' : '') +
+        '<p class="tile-angka mt-4 text-3xl font-bold tracking-tight">' + angka(opts.value) + '</p>' +
+        '<p class="tile-label mt-1 text-sm font-semibold">' + esc(opts.label) + '</p>' +
+        (opts.hint ? '<p class="tile-catatan mt-0.5 text-xs">' + esc(opts.hint) + '</p>' : '') +
       '</div>';
   }
 
@@ -666,9 +667,10 @@
       subtitle: 'Rekapitulasi & ekspor data' }
   ];
 
-  /* Kewenangan per role, disamakan dengan pembatasan di API. */
+  /* Kewenangan per role, disamakan dengan pembatasan di API.
+     User Input (role 5) memasukkan surat, tetapi tidak memverifikasinya. */
   var IZIN = {
-    verifikasi: [1, 3, 5],
+    verifikasi: [1, 3],
     buat_surat: [1, 3, 5],
     disposisi: [1, 2, 10]
   };

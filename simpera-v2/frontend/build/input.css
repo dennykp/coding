@@ -146,13 +146,44 @@ input[type="radio"] { accent-color: #059669; }
 }
 .nav-section:first-child { padding-top: .35rem; }
 
-/* Kartu ringkasan bernuansa pastel (gaya dasbor Metronic terbaru). */
-.tile { border-radius: 1.25rem; padding: 1.25rem; border: 1px solid transparent; }
-.tile-green  { background: #ecfdf5; border-color: #a7f3d0; }
-.tile-sky    { background: #eff6ff; border-color: #bfdbfe; }
-.tile-amber  { background: #fffbeb; border-color: #fde68a; }
-.tile-violet { background: #f5f3ff; border-color: #ddd6fe; }
-.tile-rose   { background: #fff1f2; border-color: #fecdd3; }
+/* --------------------------------------------------------------------------
+   Kartu ringkasan. Warnanya dibuat pekat supaya angka langsung menonjol,
+   bukan pastel yang pudar.
+   -------------------------------------------------------------------------- */
+.tile {
+  border-radius: 1.25rem; padding: 1.25rem; border: 1px solid transparent;
+  color: #fff;
+}
+.tile-green {
+  background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+  box-shadow: 0 12px 24px -14px rgba(4, 120, 87, .7);
+}
+.tile-sky {
+  background: linear-gradient(135deg, #38bdf8 0%, #0369a1 100%);
+  box-shadow: 0 12px 24px -14px rgba(3, 105, 161, .7);
+}
+.tile-amber {
+  background: linear-gradient(135deg, #fbbf24 0%, #b45309 100%);
+  box-shadow: 0 12px 24px -14px rgba(180, 83, 9, .7);
+}
+.tile-violet {
+  background: linear-gradient(135deg, #a78bfa 0%, #6d28d9 100%);
+  box-shadow: 0 12px 24px -14px rgba(109, 40, 217, .7);
+}
+.tile-rose {
+  background: linear-gradient(135deg, #fb7185 0%, #be123c 100%);
+  box-shadow: 0 12px 24px -14px rgba(190, 18, 60, .7);
+}
+/* Teks di dalam kartu pekat selalu putih, termasuk keterangan kecilnya. */
+.tile .tile-angka { color: #fff; }
+.tile .tile-label { color: rgba(255, 255, 255, .95); }
+.tile .tile-catatan { color: rgba(255, 255, 255, .8); }
+
+/* Panel keterangan di kepala halaman: latar muda, teks gelap — beda peran
+   dengan kartu angka di atas, jadi warnanya pun tidak dipekatkan. */
+.panel { border-radius: 1.25rem; padding: 1.25rem; border: 1px solid transparent; }
+.panel-green { background: #ecfdf5; border-color: #6ee7b7; }
+.panel-sky   { background: #eff6ff; border-color: #93c5fd; }
 
 /* Baris notifikasi pada lonceng. */
 .notif-item {
@@ -170,30 +201,32 @@ input[type="radio"] { accent-color: #059669; }
   .year-picker.is-ready { display: block; }
 }
 
-/* --- lencana status --- */
+/* --- lencana status: warna padat dengan teks putih supaya mudah dipindai --- */
 .badge {
   display: inline-flex; align-items: center; gap: .3rem;
-  border-radius: 9999px; padding: .15rem .6rem;
-  font-size: .7rem; font-weight: 600; white-space: nowrap;
+  border-radius: 9999px; padding: .2rem .65rem;
+  font-size: .7rem; font-weight: 700; white-space: nowrap;
+  color: #fff; letter-spacing: .01em;
 }
-.badge-green  { background: #d1fae5; color: #065f46; }
-.badge-amber  { background: #fef3c7; color: #92400e; }
-.badge-rose   { background: #ffe4e6; color: #9f1239; }
-.badge-slate  { background: #f1f5f9; color: #475569; }
-.badge-sky    { background: #e0f2fe; color: #075985; }
+.badge-green  { background: #059669; }
+.badge-amber  { background: #d97706; }
+.badge-rose   { background: #e11d48; }
+.badge-slate  { background: #64748b; }
+.badge-sky    { background: #0284c7; }
 
-/* --- tabel --- */
+/* --- tabel: kepala tabel hijau, seperti aplikasi e-surat --- */
 .table-wrap { overflow-x: auto; border-radius: 1rem; }
 table.data { width: 100%; border-collapse: separate; border-spacing: 0; font-size: .8125rem; }
 table.data thead th {
-  position: sticky; top: 0; background: #f8fafc; text-align: left;
-  padding: .7rem .9rem; font-size: .7rem; font-weight: 600;
-  letter-spacing: .05em; text-transform: uppercase; color: #64748b;
-  border-bottom: 1px solid #e2e8f0; white-space: nowrap;
+  position: sticky; top: 0; background: #047857; text-align: left;
+  padding: .8rem .75rem; font-size: .7rem; font-weight: 700;
+  letter-spacing: .05em; text-transform: uppercase; color: #ffffff;
+  border-bottom: 0; white-space: nowrap;
 }
-table.data tbody td { padding: .7rem .9rem; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+table.data thead th:first-child { border-top-left-radius: .75rem; }
+table.data thead th:last-child { border-top-right-radius: .75rem; }
+table.data tbody td { padding: .7rem .75rem; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
 table.data tbody tr:last-child td { border-bottom: 0; }
-table.data tbody tr:hover { background: #f8fafc; }
 .clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
 /* Kolom aksi tetap terlihat walau tabel digeser ke samping. Latar diberi
@@ -204,8 +237,9 @@ table.data td.kolom-aksi {
   background: #fff;
   box-shadow: -6px 0 10px -9px rgba(15, 23, 42, .22);
 }
-table.data thead th.kolom-aksi { background: #f8fafc; z-index: 2; }
-table.data tbody tr:hover td.kolom-aksi { background: #f8fafc; }
+table.data thead th.kolom-aksi { background: #047857; z-index: 2; }
+table.data tbody tr:hover td.kolom-aksi { background: #f0fdf4; }
+table.data tbody tr:hover { background: #f0fdf4; }
 
 /* Nomor surat / nomor arsip: boleh patah di pemisah agar kolom tidak melebar. */
 .nomor { overflow-wrap: anywhere; word-break: break-word; }
