@@ -62,8 +62,9 @@ def _jabatan(user: dict[str, Any]) -> int:
 
 def _surat_masuk(id_surat: int) -> dict[str, Any]:
     row = db.fetch_one(
-        "SELECT id_surat, nomor_surat, perihal, dari, id_jabatan, status_surat, "
-        "catatan_approve, read_surat FROM tt_suratmasuk WHERE id_surat = %s",
+        "SELECT id_surat, nomor_surat, nomor_agenda, perihal, dari, id_jabatan, "
+        "status_surat, catatan_approve, read_surat, file_upload "
+        "FROM tt_suratmasuk WHERE id_surat = %s",
         (id_surat,),
     )
     if not row:
