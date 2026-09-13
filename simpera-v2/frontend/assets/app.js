@@ -117,6 +117,35 @@
     });
   }
 
+  /* Kirim formulir multipart (dipakai saat surat menyertakan lampiran).
+     Content-Type sengaja tidak diisi agar peramban menambahkan boundary. */
+  function kirimForm(path, formData, method) {
+    var header = { 'Accept': 'application/json' };
+    if (state.token) header['Authorization'] = 'Bearer ' + state.token;
+
+    return fetch(API + path, {
+      method: method || 'POST',
+      headers: header,
+      body: formData
+    }).then(function (res) {
+      if (res.status === 401 && state.token) {
+        logout(true);
+        throw new Error('Sesi berakhir. Silakan masuk kembali.');
+      }
+      return res.json().then(function (data) {
+        if (!res.ok) {
+          throw new Error((data && data.detail) || ('Permintaan gagal (' + res.status + ').'));
+        }
+        return data;
+      }, function () {
+        if (!res.ok) throw new Error('Server membalas status ' + res.status + '.');
+        return {};
+      });
+    }, function () {
+      throw new Error('Tidak dapat menghubungi server. Periksa koneksi Anda.');
+    });
+  }
+
   function query(params) {
     var parts = [];
     Object.keys(params || {}).forEach(function (key) {
@@ -487,7 +516,8 @@
   // ------------------------------------------------------------------ ekspor ke lingkup modul
   window.__simpera = {
     $: $, el: el, esc: esc, dash: dash, tanggal: tanggal, angka: angka,
-    toast: toast, debounce: debounce, request: request, query: query,
+    toast: toast, debounce: debounce, request: request, kirimForm: kirimForm,
+    query: query,
     openModal: openModal, closeModal: closeModal, modalLoading: modalLoading,
     statCard: statCard, badge: badge, toneStatusSurat: toneStatusSurat,
     avatar: avatar, inisial: inisial, tombolAksi: tombolAksi, salinTeks: salinTeks,
@@ -672,6 +702,7 @@
   var IZIN = {
     verifikasi: [1, 3],
     buat_surat: [1, 3, 5],
+    kelola_surat: [1, 3, 5],   // mencatat, mengubah, menghapus surat
     disposisi: [1, 2, 10]
   };
 

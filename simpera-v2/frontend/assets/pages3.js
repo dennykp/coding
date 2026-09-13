@@ -105,6 +105,232 @@
     };
   }
 
+  // ===================================================== TAMBAH / UBAH SURAT MASUK
+  /**
+   * Formulir pencatatan surat masuk. Dipakai untuk menambah maupun mengubah;
+   * nomor agenda diisi otomatis oleh server saat menambah.
+   */
+  function formSuratMasuk(row, tabel) {
+    var ubah = !!(row && row.id_surat);
+    S.modalLoading(ubah ? 'Ubah Surat Masuk' : 'Catat Surat Masuk');
+
+    Promise.all([
+      request('/master/jenis-surat').catch(function () { return []; }),
+      request('/master/kategori-surat').catch(function () { return []; }),
+      request('/master/jabatan' + query({ limit: 2000 })).catch(function () { return []; }),
+      request('/master/kode-arsip' + query({ per_page: 200 }))
+        .catch(function () { return { items: [] }; }),
+      ubah ? request('/surat-masuk/' + row.id_surat) : Promise.resolve({})
+    ]).then(function (res) {
+      var jenis = res[0], kategori = res[1], jabatan = res[2];
+      var arsip = res[3].items || [], awal = res[4] || {};
+      var hariIni = new Date().toISOString().slice(0, 10);
+
+      function pilihan(daftar, kunci, label, terpilih, kosong) {
+        return '<option value="">' + esc(kosong) + '</option>' + daftar.map(function (x) {
+          return '<option value="' + esc(x[kunci]) + '"' +
+            (String(x[kunci]) === String(terpilih || '') ? ' selected' : '') + '>' +
+            esc(typeof label === 'function' ? label(x) : x[label]) + '</option>';
+        }).join('');
+      }
+
+      S.openModal(ubah ? 'Ubah Surat Masuk — ' + (awal.nomor_surat || '') : 'Catat Surat Masuk',
+        '<form id="form-surat-masuk" class="space-y-5" novalidate>' +
+          '<div class="grid gap-4 sm:grid-cols-2">' +
+            '<div>' +
+              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Nomor surat *</label>' +
+              '<input name="nomor_surat" class="field" required maxlength="50" value="' +
+              esc(awal.nomor_surat || '') + '" placeholder="mis. 066/O117/U.01/D/L.25/IX/2026">' +
+            '</div>' +
+            (ubah
+              ? '<div>' +
+                '<label class="mb-1.5 block text-sm font-medium text-slate-700">Nomor agenda</label>' +
+                '<input name="nomor_agenda" class="field" maxlength="50" value="' +
+                esc(awal.nomor_agenda || '') + '">' +
+                '</div>'
+              : '<div>' +
+                '<label class="mb-1.5 block text-sm font-medium text-slate-700">Nomor agenda</label>' +
+                '<input class="field" value="Dibuat otomatis" disabled>' +
+                '</div>') +
+            '<div>' +
+              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Tanggal surat *</label>' +
+              '<input name="tgl_surat" type="date" class="field" required value="' +
+              esc(awal.tgl_surat || hariIni) + '">' +
+            '</div>' +
+            '<div>' +
+              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Tanggal diterima *</label>' +
+              '<input name="tgl_surat_terima" type="date" class="field" required value="' +
+              esc(awal.tgl_surat_terima || hariIni) + '">' +
+            '</div>' +
+            '<div class="sm:col-span-2">' +
+              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Perihal</label>' +
+              '<textarea name="perihal" rows="2" class="field" ' +
+              'placeholder="Ringkasan isi surat">' + esc(awal.perihal || '') + '</textarea>' +
+            '</div>' +
+            '<div>' +
+              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Pengirim (dari)</label>' +
+              '<input name="dari" class="field" maxlength="100" value="' + esc(awal.dari || '') +
+              '" placeholder="mis. Fakultas Agama Islam">' +
+            '</div>' +
+            '<div>' +
+              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Kepada (teks)</label>' +
+              '<input name="kepada" class="field" maxlength="100" value="' + esc(awal.kepada || '') + '">' +
+            '</div>' +
+            '<div>' +
+              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Jabatan tujuan</label>' +
+              '<select name="id_jabatan" class="field">' +
+              pilihan(jabatan, 'id_jabatan', 'nama_jabatan', awal.id_jabatan, 'Pilih jabatan tujuan') +
+              '</select>' +
+            '</div>' +
+            '<div>' +
+              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Jenis surat</label>' +
+              '<select name="id_jenis" class="field">' +
+              pilihan(jenis, 'id_jenis', 'nama', awal.id_jenis, 'Pilih jenis') + '</select>' +
+            '</div>' +
+            '<div>' +
+              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Kategori</label>' +
+              '<select name="id_kategori" class="field">' +
+              pilihan(kategori, 'id_kategori', 'kategori', awal.id_kategori, 'Pilih kategori') +
+              '</select>' +
+            '</div>' +
+            '<div>' +
+              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Kode arsip</label>' +
+              '<select name="id_kode_arsip" class="field">' +
+              pilihan(arsip, 'id_kode_arsip', function (x) {
+                return x.kode_arsip + ' — ' + (x.keterangan_kode_arsip || '');
+              }, awal.id_kode_arsip, 'Pilih kode arsip') + '</select>' +
+            '</div>' +
+            '<div class="sm:col-span-2">' +
+              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Catatan</label>' +
+              '<textarea name="catatan" rows="2" class="field">' + esc(awal.catatan || '') + '</textarea>' +
+            '</div>' +
+            '<div class="sm:col-span-2">' +
+              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Lampiran surat</label>' +
+              '<input name="lampiran" type="file" class="field !py-2" ' +
+              'accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.zip">' +
+              (awal.file_url
+                ? '<p class="mt-1.5 text-xs text-slate-500">Lampiran saat ini: ' +
+                  '<a href="' + esc(awal.file_url) + '" target="_blank" rel="noopener" ' +
+                  'class="font-medium text-brand-700 hover:underline">buka berkas</a>. ' +
+                  'Biarkan kosong bila tidak ingin menggantinya.</p>'
+                : '<p class="mt-1.5 text-xs text-slate-500">Format PDF, gambar, atau dokumen. ' +
+                  'Maksimal 25 MB.</p>') +
+            '</div>' +
+          '</div>' +
+          '<p id="surat-masuk-error" class="hidden rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700"></p>' +
+          '<div class="flex justify-end gap-2 border-t border-slate-100 pt-4">' +
+            '<button type="button" class="btn-ghost" data-modal-close>Batal</button>' +
+            '<button type="submit" class="btn-primary">' +
+            (ubah ? 'Simpan perubahan' : 'Simpan surat') + '</button>' +
+          '</div>' +
+        '</form>');
+
+      var form = document.getElementById('form-surat-masuk');
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        var pesan = document.getElementById('surat-masuk-error');
+        pesan.classList.add('hidden');
+
+        var data = new FormData(form);
+        if (!(data.get('nomor_surat') || '').trim()) {
+          galat(pesan, 'Nomor surat wajib diisi.');
+          return;
+        }
+        if (!data.get('tgl_surat') || !data.get('tgl_surat_terima')) {
+          galat(pesan, 'Tanggal surat dan tanggal diterima wajib diisi.');
+          return;
+        }
+        // Kolom kosong dibuang agar server memakai nilai bawaannya.
+        ['id_jenis', 'id_kategori', 'id_jabatan', 'id_kode_arsip'].forEach(function (k) {
+          if (!data.get(k)) data.delete(k);
+        });
+        var lampiran = data.get('lampiran');
+        if (!lampiran || !lampiran.name) data.delete('lampiran');
+
+        var tombol = form.querySelector('button[type=submit]');
+        var label = tombol.textContent;
+        tombol.disabled = true;
+        tombol.textContent = 'Menyimpan…';
+
+        S.kirimForm(ubah ? '/surat-masuk/' + row.id_surat : '/surat-masuk',
+                    data, ubah ? 'PUT' : 'POST')
+          .then(function (hasil) {
+            S.closeModal();
+            S.toast(ubah
+              ? 'Surat ' + hasil.nomor_surat + ' diperbarui.'
+              : 'Surat tercatat dengan agenda ' + hasil.nomor_agenda + '.', 'ok');
+            if (tabel) tabel.reload();
+            S.muatNotif();
+          })
+          .catch(function (err) {
+            galat(pesan, err.message);
+            tombol.disabled = false;
+            tombol.textContent = label;
+          });
+      });
+    }).catch(function (err) {
+      S.openModal('Surat Masuk',
+        '<p class="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">' + esc(err.message) + '</p>');
+    });
+  }
+
+  /* Konfirmasi hapus yang menyebut akibatnya, karena penghapusan permanen. */
+  function konfirmasiHapus(opsi) {
+    S.openModal(opsi.judul,
+      '<p class="text-sm leading-relaxed text-slate-600">' + opsi.pesan + '</p>' +
+      '<p class="mt-3 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">' +
+      'Tindakan ini permanen dan tidak bisa dibatalkan.</p>' +
+      '<p id="hapus-surat-error" class="mt-3 hidden rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700"></p>' +
+      '<div class="mt-6 flex justify-end gap-2 border-t border-slate-100 pt-4">' +
+        '<button type="button" class="btn-ghost" data-modal-close>Batal</button>' +
+        '<button type="button" id="btn-hapus-surat" ' +
+        'class="btn-primary !bg-rose-600 hover:!bg-rose-700">Ya, hapus</button>' +
+      '</div>');
+
+    var tombol = document.getElementById('btn-hapus-surat');
+    tombol.addEventListener('click', function () {
+      var pesan = document.getElementById('hapus-surat-error');
+      pesan.classList.add('hidden');
+      tombol.disabled = true;
+      tombol.textContent = 'Menghapus…';
+      request(opsi.endpoint, { method: 'DELETE' }).then(function (hasil) {
+        S.closeModal();
+        S.toast(opsi.sukses(hasil), 'ok');
+        if (opsi.tabel) opsi.tabel.reload();
+        S.muatNotif();
+      }).catch(function (err) {
+        galat(pesan, err.message);
+        tombol.disabled = false;
+        tombol.textContent = 'Ya, hapus';
+      });
+    });
+  }
+
+  function hapusSuratMasuk(row, tabel) {
+    konfirmasiHapus({
+      judul: 'Hapus Surat Masuk',
+      pesan: 'Surat <b>' + esc(row.nomor_surat || '') + '</b> beserta seluruh ' +
+             'disposisi dan berkas lampirannya akan dihapus dari e-surat.',
+      endpoint: '/surat-masuk/' + row.id_surat,
+      tabel: tabel,
+      sukses: function (h) {
+        return 'Surat dihapus' +
+          (h.disposisi_terhapus ? ' beserta ' + h.disposisi_terhapus + ' disposisi.' : '.');
+      }
+    });
+  }
+
+  function hapusSuratKeluar(row, tabel) {
+    konfirmasiHapus({
+      judul: 'Hapus Surat Keluar',
+      pesan: 'Surat <b>' + esc(row.nomor || '') + '</b> beserta daftar tujuan, ' +
+             'tembusan, dan penanda tangannya akan dihapus dari e-surat.',
+      endpoint: '/surat-keluar/' + row.id_suratkel,
+      tabel: tabel,
+      sukses: function () { return 'Surat keluar dihapus.'; }
+    });
+  }
+
   // ================================================================ VERIFIKASI
   function formVerifikasi(row, tabel) {
     var id = row.id_surat;
@@ -520,9 +746,148 @@
     }).catch(function (err) { S.renderError(container, err); });
   };
 
+  // ============================================================ UBAH SURAT KELUAR
+  function formSuratKeluar(row, tabel) {
+    S.modalLoading('Ubah Surat Keluar');
+    Promise.all([
+      request('/surat-keluar/' + row.id_suratkel),
+      request('/master/jabatan' + query({ limit: 2000 })),
+      request('/master/jenis-surat'),
+      request('/master/kode-arsip' + query({ per_page: 200 })),
+      request('/master/kode-perihal' + query({ limit: 500 }))
+    ]).then(function (res) {
+      var awal = res[0], jabatan = res[1], jenis = res[2];
+      var arsip = res[3].items || [], perihal = res[4];
+
+      /* Kolom tujuan/tembusan/tanda tangan disimpan sebagai teks "4, 5". */
+      function keDaftar(teks) {
+        return String(teks || '').split(',').map(function (x) {
+          return parseInt(x.trim(), 10);
+        }).filter(function (x) { return !isNaN(x); });
+      }
+
+      var pTujuan = pemilihJabatan('tujuan', jabatan, keDaftar(awal.tujuan));
+      var pTembusan = pemilihJabatan('tembusan', jabatan, keDaftar(awal.tembusan));
+      var pTtd = pemilihJabatan('ttd', jabatan, keDaftar(awal.tanda_tangan));
+
+      function opsi(daftar, kunci, label, terpilih, kosong) {
+        return '<option value="">' + esc(kosong) + '</option>' + daftar.map(function (x) {
+          return '<option value="' + esc(x[kunci]) + '"' +
+            (String(x[kunci]) === String(terpilih || '') ? ' selected' : '') + '>' +
+            esc(typeof label === 'function' ? label(x) : x[label]) + '</option>';
+        }).join('');
+      }
+
+      S.openModal('Ubah Surat Keluar — ' + (awal.nomor || ''),
+        '<form id="form-ubah-keluar" class="space-y-5" novalidate>' +
+          '<div class="grid gap-4 sm:grid-cols-2">' +
+            '<div><label class="mb-1.5 block text-sm font-medium text-slate-700">Nomor surat *</label>' +
+              '<input name="nomor" class="field" required maxlength="50" value="' +
+              esc(awal.nomor || '') + '"></div>' +
+            '<div><label class="mb-1.5 block text-sm font-medium text-slate-700">Tanggal surat *</label>' +
+              '<input name="tgl_suratkel" type="date" class="field" required value="' +
+              esc(awal.tgl_suratkel || '') + '"></div>' +
+            '<div><label class="mb-1.5 block text-sm font-medium text-slate-700">Jenis surat *</label>' +
+              '<select name="id_jenis" class="field" required>' +
+              opsi(jenis, 'id_jenis', 'nama', awal.id_jenis, 'Pilih jenis') + '</select></div>' +
+            '<div><label class="mb-1.5 block text-sm font-medium text-slate-700">Kode arsip</label>' +
+              '<select name="id_kode_arsip" class="field">' +
+              opsi(arsip, 'id_kode_arsip', function (x) {
+                return x.kode_arsip + ' — ' + (x.keterangan_kode_arsip || '');
+              }, awal.id_kode_arsip, 'Pilih kode arsip') + '</select></div>' +
+            '<div class="sm:col-span-2">' +
+              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Perihal</label>' +
+              '<select name="id_perihal" class="field">' +
+              opsi(perihal, 'id_perihal', function (x) {
+                return x.kode + ' — ' + x.keterangan;
+              }, awal.perihal_kode ? awal.perihal : '', 'Pilih kode perihal') + '</select></div>' +
+            '<div class="sm:col-span-2">' +
+              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Keterangan perihal</label>' +
+              '<textarea name="keterangan_perihal" rows="2" class="field">' +
+              esc(awal.keterangan_perihal === '-' ? '' : (awal.keterangan_perihal || '')) +
+              '</textarea></div>' +
+          '</div>' +
+          '<div class="grid gap-5 lg:grid-cols-2">' +
+            '<div><label class="mb-1.5 block text-sm font-medium text-slate-700">Tujuan (jabatan)</label>' +
+              pTujuan.html +
+              '<label class="mb-1.5 mt-3 block text-sm font-medium text-slate-700">Tujuan lainnya</label>' +
+              '<input name="tujuan_lainnya" class="field" value="' +
+              esc(awal.tujuan_lainnya || '') + '"></div>' +
+            '<div><label class="mb-1.5 block text-sm font-medium text-slate-700">Tembusan</label>' +
+              pTembusan.html + '</div>' +
+            '<div class="lg:col-span-2">' +
+              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Penanda tangan *</label>' +
+              pTtd.html + '</div>' +
+          '</div>' +
+          '<p id="ubah-keluar-error" class="hidden rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700"></p>' +
+          '<div class="flex justify-end gap-2 border-t border-slate-100 pt-4">' +
+            '<button type="button" class="btn-ghost" data-modal-close>Batal</button>' +
+            '<button type="submit" class="btn-primary">Simpan perubahan</button>' +
+          '</div>' +
+        '</form>');
+
+      var form = document.getElementById('form-ubah-keluar');
+      pTujuan.pasang(form);
+      pTembusan.pasang(form);
+      pTtd.pasang(form);
+
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        var pesan = document.getElementById('ubah-keluar-error');
+        pesan.classList.add('hidden');
+
+        var ttd = pTtd.nilai();
+        if (!ttd.length) {
+          galat(pesan, 'Pilih minimal satu jabatan penanda tangan.');
+          return;
+        }
+        var data = new FormData(form);
+        var muatan = {
+          nomor: (data.get('nomor') || '').trim(),
+          tgl_suratkel: data.get('tgl_suratkel'),
+          id_jenis: parseInt(data.get('id_jenis'), 10),
+          keterangan_perihal: (data.get('keterangan_perihal') || '').trim(),
+          tujuan: pTujuan.nilai(),
+          tujuan_lainnya: (data.get('tujuan_lainnya') || '').trim(),
+          tembusan: pTembusan.nilai(),
+          tanda_tangan: ttd
+        };
+        if (data.get('id_kode_arsip')) muatan.id_kode_arsip = parseInt(data.get('id_kode_arsip'), 10);
+        if (data.get('id_perihal')) muatan.id_perihal = parseInt(data.get('id_perihal'), 10);
+
+        if (!muatan.nomor || !muatan.tgl_suratkel) {
+          galat(pesan, 'Nomor surat dan tanggal wajib diisi.');
+          return;
+        }
+
+        var tombol = form.querySelector('button[type=submit]');
+        tombol.disabled = true;
+        tombol.textContent = 'Menyimpan…';
+        request('/surat-keluar/' + row.id_suratkel, { method: 'PUT', body: muatan })
+          .then(function (hasil) {
+            S.closeModal();
+            S.toast('Surat ' + hasil.nomor + ' diperbarui.', 'ok');
+            if (tabel) tabel.reload();
+          })
+          .catch(function (err) {
+            galat(pesan, err.message);
+            tombol.disabled = false;
+            tombol.textContent = 'Simpan perubahan';
+          });
+      });
+    }).catch(function (err) {
+      S.openModal('Ubah Surat Keluar',
+        '<p class="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">' + esc(err.message) + '</p>');
+    });
+  }
+
   window.__simperaAlur = {
     formVerifikasi: formVerifikasi,
     formDisposisi: formDisposisi,
+    formSuratMasuk: formSuratMasuk,
+    hapusSuratMasuk: hapusSuratMasuk,
+    formSuratKeluar: formSuratKeluar,
+    hapusSuratKeluar: hapusSuratKeluar,
     pemilihJabatan: pemilihJabatan
   };
 })();

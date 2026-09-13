@@ -370,10 +370,13 @@
     ]).then(function (res) {
       var jenis = res[0], kategori = res[1];
 
-      listPage(container, {
+      var tabelMasuk = listPage(container, {
         endpoint: '/surat-masuk',
         params: function () { return { tahun: state.tahun }; },
         empty: 'Tidak ada surat masuk yang cocok dengan pencarian ini.',
+        toolbar: S.boleh('kelola_surat')
+          ? '<button id="btn-tambah-surat" class="btn-primary btn-sm">Catat surat masuk</button>'
+          : '',
         filters: [
           { name: 'q', type: 'search', placeholder: 'Cari nomor, perihal, pengirim…' },
           { name: 'status', type: 'select', options: [
@@ -445,6 +448,12 @@
                   : null,
                 // Jejak disposisi sudah tampil di jendela detail saat baris
                 // diklik, jadi tidak perlu tombolnya sendiri di sini.
+                S.boleh('kelola_surat')
+                  ? { ikon: 'ubah', warna: 'kuning', judul: 'Ubah data surat', aksi: 'ubah' }
+                  : null,
+                S.boleh('kelola_surat')
+                  ? { ikon: 'hapus', warna: 'merah', judul: 'Hapus surat', aksi: 'hapus' }
+                  : null,
                 { ikon: 'salin', warna: 'abu', judul: 'Salin nomor surat', aksi: 'salin' }
               ]); } }
         ],
@@ -456,10 +465,20 @@
           else if (aksi === 'berkas' && row.file_url) window.open(row.file_url, '_blank', 'noopener');
           else if (aksi === 'verifikasi') alur.formVerifikasi(row, tabel);
           else if (aksi === 'kirim-disposisi') alur.formDisposisi(row.id_surat, tabel);
-          else if (aksi === 'disposisi') detailMonitoring(row);
+          else if (aksi === 'ubah') alur.formSuratMasuk(row, tabel);
+          else if (aksi === 'hapus') alur.hapusSuratMasuk(row, tabel);
           else if (aksi === 'salin') S.salinTeks(row.nomor_surat || '');
         }
-      }).load();
+      });
+
+      tabelMasuk.load();
+
+      var btnTambah = tabelMasuk.akar.querySelector('#btn-tambah-surat');
+      if (btnTambah) {
+        btnTambah.addEventListener('click', function () {
+          (window.__simperaAlur || {}).formSuratMasuk(null, tabelMasuk);
+        });
+      }
     });
   };
 
@@ -562,18 +581,27 @@
                 { ikon: 'detail', warna: 'hijau', judul: 'Lihat detail surat', aksi: 'detail' },
                 { ikon: 'berkas', warna: 'biru', judul: r.file_url ? 'Buka berkas surat' : 'Tidak ada berkas',
                   aksi: 'berkas', nonaktif: !r.file_url },
-                { ikon: 'ubah', warna: 'ungu',
+                { ikon: 'berkas', warna: 'ungu',
                   judul: r.file_arsip_url ? 'Buka berkas arsip' : 'Belum ada berkas arsip',
                   aksi: 'arsip', nonaktif: !r.file_arsip_url },
+                S.boleh('kelola_surat')
+                  ? { ikon: 'ubah', warna: 'kuning', judul: 'Ubah surat keluar', aksi: 'ubah' }
+                  : null,
+                S.boleh('kelola_surat')
+                  ? { ikon: 'hapus', warna: 'merah', judul: 'Hapus surat keluar', aksi: 'hapus' }
+                  : null,
                 { ikon: 'salin', warna: 'abu', judul: 'Salin nomor surat', aksi: 'salin' }
               ]); } }
         ],
         onRow: function (row) { detailSuratKeluar(row.id_suratkel); },
-        onAksi: function (aksi, row) {
+        onAksi: function (aksi, row, tombol, tabel) {
           if (!row) return;
+          var alur = window.__simperaAlur || {};
           if (aksi === 'detail') detailSuratKeluar(row.id_suratkel);
           else if (aksi === 'berkas' && row.file_url) window.open(row.file_url, '_blank', 'noopener');
           else if (aksi === 'arsip' && row.file_arsip_url) window.open(row.file_arsip_url, '_blank', 'noopener');
+          else if (aksi === 'ubah') alur.formSuratKeluar(row, tabel);
+          else if (aksi === 'hapus') alur.hapusSuratKeluar(row, tabel);
           else if (aksi === 'salin') S.salinTeks(row.nomor || '');
         }
       }).load();
