@@ -113,6 +113,9 @@
        dipakai ulang oleh seluruh rute — kalau tidak, listener halaman lama
        ikut menyala pada halaman berikutnya. */
     var akar = container.firstElementChild;
+    // Filter berbentuk daftar pilih langsung disulap jadi versi yang dapat
+    // dicari, termasuk saat listPage dipakai di dalam tab.
+    S.tingkatkanSelect(akar);
     var body = akar.querySelector('[data-body]');
     var pager = akar.querySelector('[data-pager]');
     var panel = akar.querySelector('[data-panel]');

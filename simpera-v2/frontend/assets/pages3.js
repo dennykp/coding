@@ -106,72 +106,96 @@
   }
 
   /**
-   * Pemilih kode arsip dengan pencarian ke server.
-   * Daftar kode arsip berisi ratusan baris, jadi tidak diturunkan sekaligus;
-   * pengguna mengetik, server yang menyaring.
+   * Pemilih kode arsip: tampilannya sama dengan daftar pilih lain, tetapi
+   * daftarnya diambil dari server sambil diketik. Kode arsip ada ratusan
+   * baris, jadi tidak diturunkan sekaligus.
    */
   function pilihKodeArsip(idAwal, labelAwal) {
     var terpilih = idAwal ? String(idAwal) : '';
+    var label = labelAwal || (terpilih ? 'Kode arsip lama dipertahankan' : '');
+
     return {
       html:
-        '<div class="relative" data-kode-arsip>' +
-          '<input type="text" class="field" data-cari autocomplete="off" ' +
-          'placeholder="Ketik kode atau keterangan, mis. O117" value="' + esc(labelAwal || '') + '">' +
+        '<div class="select2" data-kode-arsip>' +
           '<input type="hidden" name="id_kode_arsip" value="' + esc(terpilih) + '">' +
-          '<div data-daftar class="absolute z-30 mt-1 hidden max-h-56 w-full overflow-y-auto ' +
-          'rounded-xl border border-slate-200 bg-white py-1 shadow-xl"></div>' +
-          '<p data-pesan class="mt-1.5 text-xs text-slate-500">' +
-          (terpilih
-            ? (labelAwal ? 'Kode arsip terpilih.'
-                         : 'Kode arsip lama tetap dipakai; ketik untuk menggantinya.')
-            : 'Biarkan kosong bila belum ditentukan.') + '</p>' +
+          '<button type="button" class="select2-tombol field' + (label ? '' : ' kosong') + '">' +
+            '<span class="select2-teks">' + esc(label || 'Pilih kode arsip') + '</span>' +
+            '<svg class="select2-panah" fill="none" stroke="currentColor" stroke-width="2" ' +
+            'viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" ' +
+            'd="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>' +
+          '</button>' +
+          '<div class="select2-panel hidden">' +
+            '<div class="select2-cari"><input type="text" class="select2-kotak" ' +
+            'placeholder="Ketik kode atau keterangan, mis. O117" autocomplete="off"></div>' +
+            '<div class="select2-daftar"></div>' +
+          '</div>' +
         '</div>',
 
       pasang: function (form) {
         var akar = form.querySelector('[data-kode-arsip]');
-        var cari = akar.querySelector('[data-cari]');
-        var wadah = akar.querySelector('[data-daftar]');
+        var tombol = akar.querySelector('.select2-tombol');
+        var panel = akar.querySelector('.select2-panel');
+        var kotak = akar.querySelector('.select2-kotak');
+        var daftar = akar.querySelector('.select2-daftar');
+        var teks = akar.querySelector('.select2-teks');
         var nilai = akar.querySelector('input[type=hidden]');
-        var pesan = akar.querySelector('[data-pesan]');
 
-        function tutup() { wadah.classList.add('hidden'); }
+        function tutup() {
+          panel.classList.add('hidden');
+          akar.classList.remove('terbuka');
+        }
 
         function gambar(items) {
-          if (!items.length) {
-            wadah.innerHTML = '<p class="px-3 py-2 text-sm text-slate-400">Tidak ada kode yang cocok.</p>';
-          } else {
-            wadah.innerHTML = items.map(function (x) {
-              return '<button type="button" class="block w-full px-3 py-2 text-left text-sm ' +
-                'hover:bg-brand-50" data-pilih="' + esc(x.id_kode_arsip) + '" ' +
-                'data-label="' + esc(x.kode_arsip + ' — ' + (x.keterangan_kode_arsip || '')) + '">' +
-                '<span class="font-semibold text-slate-800">' + esc(x.kode_arsip) + '</span> ' +
-                '<span class="text-slate-500">' + esc(x.keterangan_kode_arsip || '') + '</span></button>';
-            }).join('');
-          }
-          wadah.classList.remove('hidden');
+          daftar.innerHTML = items.length
+            ? '<button type="button" class="select2-opsi netral" data-pilih="">' +
+              'Kosongkan pilihan</button>' +
+              items.map(function (x) {
+                var isi = x.kode_arsip + ' — ' + (x.keterangan_kode_arsip || '');
+                return '<button type="button" class="select2-opsi' +
+                  (String(x.id_kode_arsip) === nilai.value ? ' dipilih' : '') +
+                  '" title="' + esc(isi) + '" data-pilih="' + esc(x.id_kode_arsip) +
+                  '" data-label="' + esc(isi) + '">' +
+                  '<b>' + esc(x.kode_arsip) + '</b> ' +
+                  esc(x.keterangan_kode_arsip || '') + '</button>';
+              }).join('')
+            : '<p class="select2-kosong">Tidak ada kode yang cocok.</p>';
         }
 
         var muat = S.debounce(function () {
-          var teks = cari.value.trim();
-          request('/master/kode-arsip' + query({ q: teks, per_page: 25 }))
+          request('/master/kode-arsip' + query({ q: kotak.value.trim(), per_page: 25 }))
             .then(function (res) { gambar(res.items || []); })
-            .catch(function () { tutup(); });
+            .catch(function () {
+              daftar.innerHTML = '<p class="select2-kosong">Daftar kode arsip gagal dimuat.</p>';
+            });
         }, 250);
 
-        cari.addEventListener('input', function () {
-          nilai.value = '';
-          pesan.textContent = 'Pilih salah satu dari daftar agar kode tersimpan.';
-          muat();
+        tombol.addEventListener('click', function () {
+          if (panel.classList.contains('hidden')) {
+            panel.classList.remove('hidden');
+            akar.classList.add('terbuka');
+            daftar.innerHTML = '<p class="select2-kosong">Memuat…</p>';
+            kotak.focus();
+            muat();
+          } else {
+            tutup();
+          }
         });
-        cari.addEventListener('focus', muat);
 
-        wadah.addEventListener('click', function (event) {
-          var tombol = event.target.closest('[data-pilih]');
-          if (!tombol) return;
-          nilai.value = tombol.getAttribute('data-pilih');
-          cari.value = tombol.getAttribute('data-label');
-          pesan.textContent = 'Kode arsip terpilih.';
+        kotak.addEventListener('input', muat);
+        kotak.addEventListener('keydown', function (event) {
+          if (event.key === 'Escape') { event.preventDefault(); tutup(); tombol.focus(); }
+        });
+
+        daftar.addEventListener('click', function (event) {
+          var pilih = event.target.closest('[data-pilih]');
+          if (!pilih) return;
+          nilai.value = pilih.getAttribute('data-pilih');
+          teks.textContent = nilai.value
+            ? pilih.getAttribute('data-label')
+            : 'Pilih kode arsip';
+          tombol.classList.toggle('kosong', !nilai.value);
           tutup();
+          tombol.focus();
         });
 
         // Pendengar melepas dirinya sendiri begitu formulir ditutup, supaya
@@ -184,6 +208,16 @@
           if (!akar.contains(event.target)) tutup();
         }
         document.addEventListener('click', klikLuar);
+
+        if (form.tagName === 'FORM') {
+          form.addEventListener('reset', function () {
+            setTimeout(function () {
+              nilai.value = '';
+              teks.textContent = 'Pilih kode arsip';
+              tombol.classList.add('kosong');
+            }, 0);
+          });
+        }
       }
     };
   }

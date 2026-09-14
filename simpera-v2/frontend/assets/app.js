@@ -215,6 +215,7 @@
     cetakSekarang = typeof opsi.cetak === 'function' ? opsi.cetak : null;
     el('modal-title').textContent = title;
     el('modal-body').innerHTML = html;
+    tingkatkanSelect(el('modal-body'));
     el('modal').classList.remove('hidden');
     el('modal-body').scrollTop = 0;
     document.body.style.overflow = 'hidden';
@@ -714,6 +715,200 @@
       });
   }
 
+  // ------------------------------------------------------ daftar pilih dapat dicari
+  /*
+   * Pengganti Select2: setiap <select> disulap jadi tombol + panel berisi
+   * kotak cari. Elemen <select> aslinya tetap ada dan tetap jadi sumber
+   * nilai, jadi FormData, form.reset(), dan pendengar 'change' yang sudah
+   * ada tidak perlu diubah sama sekali.
+   */
+  var AMBANG_CARI = 7;   // kotak cari baru muncul bila pilihannya sebanyak ini
+  var KELAS_LEBAR = /^(w-|sm:w-|md:w-|lg:w-|max-w-|min-w-)/;
+
+  function tingkatkanSelect(akar) {
+    var wadah = akar || document;
+    var daftar = wadah.querySelectorAll('select:not([data-s2])');
+    Array.prototype.forEach.call(daftar, pasangSelect);
+  }
+
+  function labelTerpilih(sel) {
+    var opt = sel.options[sel.selectedIndex];
+    return opt ? opt.textContent : '';
+  }
+
+  function pasangSelect(sel) {
+    if (sel.multiple || sel.getAttribute('data-s2')) return;
+    sel.setAttribute('data-s2', 'ya');
+
+    var bungkus = document.createElement('div');
+    bungkus.className = 'select2';
+    Array.prototype.forEach.call(sel.classList, function (k) {
+      if (KELAS_LEBAR.test(k)) bungkus.classList.add(k);
+    });
+    sel.parentNode.insertBefore(bungkus, sel);
+    bungkus.appendChild(sel);
+    sel.classList.add('select2-asli');
+
+    var tombol = document.createElement('button');
+    tombol.type = 'button';
+    tombol.className = 'select2-tombol ' + sel.className.replace('select2-asli', '').trim();
+    tombol.setAttribute('aria-haspopup', 'listbox');
+    tombol.setAttribute('aria-expanded', 'false');
+    tombol.innerHTML = '<span class="select2-teks"></span>' +
+      '<svg class="select2-panah" fill="none" stroke="currentColor" stroke-width="2" ' +
+      'viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" ' +
+      'd="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>';
+    bungkus.appendChild(tombol);
+
+    var panel = document.createElement('div');
+    panel.className = 'select2-panel hidden';
+    panel.innerHTML =
+      '<div class="select2-cari hidden"><input type="text" class="select2-kotak" ' +
+      'placeholder="Cari…" autocomplete="off" spellcheck="false"></div>' +
+      '<div class="select2-daftar" role="listbox"></div>';
+    bungkus.appendChild(panel);
+
+    var kotak = panel.querySelector('.select2-kotak');
+    var isiCari = panel.querySelector('.select2-cari');
+    var daftar = panel.querySelector('.select2-daftar');
+    var teks = tombol.querySelector('.select2-teks');
+    var aktif = -1;      // indeks baris yang sedang disorot
+    var tampil = [];     // indeks <option> yang lolos saringan
+
+    function segarkan() {
+      var opt = sel.options[sel.selectedIndex];
+      teks.textContent = labelTerpilih(sel) || 'Pilih…';
+      tombol.classList.toggle('kosong', !opt || opt.value === '');
+      tombol.disabled = sel.disabled;
+    }
+
+    function gambar() {
+      var cari = (kotak.value || '').trim().toLowerCase();
+      tampil = [];
+      var isi = '';
+      Array.prototype.forEach.call(sel.options, function (o, i) {
+        var label = o.textContent;
+        if (cari && label.toLowerCase().indexOf(cari) === -1) return;
+        var dipilih = i === sel.selectedIndex;
+        tampil.push(i);
+        isi += '<button type="button" role="option" class="select2-opsi' +
+          (dipilih ? ' dipilih' : '') + (o.value === '' ? ' netral' : '') +
+          '" data-i="' + i + '" aria-selected="' + (dipilih ? 'true' : 'false') + '">' +
+          esc(label) + '</button>';
+      });
+      daftar.innerHTML = isi ||
+        '<p class="select2-kosong">Tidak ada pilihan yang cocok.</p>';
+      aktif = tampil.indexOf(sel.selectedIndex);
+      sorot();
+    }
+
+    function sorot() {
+      var baris = daftar.querySelectorAll('.select2-opsi');
+      Array.prototype.forEach.call(baris, function (b, i) {
+        b.classList.toggle('sorot', i === aktif);
+      });
+      if (aktif >= 0 && baris[aktif]) {
+        var b = baris[aktif];
+        if (b.offsetTop < daftar.scrollTop) daftar.scrollTop = b.offsetTop;
+        else if (b.offsetTop + b.offsetHeight > daftar.scrollTop + daftar.clientHeight) {
+          daftar.scrollTop = b.offsetTop + b.offsetHeight - daftar.clientHeight;
+        }
+      }
+    }
+
+    function buka() {
+      if (sel.disabled) return;
+      tutupSemuaSelect(bungkus);
+      kotak.value = '';
+      isiCari.classList.toggle('hidden', sel.options.length < AMBANG_CARI);
+      gambar();
+      panel.classList.remove('hidden');
+      tombol.setAttribute('aria-expanded', 'true');
+      bungkus.classList.add('terbuka');
+      // Panel dibalik ke atas bila ruang di bawahnya tidak cukup.
+      var sisa = window.innerHeight - tombol.getBoundingClientRect().bottom;
+      bungkus.classList.toggle('ke-atas', sisa < 240);
+      if (!isiCari.classList.contains('hidden')) kotak.focus();
+    }
+
+    function tutup() {
+      panel.classList.add('hidden');
+      tombol.setAttribute('aria-expanded', 'false');
+      bungkus.classList.remove('terbuka', 'ke-atas');
+    }
+
+    function pilih(i) {
+      if (sel.selectedIndex !== i) {
+        sel.selectedIndex = i;
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      segarkan();
+      tutup();
+      tombol.focus();
+    }
+
+    tombol.addEventListener('click', function () {
+      if (panel.classList.contains('hidden')) buka(); else tutup();
+    });
+
+    tombol.addEventListener('keydown', function (event) {
+      if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        buka();
+      }
+    });
+
+    daftar.addEventListener('click', function (event) {
+      var opsi = event.target.closest('.select2-opsi');
+      if (opsi) pilih(parseInt(opsi.getAttribute('data-i'), 10));
+    });
+
+    kotak.addEventListener('input', gambar);
+
+    panel.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') { event.preventDefault(); tutup(); tombol.focus(); return; }
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        aktif = Math.min(aktif + 1, tampil.length - 1); sorot();
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        aktif = Math.max(aktif - 1, 0); sorot();
+      } else if (event.key === 'Enter') {
+        event.preventDefault();
+        if (aktif >= 0 && tampil[aktif] !== undefined) pilih(tampil[aktif]);
+      }
+    });
+
+    // Perubahan dari kode lain (reset filter, form.reset) ikut tercermin.
+    sel.addEventListener('change', segarkan);
+    if (sel.form) sel.form.addEventListener('reset', function () { setTimeout(segarkan, 0); });
+
+    bungkus.__segarkan = segarkan;
+    segarkan();
+  }
+
+  function tutupSemuaSelect(kecuali) {
+    var terbuka = document.querySelectorAll('.select2.terbuka');
+    Array.prototype.forEach.call(terbuka, function (b) {
+      if (b === kecuali) return;
+      b.classList.remove('terbuka', 'ke-atas');
+      var p = b.querySelector('.select2-panel');
+      if (p) p.classList.add('hidden');
+      var t = b.querySelector('.select2-tombol');
+      if (t) t.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  /* Dipanggil bila daftar <option> diganti dari luar. */
+  function segarkanSelect(sel) {
+    var bungkus = sel && sel.closest ? sel.closest('.select2') : null;
+    if (bungkus && bungkus.__segarkan) bungkus.__segarkan();
+  }
+
+  document.addEventListener('click', function (event) {
+    if (!event.target.closest('.select2')) tutupSemuaSelect(null);
+  });
+
   // ------------------------------------------------------------------ ekspor ke lingkup modul
   window.__simpera = {
     $: $, el: el, esc: esc, dash: dash, tanggal: tanggal, angka: angka,
@@ -721,6 +916,7 @@
     query: query,
     openModal: openModal, closeModal: closeModal, modalLoading: modalLoading,
     tombolCetak: tombolCetak, cetak: cetak, master: master,
+    tingkatkanSelect: tingkatkanSelect, segarkanSelect: segarkanSelect,
     statCard: statCard, badge: badge, toneStatusSurat: toneStatusSurat,
     avatar: avatar, inisial: inisial, tombolAksi: tombolAksi, salinTeks: salinTeks,
     boleh: boleh, muatNotif: muatNotif,
@@ -997,8 +1193,10 @@
     }
     try {
       var result = render(page);
-      if (result && typeof result.catch === 'function') {
-        result.catch(function (err) { renderError(page, err); });
+      tingkatkanSelect(page);
+      if (result && typeof result.then === 'function') {
+        result.then(function () { tingkatkanSelect(page); },
+                    function (err) { renderError(page, err); });
       }
     } catch (err) {
       renderError(page, err);
@@ -1025,7 +1223,11 @@
     select.innerHTML = state.tahunList.map(function (y) {
       return '<option value="' + y + '"' + (y === state.tahun ? ' selected' : '') + '>Tahun ' + y + '</option>';
     }).join('');
-    select.classList.add('is-ready');
+    tingkatkanSelect(select.parentNode);
+    segarkanSelect(select);
+    // Kelas penanda siap dipasang pada tombolnya, karena itulah yang terlihat.
+    var tombolTahun = select.parentNode.querySelector('.select2-tombol');
+    if (tombolTahun) tombolTahun.classList.add('is-ready');
   }
 
   // ------------------------------------------------------------------ peristiwa
