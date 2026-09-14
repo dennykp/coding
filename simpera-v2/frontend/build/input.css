@@ -262,6 +262,86 @@ table.data tbody tr:hover { background: #f0fdf4; }
 .toast-info { background: #334155; }
 @keyframes rise { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
 
+/* ======================================================== jendela (modal)
+   Kepala jendela memakai gradasi hijau supaya seluruh jendela — detail,
+   formulir, maupun konfirmasi — terasa satu keluarga. */
+.modal-header {
+  background: linear-gradient(120deg, #065f46 0%, #047857 45%, #059669 100%);
+  color: #ffffff;
+}
+.modal-header h3 { color: #ffffff; }
+.modal-close {
+  border-radius: .6rem; padding: .375rem; color: rgba(255,255,255,.75);
+  transition: background-color .15s, color .15s;
+}
+.modal-close:hover { background: rgba(255,255,255,.18); color: #ffffff; }
+
+/* Tombol kecil di kepala jendela (mis. Cetak). */
+.btn-header {
+  display: inline-flex; align-items: center; gap: .4rem;
+  border-radius: .6rem; background: rgba(255,255,255,.16);
+  padding: .4rem .75rem; font-size: .75rem; font-weight: 600; color: #ffffff;
+  border: 1px solid rgba(255,255,255,.28);
+  transition: background-color .15s;
+}
+.btn-header:hover { background: rgba(255,255,255,.28); }
+
+/* --- kartu di dalam jendela detail --- */
+.kartu {
+  background: #ffffff; border-radius: 1rem; border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px rgba(15,23,42,.04);
+  overflow: hidden;
+}
+.kartu-kepala {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .75rem 1.15rem;
+  background: #ecfdf5; border-bottom: 1px solid #d1fae5;
+  font-size: .75rem; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: #047857;
+}
+.kartu-isi { padding: 1.15rem; }
+
+/* Baris data: label di atas, nilai tebal di bawah — terbaca di kolom sempit. */
+.data-baris { padding: .6rem 0; border-bottom: 1px dashed #e2e8f0; }
+.data-baris:last-child { border-bottom: 0; }
+.data-label {
+  font-size: .6875rem; font-weight: 600; letter-spacing: .05em;
+  text-transform: uppercase; color: #64748b;
+}
+.data-nilai { margin-top: .2rem; font-size: .875rem; color: #0f172a; overflow-wrap: anywhere; }
+
+/* --- bagian formulir --- */
+.bagian {
+  background: #ffffff; border-radius: 1rem; border: 1px solid #e2e8f0;
+  padding: 1.15rem;
+}
+.bagian-judul {
+  display: flex; align-items: center; gap: .5rem; margin-bottom: .9rem;
+  font-size: .75rem; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: #047857;
+}
+.bagian-judul::before {
+  content: ""; width: .3rem; height: 1rem; border-radius: 999px;
+  background: linear-gradient(#10b981, #047857);
+}
+
+/* Kotak unggah berkas. */
+.unggah {
+  display: block; border: 1.5px dashed #a7f3d0; border-radius: .9rem;
+  background: #f0fdf4; padding: 1rem; cursor: pointer;
+  transition: border-color .15s, background-color .15s;
+}
+.unggah:hover { border-color: #34d399; background: #ecfdf5; }
+.unggah input[type=file] {
+  display: block; width: 100%; margin-top: .7rem; font-size: .8125rem; color: #475569;
+}
+.unggah input[type=file]::file-selector-button {
+  margin-right: .75rem; border: 0; border-radius: .55rem;
+  background: #047857; color: #ffffff; padding: .45rem .85rem;
+  font-size: .75rem; font-weight: 600; cursor: pointer;
+}
+.unggah input[type=file]::file-selector-button:hover { background: #065f46; }
+
 @media print {
   #sidebar, header, footer, #toasts { display: none !important; }
   .lg\:pl-72 { padding-left: 0 !important; }

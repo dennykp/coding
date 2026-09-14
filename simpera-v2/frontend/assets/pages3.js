@@ -105,6 +105,89 @@
     };
   }
 
+  /**
+   * Pemilih kode arsip dengan pencarian ke server.
+   * Daftar kode arsip berisi ratusan baris, jadi tidak diturunkan sekaligus;
+   * pengguna mengetik, server yang menyaring.
+   */
+  function pilihKodeArsip(idAwal, labelAwal) {
+    var terpilih = idAwal ? String(idAwal) : '';
+    return {
+      html:
+        '<div class="relative" data-kode-arsip>' +
+          '<input type="text" class="field" data-cari autocomplete="off" ' +
+          'placeholder="Ketik kode atau keterangan, mis. O117" value="' + esc(labelAwal || '') + '">' +
+          '<input type="hidden" name="id_kode_arsip" value="' + esc(terpilih) + '">' +
+          '<div data-daftar class="absolute z-30 mt-1 hidden max-h-56 w-full overflow-y-auto ' +
+          'rounded-xl border border-slate-200 bg-white py-1 shadow-xl"></div>' +
+          '<p data-pesan class="mt-1.5 text-xs text-slate-500">' +
+          (terpilih
+            ? (labelAwal ? 'Kode arsip terpilih.'
+                         : 'Kode arsip lama tetap dipakai; ketik untuk menggantinya.')
+            : 'Biarkan kosong bila belum ditentukan.') + '</p>' +
+        '</div>',
+
+      pasang: function (form) {
+        var akar = form.querySelector('[data-kode-arsip]');
+        var cari = akar.querySelector('[data-cari]');
+        var wadah = akar.querySelector('[data-daftar]');
+        var nilai = akar.querySelector('input[type=hidden]');
+        var pesan = akar.querySelector('[data-pesan]');
+
+        function tutup() { wadah.classList.add('hidden'); }
+
+        function gambar(items) {
+          if (!items.length) {
+            wadah.innerHTML = '<p class="px-3 py-2 text-sm text-slate-400">Tidak ada kode yang cocok.</p>';
+          } else {
+            wadah.innerHTML = items.map(function (x) {
+              return '<button type="button" class="block w-full px-3 py-2 text-left text-sm ' +
+                'hover:bg-brand-50" data-pilih="' + esc(x.id_kode_arsip) + '" ' +
+                'data-label="' + esc(x.kode_arsip + ' — ' + (x.keterangan_kode_arsip || '')) + '">' +
+                '<span class="font-semibold text-slate-800">' + esc(x.kode_arsip) + '</span> ' +
+                '<span class="text-slate-500">' + esc(x.keterangan_kode_arsip || '') + '</span></button>';
+            }).join('');
+          }
+          wadah.classList.remove('hidden');
+        }
+
+        var muat = S.debounce(function () {
+          var teks = cari.value.trim();
+          request('/master/kode-arsip' + query({ q: teks, per_page: 25 }))
+            .then(function (res) { gambar(res.items || []); })
+            .catch(function () { tutup(); });
+        }, 250);
+
+        cari.addEventListener('input', function () {
+          nilai.value = '';
+          pesan.textContent = 'Pilih salah satu dari daftar agar kode tersimpan.';
+          muat();
+        });
+        cari.addEventListener('focus', muat);
+
+        wadah.addEventListener('click', function (event) {
+          var tombol = event.target.closest('[data-pilih]');
+          if (!tombol) return;
+          nilai.value = tombol.getAttribute('data-pilih');
+          cari.value = tombol.getAttribute('data-label');
+          pesan.textContent = 'Kode arsip terpilih.';
+          tutup();
+        });
+
+        // Pendengar melepas dirinya sendiri begitu formulir ditutup, supaya
+        // tidak menumpuk setiap kali jendela dibuka.
+        function klikLuar(event) {
+          if (!document.body.contains(akar)) {
+            document.removeEventListener('click', klikLuar);
+            return;
+          }
+          if (!akar.contains(event.target)) tutup();
+        }
+        document.addEventListener('click', klikLuar);
+      }
+    };
+  }
+
   // ===================================================== TAMBAH / UBAH SURAT MASUK
   /**
    * Formulir pencatatan surat masuk. Dipakai untuk menambah maupun mengubah;
@@ -112,19 +195,22 @@
    */
   function formSuratMasuk(row, tabel) {
     var ubah = !!(row && row.id_surat);
-    S.modalLoading(ubah ? 'Ubah Surat Masuk' : 'Catat Surat Masuk');
+    var judul = ubah ? 'Ubah Surat Masuk' : 'Catat Surat Masuk';
+    S.modalLoading(judul, { lebar: 'lebar' });
 
+    // Data referensi diambil dari singgahan sesi, jadi jendela ini terbuka
+    // seketika sesudah pemakaian pertama.
     Promise.all([
-      request('/master/jenis-surat').catch(function () { return []; }),
-      request('/master/kategori-surat').catch(function () { return []; }),
-      request('/master/jabatan' + query({ limit: 2000 })).catch(function () { return []; }),
-      request('/master/kode-arsip' + query({ per_page: 200 }))
-        .catch(function () { return { items: [] }; }),
+      S.master('/master/jenis-surat').catch(function () { return []; }),
+      S.master('/master/kategori-surat').catch(function () { return []; }),
+      S.master('/master/jabatan' + query({ limit: 2000 })).catch(function () { return []; }),
       ubah ? request('/surat-masuk/' + row.id_surat) : Promise.resolve({})
     ]).then(function (res) {
-      var jenis = res[0], kategori = res[1], jabatan = res[2];
-      var arsip = res[3].items || [], awal = res[4] || {};
+      var jenis = res[0], kategori = res[1], jabatan = res[2], awal = res[3] || {};
       var hariIni = new Date().toISOString().slice(0, 10);
+
+      var pKode = pilihKodeArsip(awal.id_kode_arsip,
+        awal.kode_arsip ? awal.kode_arsip + ' — ' + (awal.keterangan_kode_arsip || '') : '');
 
       function pilihan(daftar, kunci, label, terpilih, kosong) {
         return '<option value="">' + esc(kosong) + '</option>' + daftar.map(function (x) {
@@ -134,98 +220,123 @@
         }).join('');
       }
 
-      S.openModal(ubah ? 'Ubah Surat Masuk — ' + (awal.nomor_surat || '') : 'Catat Surat Masuk',
-        '<form id="form-surat-masuk" class="space-y-5" novalidate>' +
+      function bidang(label, isi, lebar) {
+        return '<div class="' + (lebar || '') + '">' +
+          '<label class="mb-1.5 block text-sm font-medium text-slate-700">' + label + '</label>' +
+          isi + '</div>';
+      }
+
+      var wajib = ' <span class="text-rose-500">*</span>';
+
+      var identitas =
+        '<section class="bagian">' +
+          '<h4 class="bagian-judul">Identitas surat</h4>' +
           '<div class="grid gap-4 sm:grid-cols-2">' +
-            '<div>' +
-              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Nomor surat *</label>' +
+            bidang('Nomor surat' + wajib,
               '<input name="nomor_surat" class="field" required maxlength="50" value="' +
-              esc(awal.nomor_surat || '') + '" placeholder="mis. 066/O117/U.01/D/L.25/IX/2026">' +
-            '</div>' +
-            (ubah
-              ? '<div>' +
-                '<label class="mb-1.5 block text-sm font-medium text-slate-700">Nomor agenda</label>' +
-                '<input name="nomor_agenda" class="field" maxlength="50" value="' +
-                esc(awal.nomor_agenda || '') + '">' +
-                '</div>'
-              : '<div>' +
-                '<label class="mb-1.5 block text-sm font-medium text-slate-700">Nomor agenda</label>' +
-                '<input class="field" value="Dibuat otomatis" disabled>' +
-                '</div>') +
-            '<div>' +
-              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Tanggal surat *</label>' +
+              esc(awal.nomor_surat || '') + '" placeholder="mis. 066/O117/U.01/D/L.25/IX/2026">') +
+            bidang('Nomor agenda', ubah
+              ? '<input name="nomor_agenda" class="field" maxlength="50" value="' +
+                esc(awal.nomor_agenda || '') + '">'
+              : '<input class="field" value="Dibuat otomatis oleh sistem" disabled>') +
+            bidang('Tanggal surat' + wajib,
               '<input name="tgl_surat" type="date" class="field" required value="' +
-              esc(awal.tgl_surat || hariIni) + '">' +
-            '</div>' +
-            '<div>' +
-              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Tanggal diterima *</label>' +
+              esc(awal.tgl_surat || hariIni) + '">') +
+            bidang('Tanggal diterima' + wajib,
               '<input name="tgl_surat_terima" type="date" class="field" required value="' +
-              esc(awal.tgl_surat_terima || hariIni) + '">' +
-            '</div>' +
-            '<div class="sm:col-span-2">' +
-              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Perihal</label>' +
-              '<textarea name="perihal" rows="2" class="field" ' +
-              'placeholder="Ringkasan isi surat">' + esc(awal.perihal || '') + '</textarea>' +
-            '</div>' +
-            '<div>' +
-              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Pengirim (dari)</label>' +
+              esc(awal.tgl_surat_terima || hariIni) + '">') +
+          '</div>' +
+        '</section>';
+
+      var asal =
+        '<section class="bagian">' +
+          '<h4 class="bagian-judul">Asal &amp; tujuan</h4>' +
+          '<div class="grid gap-4 sm:grid-cols-2">' +
+            bidang('Pengirim (dari)',
               '<input name="dari" class="field" maxlength="100" value="' + esc(awal.dari || '') +
-              '" placeholder="mis. Fakultas Agama Islam">' +
-            '</div>' +
-            '<div>' +
-              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Kepada (teks)</label>' +
-              '<input name="kepada" class="field" maxlength="100" value="' + esc(awal.kepada || '') + '">' +
-            '</div>' +
-            '<div>' +
-              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Jabatan tujuan</label>' +
+              '" placeholder="mis. Fakultas Agama Islam">') +
+            bidang('Kepada (teks bebas)',
+              '<input name="kepada" class="field" maxlength="100" value="' +
+              esc(awal.kepada || '') + '" placeholder="mis. Rektor">') +
+            bidang('Jabatan tujuan',
               '<select name="id_jabatan" class="field">' +
-              pilihan(jabatan, 'id_jabatan', 'nama_jabatan', awal.id_jabatan, 'Pilih jabatan tujuan') +
-              '</select>' +
-            '</div>' +
-            '<div>' +
-              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Jenis surat</label>' +
+              pilihan(jabatan, 'id_jabatan', 'nama_jabatan', awal.id_jabatan,
+                      'Pilih jabatan tujuan') + '</select>', 'sm:col-span-2') +
+          '</div>' +
+        '</section>';
+
+      var klasifikasi =
+        '<section class="bagian">' +
+          '<h4 class="bagian-judul">Klasifikasi</h4>' +
+          '<div class="grid gap-4 sm:grid-cols-2">' +
+            bidang('Jenis surat',
               '<select name="id_jenis" class="field">' +
-              pilihan(jenis, 'id_jenis', 'nama', awal.id_jenis, 'Pilih jenis') + '</select>' +
-            '</div>' +
-            '<div>' +
-              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Kategori</label>' +
+              pilihan(jenis, 'id_jenis', 'nama', awal.id_jenis, 'Pilih jenis') + '</select>') +
+            bidang('Kategori',
               '<select name="id_kategori" class="field">' +
               pilihan(kategori, 'id_kategori', 'kategori', awal.id_kategori, 'Pilih kategori') +
-              '</select>' +
-            '</div>' +
-            '<div>' +
-              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Kode arsip</label>' +
-              '<select name="id_kode_arsip" class="field">' +
-              pilihan(arsip, 'id_kode_arsip', function (x) {
-                return x.kode_arsip + ' — ' + (x.keterangan_kode_arsip || '');
-              }, awal.id_kode_arsip, 'Pilih kode arsip') + '</select>' +
-            '</div>' +
-            '<div class="sm:col-span-2">' +
-              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Catatan</label>' +
-              '<textarea name="catatan" rows="2" class="field">' + esc(awal.catatan || '') + '</textarea>' +
-            '</div>' +
-            '<div class="sm:col-span-2">' +
-              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Lampiran surat</label>' +
-              '<input name="lampiran" type="file" class="field !py-2" ' +
-              'accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.zip">' +
-              (awal.file_url
-                ? '<p class="mt-1.5 text-xs text-slate-500">Lampiran saat ini: ' +
-                  '<a href="' + esc(awal.file_url) + '" target="_blank" rel="noopener" ' +
-                  'class="font-medium text-brand-700 hover:underline">buka berkas</a>. ' +
-                  'Biarkan kosong bila tidak ingin menggantinya.</p>'
-                : '<p class="mt-1.5 text-xs text-slate-500">Format PDF, gambar, atau dokumen. ' +
-                  'Maksimal 25 MB.</p>') +
-            '</div>' +
+              '</select>') +
+            bidang('Kode arsip', pKode.html, 'sm:col-span-2') +
           '</div>' +
-          '<p id="surat-masuk-error" class="hidden rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700"></p>' +
-          '<div class="flex justify-end gap-2 border-t border-slate-100 pt-4">' +
+        '</section>';
+
+      var isi =
+        '<section class="bagian">' +
+          '<h4 class="bagian-judul">Isi surat</h4>' +
+          '<div class="space-y-4">' +
+            bidang('Perihal',
+              '<textarea name="perihal" rows="3" class="field" ' +
+              'placeholder="Ringkasan isi surat">' + esc(awal.perihal || '') + '</textarea>') +
+            bidang('Catatan',
+              '<textarea name="catatan" rows="2" class="field" ' +
+              'placeholder="Catatan tambahan untuk penerima">' +
+              esc(awal.catatan || '') + '</textarea>') +
+          '</div>' +
+        '</section>';
+
+      var lampiran =
+        '<section class="bagian">' +
+          '<h4 class="bagian-judul">Lampiran</h4>' +
+          '<label class="unggah">' +
+            '<span class="flex items-center gap-3">' +
+              '<span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-600 text-white">' +
+              '<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">' +
+              '<path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z"/></svg></span>' +
+              '<span class="min-w-0">' +
+                '<span class="block text-sm font-semibold text-brand-800">Pilih berkas surat</span>' +
+                '<span class="block text-xs text-slate-500">PDF, gambar, atau dokumen. Maksimal 25 MB.</span>' +
+              '</span>' +
+            '</span>' +
+            '<input name="lampiran" type="file" ' +
+            'accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.zip">' +
+          '</label>' +
+          (awal.file_url
+            ? '<p class="mt-2.5 text-xs text-slate-500">Lampiran saat ini: ' +
+              '<a href="' + esc(awal.file_url) + '" target="_blank" rel="noopener" ' +
+              'class="font-semibold text-brand-700 hover:underline">buka berkas</a>. ' +
+              'Biarkan kosong bila tidak ingin menggantinya.</p>'
+            : '') +
+        '</section>';
+
+      S.openModal(ubah ? judul + ' — ' + (awal.nomor_surat || '') : judul,
+        '<form id="form-surat-masuk" novalidate>' +
+          '<div class="grid gap-5 lg:grid-cols-2">' +
+            '<div class="space-y-5">' + identitas + klasifikasi + lampiran + '</div>' +
+            '<div class="space-y-5">' + asal + isi + '</div>' +
+          '</div>' +
+          '<p id="surat-masuk-error" class="mt-5 hidden rounded-xl bg-rose-50 px-4 py-3 ' +
+          'text-sm text-rose-700"></p>' +
+          '<div class="mt-5 flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-4">' +
             '<button type="button" class="btn-ghost" data-modal-close>Batal</button>' +
             '<button type="submit" class="btn-primary">' +
             (ubah ? 'Simpan perubahan' : 'Simpan surat') + '</button>' +
           '</div>' +
-        '</form>');
+        '</form>',
+        { lebar: 'lebar' });
 
       var form = document.getElementById('form-surat-masuk');
+      pKode.pasang(form);
+
       form.addEventListener('submit', function (event) {
         event.preventDefault();
         var pesan = document.getElementById('surat-masuk-error');
@@ -244,8 +355,8 @@
         ['id_jenis', 'id_kategori', 'id_jabatan', 'id_kode_arsip'].forEach(function (k) {
           if (!data.get(k)) data.delete(k);
         });
-        var lampiran = data.get('lampiran');
-        if (!lampiran || !lampiran.name) data.delete('lampiran');
+        var berkas = data.get('lampiran');
+        if (!berkas || !berkas.name) data.delete('lampiran');
 
         var tombol = form.querySelector('button[type=submit]');
         var label = tombol.textContent;
@@ -269,7 +380,7 @@
           });
       });
     }).catch(function (err) {
-      S.openModal('Surat Masuk',
+      S.openModal(judul,
         '<p class="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">' + esc(err.message) + '</p>');
     });
   }
@@ -281,11 +392,11 @@
       '<p class="mt-3 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">' +
       'Tindakan ini permanen dan tidak bisa dibatalkan.</p>' +
       '<p id="hapus-surat-error" class="mt-3 hidden rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700"></p>' +
-      '<div class="mt-6 flex justify-end gap-2 border-t border-slate-100 pt-4">' +
+      '<div class="mt-6 flex justify-end gap-2 border-t border-slate-200 pt-4">' +
         '<button type="button" class="btn-ghost" data-modal-close>Batal</button>' +
         '<button type="button" id="btn-hapus-surat" ' +
         'class="btn-primary !bg-rose-600 hover:!bg-rose-700">Ya, hapus</button>' +
-      '</div>');
+      '</div>', { lebar: 'sedang' });
 
     var tombol = document.getElementById('btn-hapus-surat');
     tombol.addEventListener('click', function () {
@@ -336,7 +447,7 @@
     var id = row.id_surat;
     S.openModal('Verifikasi Surat Masuk',
       '<form id="form-verifikasi" class="space-y-5" novalidate>' +
-        '<div class="rounded-2xl bg-slate-50 p-4">' +
+        '<div class="rounded-2xl border border-slate-200 bg-white p-4">' +
           '<p class="text-xs uppercase tracking-wide text-slate-500">Nomor surat</p>' +
           '<p class="mt-0.5 font-medium text-slate-900">' + dash(row.nomor_surat) + '</p>' +
           '<p class="mt-3 text-xs uppercase tracking-wide text-slate-500">Perihal</p>' +
@@ -439,12 +550,10 @@
         { title: 'Diterima', tdClass: 'whitespace-nowrap', render: function (r) {
             return tanggal(r.tgl_surat_terima); } },
         { title: 'Aksi', thClass: 'text-right kolom-aksi', tdClass: 'whitespace-nowrap kolom-aksi',
-          render: function (r) {
+          render: function () {
             return S.tombolAksi([
-              { ikon: 'detail', warna: 'hijau', judul: 'Lihat detail surat', aksi: 'detail' },
-              { ikon: 'berkas', warna: 'biru', judul: r.file_url ? 'Buka lampiran' : 'Tidak ada lampiran',
-                aksi: 'berkas', nonaktif: !r.file_url }
-            ]) ; } },
+              { ikon: 'detail', warna: 'hijau', judul: 'Lihat detail surat', aksi: 'detail' }
+            ]); } },
         { title: '', thClass: 'text-right', tdClass: 'whitespace-nowrap text-right',
           render: function () {
             return '<button class="btn-primary btn-sm" data-aksi="verifikasi">Verifikasi</button>'; } }
@@ -453,7 +562,6 @@
       onAksi: function (aksi, row, tombol, tabel) {
         if (!row) return;
         if (aksi === 'detail') H.detailSuratMasuk(row.id_surat);
-        else if (aksi === 'berkas' && row.file_url) window.open(row.file_url, '_blank', 'noopener');
         else if (aksi === 'verifikasi') formVerifikasi(row, tabel);
       }
     }).load();
@@ -461,10 +569,10 @@
 
   // ================================================================= DISPOSISI
   function formDisposisi(idSurat, tabel) {
-    S.modalLoading('Disposisi Surat');
+    S.modalLoading('Disposisi Surat', { lebar: 'lebar' });
     Promise.all([
       request('/surat-masuk/' + idSurat + '/opsi-disposisi'),
-      request('/master/jabatan' + query({ limit: 2000 }))
+      S.master('/master/jabatan' + query({ limit: 2000 }))
     ]).then(function (res) {
       var bahan = res[0], jabatan = res[1];
       var surat = bahan.surat;
@@ -486,7 +594,7 @@
 
       S.openModal('Disposisi — ' + (surat.nomor_surat || '#' + idSurat),
         '<form id="form-disposisi" class="space-y-5" novalidate>' +
-          '<div class="rounded-2xl bg-slate-50 p-4">' +
+          '<div class="rounded-2xl border border-slate-200 bg-white p-4">' +
             '<p class="text-sm font-medium text-slate-900">' + dash(surat.perihal) + '</p>' +
             '<p class="mt-1 text-xs text-slate-500">Dari ' + dash(surat.dari) +
             ' · diterima ' + tanggal(surat.tgl_surat_terima) + '</p>' +
@@ -530,7 +638,7 @@
             '<button type="button" class="btn-ghost" data-modal-close>Batal</button>' +
             '<button type="submit" class="btn-primary">Kirim disposisi</button>' +
           '</div>' +
-        '</form>');
+        '</form>', { lebar: 'lebar' });
 
       var form = document.getElementById('form-disposisi');
       pilih.pasang(form);
@@ -584,19 +692,18 @@
   pages['buat-surat'] = function (container) {
     container.innerHTML = '<div class="skeleton h-96 w-full"></div>';
     return Promise.all([
-      request('/master/jabatan' + query({ limit: 2000 })),
-      request('/master/jenis-surat'),
-      request('/master/kode-arsip' + query({ per_page: 200 })),
-      request('/master/kode-perihal' + query({ limit: 500 })),
+      S.master('/master/jabatan' + query({ limit: 2000 })),
+      S.master('/master/jenis-surat'),
+      S.master('/master/kode-perihal' + query({ limit: 500 })),
       request('/surat-keluar/nomor-berikutnya').catch(function () { return { nomor: '' }; })
     ]).then(function (res) {
-      var jabatan = res[0], jenis = res[1], arsip = res[2].items || [],
-          perihal = res[3], usulNomor = res[4];
+      var jabatan = res[0], jenis = res[1], perihal = res[2], usulNomor = res[3];
       var hariIni = new Date().toISOString().slice(0, 10);
 
       var pTujuan = pemilihJabatan('tujuan', jabatan, []);
       var pTembusan = pemilihJabatan('tembusan', jabatan, []);
       var pTtd = pemilihJabatan('ttd', jabatan, []);
+      var pKode = pilihKodeArsip('', '');
 
       container.innerHTML =
         '<div class="mx-auto max-w-4xl space-y-5">' +
@@ -639,13 +746,7 @@
               '</div>' +
               '<div>' +
                 '<label class="mb-1.5 block text-sm font-medium text-slate-700">Kode arsip</label>' +
-                '<select name="id_kode_arsip" class="field">' +
-                '<option value="">Pilih kode arsip</option>' +
-                arsip.map(function (a) {
-                  return '<option value="' + esc(a.id_kode_arsip) + '">' + esc(a.kode_arsip) +
-                    ' — ' + esc(a.keterangan_kode_arsip || '') + '</option>';
-                }).join('') +
-                '</select>' +
+                pKode.html +
               '</div>' +
               '<div class="sm:col-span-2">' +
                 '<label class="mb-1.5 block text-sm font-medium text-slate-700">Perihal</label>' +
@@ -690,6 +791,7 @@
         '</div>';
 
       var form = document.getElementById('form-surat');
+      pKode.pasang(form);
       pTujuan.pasang(form);
       pTembusan.pasang(form);
       pTtd.pasang(form);
@@ -748,16 +850,14 @@
 
   // ============================================================ UBAH SURAT KELUAR
   function formSuratKeluar(row, tabel) {
-    S.modalLoading('Ubah Surat Keluar');
+    S.modalLoading('Ubah Surat Keluar', { lebar: 'lebar' });
     Promise.all([
       request('/surat-keluar/' + row.id_suratkel),
-      request('/master/jabatan' + query({ limit: 2000 })),
-      request('/master/jenis-surat'),
-      request('/master/kode-arsip' + query({ per_page: 200 })),
-      request('/master/kode-perihal' + query({ limit: 500 }))
+      S.master('/master/jabatan' + query({ limit: 2000 })),
+      S.master('/master/jenis-surat'),
+      S.master('/master/kode-perihal' + query({ limit: 500 }))
     ]).then(function (res) {
-      var awal = res[0], jabatan = res[1], jenis = res[2];
-      var arsip = res[3].items || [], perihal = res[4];
+      var awal = res[0], jabatan = res[1], jenis = res[2], perihal = res[3];
 
       /* Kolom tujuan/tembusan/tanda tangan disimpan sebagai teks "4, 5". */
       function keDaftar(teks) {
@@ -769,6 +869,8 @@
       var pTujuan = pemilihJabatan('tujuan', jabatan, keDaftar(awal.tujuan));
       var pTembusan = pemilihJabatan('tembusan', jabatan, keDaftar(awal.tembusan));
       var pTtd = pemilihJabatan('ttd', jabatan, keDaftar(awal.tanda_tangan));
+      var pKode = pilihKodeArsip(awal.id_kode_arsip,
+        awal.kode_arsip ? awal.kode_arsip + ' — ' + (awal.keterangan_kode_arsip || '') : '');
 
       function opsi(daftar, kunci, label, terpilih, kosong) {
         return '<option value="">' + esc(kosong) + '</option>' + daftar.map(function (x) {
@@ -778,55 +880,65 @@
         }).join('');
       }
 
+      function bidang(label, isi, lebar) {
+        return '<div class="' + (lebar || '') + '">' +
+          '<label class="mb-1.5 block text-sm font-medium text-slate-700">' + label + '</label>' +
+          isi + '</div>';
+      }
+      var wajib = ' <span class="text-rose-500">*</span>';
+
       S.openModal('Ubah Surat Keluar — ' + (awal.nomor || ''),
-        '<form id="form-ubah-keluar" class="space-y-5" novalidate>' +
-          '<div class="grid gap-4 sm:grid-cols-2">' +
-            '<div><label class="mb-1.5 block text-sm font-medium text-slate-700">Nomor surat *</label>' +
-              '<input name="nomor" class="field" required maxlength="50" value="' +
-              esc(awal.nomor || '') + '"></div>' +
-            '<div><label class="mb-1.5 block text-sm font-medium text-slate-700">Tanggal surat *</label>' +
-              '<input name="tgl_suratkel" type="date" class="field" required value="' +
-              esc(awal.tgl_suratkel || '') + '"></div>' +
-            '<div><label class="mb-1.5 block text-sm font-medium text-slate-700">Jenis surat *</label>' +
-              '<select name="id_jenis" class="field" required>' +
-              opsi(jenis, 'id_jenis', 'nama', awal.id_jenis, 'Pilih jenis') + '</select></div>' +
-            '<div><label class="mb-1.5 block text-sm font-medium text-slate-700">Kode arsip</label>' +
-              '<select name="id_kode_arsip" class="field">' +
-              opsi(arsip, 'id_kode_arsip', function (x) {
-                return x.kode_arsip + ' — ' + (x.keterangan_kode_arsip || '');
-              }, awal.id_kode_arsip, 'Pilih kode arsip') + '</select></div>' +
-            '<div class="sm:col-span-2">' +
-              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Perihal</label>' +
-              '<select name="id_perihal" class="field">' +
-              opsi(perihal, 'id_perihal', function (x) {
-                return x.kode + ' — ' + x.keterangan;
-              }, awal.perihal_kode ? awal.perihal : '', 'Pilih kode perihal') + '</select></div>' +
-            '<div class="sm:col-span-2">' +
-              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Keterangan perihal</label>' +
-              '<textarea name="keterangan_perihal" rows="2" class="field">' +
-              esc(awal.keterangan_perihal === '-' ? '' : (awal.keterangan_perihal || '')) +
-              '</textarea></div>' +
-          '</div>' +
+        '<form id="form-ubah-keluar" novalidate>' +
           '<div class="grid gap-5 lg:grid-cols-2">' +
-            '<div><label class="mb-1.5 block text-sm font-medium text-slate-700">Tujuan (jabatan)</label>' +
-              pTujuan.html +
-              '<label class="mb-1.5 mt-3 block text-sm font-medium text-slate-700">Tujuan lainnya</label>' +
-              '<input name="tujuan_lainnya" class="field" value="' +
-              esc(awal.tujuan_lainnya || '') + '"></div>' +
-            '<div><label class="mb-1.5 block text-sm font-medium text-slate-700">Tembusan</label>' +
-              pTembusan.html + '</div>' +
-            '<div class="lg:col-span-2">' +
-              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Penanda tangan *</label>' +
-              pTtd.html + '</div>' +
+            '<section class="bagian">' +
+              '<h4 class="bagian-judul">Identitas surat</h4>' +
+              '<div class="grid gap-4 sm:grid-cols-2">' +
+                bidang('Nomor surat' + wajib,
+                  '<input name="nomor" class="field" required maxlength="50" value="' +
+                  esc(awal.nomor || '') + '">') +
+                bidang('Tanggal surat' + wajib,
+                  '<input name="tgl_suratkel" type="date" class="field" required value="' +
+                  esc(awal.tgl_suratkel || '') + '">') +
+                bidang('Jenis surat' + wajib,
+                  '<select name="id_jenis" class="field" required>' +
+                  opsi(jenis, 'id_jenis', 'nama', awal.id_jenis, 'Pilih jenis') + '</select>') +
+                bidang('Kode perihal',
+                  '<select name="id_perihal" class="field">' +
+                  opsi(perihal, 'id_perihal', function (x) {
+                    return x.kode + ' — ' + x.keterangan;
+                  }, awal.perihal_kode ? awal.perihal : '', 'Pilih kode perihal') + '</select>') +
+                bidang('Kode arsip', pKode.html, 'sm:col-span-2') +
+                bidang('Keterangan perihal',
+                  '<textarea name="keterangan_perihal" rows="3" class="field">' +
+                  esc(awal.keterangan_perihal === '-' ? '' : (awal.keterangan_perihal || '')) +
+                  '</textarea>', 'sm:col-span-2') +
+              '</div>' +
+            '</section>' +
+            '<div class="space-y-5">' +
+              '<section class="bagian">' +
+                '<h4 class="bagian-judul">Tujuan &amp; tembusan</h4>' +
+                bidang('Tujuan (jabatan)', pTujuan.html) +
+                bidang('Tujuan lainnya',
+                  '<input name="tujuan_lainnya" class="field" value="' +
+                  esc(awal.tujuan_lainnya || '') + '">', 'mt-4') +
+                bidang('Tembusan', pTembusan.html, 'mt-4') +
+              '</section>' +
+              '<section class="bagian">' +
+                '<h4 class="bagian-judul">Penanda tangan</h4>' +
+                bidang('Jabatan penanda tangan' + wajib, pTtd.html) +
+              '</section>' +
+            '</div>' +
           '</div>' +
-          '<p id="ubah-keluar-error" class="hidden rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700"></p>' +
-          '<div class="flex justify-end gap-2 border-t border-slate-100 pt-4">' +
+          '<p id="ubah-keluar-error" class="mt-5 hidden rounded-xl bg-rose-50 px-4 py-3 ' +
+          'text-sm text-rose-700"></p>' +
+          '<div class="mt-5 flex justify-end gap-2 border-t border-slate-200 pt-4">' +
             '<button type="button" class="btn-ghost" data-modal-close>Batal</button>' +
             '<button type="submit" class="btn-primary">Simpan perubahan</button>' +
           '</div>' +
-        '</form>');
+        '</form>', { lebar: 'lebar' });
 
       var form = document.getElementById('form-ubah-keluar');
+      pKode.pasang(form);
       pTujuan.pasang(form);
       pTembusan.pasang(form);
       pTtd.pasang(form);

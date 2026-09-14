@@ -6,7 +6,7 @@
 <meta name="description" content="SIMPERA v2 — Sistem Informasi Persuratan & Arsip Terintegrasi UNISMA">
 <title>SIMPERA v2 — Persuratan &amp; Arsip Terintegrasi</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23059669'/><path d='M22 34h56v34H22z' fill='none' stroke='white' stroke-width='7' stroke-linejoin='round'/><path d='M22 36l28 20 28-20' fill='none' stroke='white' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/></svg>">
-<link rel="stylesheet" href="assets/app.css?v=36498f6166">
+<link rel="stylesheet" href="assets/app.css?v=3c29c01eb8">
 </head>
 <body class="h-full bg-canvas text-slate-700 antialiased">
 
@@ -206,16 +206,17 @@
 <!-- Toast + Modal -->
 <div id="toasts" class="pointer-events-none fixed bottom-5 right-5 z-[60] flex w-80 flex-col gap-2"></div>
 <div id="modal" class="fixed inset-0 z-50 hidden">
-  <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" data-modal-close></div>
-  <div class="relative mx-auto flex min-h-full max-w-3xl items-center p-4">
-    <div class="w-full overflow-hidden rounded-2xl bg-white shadow-2xl">
-      <div class="flex items-start gap-4 border-b border-slate-100 px-6 py-4">
-        <h3 id="modal-title" class="min-w-0 flex-1 truncate text-base font-semibold text-slate-900">Detail</h3>
-        <button class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600" data-modal-close aria-label="Tutup">
+  <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-modal-close></div>
+  <div id="modal-panel" class="relative mx-auto flex min-h-full max-w-4xl items-center p-3 sm:p-5">
+    <div class="w-full overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10">
+      <div class="modal-header flex items-center gap-3 px-5 py-4 sm:px-6">
+        <h3 id="modal-title" class="min-w-0 flex-1 truncate text-base font-semibold sm:text-lg">Detail</h3>
+        <div id="modal-alat" class="flex shrink-0 items-center gap-2"></div>
+        <button class="modal-close" data-modal-close aria-label="Tutup">
           <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
         </button>
       </div>
-      <div id="modal-body" class="max-h-[70vh] overflow-y-auto px-6 py-5"></div>
+      <div id="modal-body" class="max-h-[78vh] overflow-y-auto bg-slate-50/70 px-5 py-5 sm:px-6"></div>
     </div>
   </div>
 </div>
@@ -227,9 +228,9 @@
   </div>
 </div>
 
-<script src="assets/app.js?v=cf79f5f408"></script>
-<script src="assets/pages.js?v=337892edc6"></script>
+<script src="assets/app.js?v=7bed884b99"></script>
+<script src="assets/pages.js?v=6d899e7c97"></script>
 <script src="assets/pages2.js?v=c8d3ca31e2"></script>
-<script src="assets/pages3.js?v=61966eb543"></script>
+<script src="assets/pages3.js?v=5b0ec98409"></script>
 </body>
 </html>

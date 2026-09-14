@@ -274,6 +274,49 @@
       '<dd class="sm:col-span-2 text-sm text-slate-800">' + value + '</dd></div>';
   }
 
+  /* Satu baris data di dalam kartu detail: label kecil di atas, isi di bawah. */
+  function baris(label, nilai) {
+    return '<div class="data-baris"><p class="data-label">' + esc(label) + '</p>' +
+      '<div class="data-nilai">' + nilai + '</div></div>';
+  }
+
+  function kartu(judul, ikon, isi, kelas) {
+    return '<section class="kartu ' + (kelas || '') + '">' +
+      '<header class="kartu-kepala">' +
+      '<svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">' +
+      (IKON_KARTU[ikon] || '') + '</svg>' + esc(judul) + '</header>' +
+      '<div class="kartu-isi">' + isi + '</div></section>';
+  }
+
+  var IKON_KARTU = {
+    surat: '<path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"/>',
+    bagi: '<path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z"/>',
+    berkas: '<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>',
+    orang: '<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>'
+  };
+
+  /* Tombol besar untuk membuka lampiran; menggantikan ikon pada baris tabel. */
+  function tombolBerkas(url, label) {
+    if (!url) {
+      return '<p class="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 ' +
+        'text-sm text-slate-400">Tidak ada berkas terlampir.</p>';
+    }
+    return '<a href="' + esc(url) + '" target="_blank" rel="noopener" ' +
+      'class="flex items-center gap-3 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 ' +
+      'text-sm font-semibold text-brand-800 transition hover:border-brand-400 hover:bg-brand-100">' +
+      '<span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-600 text-white">' +
+      '<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">' +
+      '<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg></span>' +
+      '<span class="min-w-0"><span class="block">' + esc(label || 'Buka berkas') + '</span>' +
+      '<span class="block text-xs font-normal text-brand-700/80">Terbuka di tab baru</span></span></a>';
+  }
+
+  /* Baris tabel untuk lembar cetak. */
+  function barisCetak(label, nilai) {
+    return '<tr><th>' + esc(label) + '</th><td>' + esc(nilai === null || nilai === undefined ||
+      nilai === '' ? '-' : String(nilai)) + '</td></tr>';
+  }
+
   function linkBerkas(url, label) {
     if (!url) return '<span class="text-slate-400">Tidak ada berkas</span>';
     return '<a href="' + esc(url) + '" target="_blank" rel="noopener" ' +
@@ -434,8 +477,6 @@
           { title: 'Aksi', thClass: 'text-right kolom-aksi', tdClass: 'whitespace-nowrap kolom-aksi', render: function (r) {
               return S.tombolAksi([
                 { ikon: 'detail', warna: 'hijau', judul: 'Lihat detail surat', aksi: 'detail' },
-                { ikon: 'berkas', warna: 'biru', judul: r.file_url ? 'Buka lampiran' : 'Tidak ada lampiran',
-                  aksi: 'berkas', nonaktif: !r.file_url },
                 S.boleh('verifikasi')
                   ? { ikon: 'verifikasi', warna: 'hijau',
                       judul: 'Verifikasi surat', aksi: 'verifikasi' }
@@ -453,8 +494,7 @@
                   : null,
                 S.boleh('kelola_surat')
                   ? { ikon: 'hapus', warna: 'merah', judul: 'Hapus surat', aksi: 'hapus' }
-                  : null,
-                { ikon: 'salin', warna: 'abu', judul: 'Salin nomor surat', aksi: 'salin' }
+                  : null
               ]); } }
         ],
         onRow: function (row) { detailSuratMasuk(row.id_surat); },
@@ -462,12 +502,10 @@
           if (!row) return;
           var alur = window.__simperaAlur || {};
           if (aksi === 'detail') detailSuratMasuk(row.id_surat);
-          else if (aksi === 'berkas' && row.file_url) window.open(row.file_url, '_blank', 'noopener');
           else if (aksi === 'verifikasi') alur.formVerifikasi(row, tabel);
           else if (aksi === 'kirim-disposisi') alur.formDisposisi(row.id_surat, tabel);
           else if (aksi === 'ubah') alur.formSuratMasuk(row, tabel);
           else if (aksi === 'hapus') alur.hapusSuratMasuk(row, tabel);
-          else if (aksi === 'salin') S.salinTeks(row.nomor_surat || '');
         }
       });
 
@@ -483,45 +521,117 @@
   };
 
   function detailSuratMasuk(id) {
-    S.modalLoading('Detail Surat Masuk');
+    S.modalLoading('Detail Surat Masuk', { lebar: 'penuh' });
     request('/surat-masuk/' + id).then(function (d) {
-      var jejak = (d.disposisi || []).length
-        ? '<ol class="relative space-y-4 border-l border-slate-200 pl-5">' + d.disposisi.map(function (x) {
+      var dispo = d.disposisi || [];
+
+      var jejak = dispo.length
+        ? '<ol class="relative space-y-4 border-l-2 border-brand-100 pl-5">' + dispo.map(function (x) {
             return '<li class="relative">' +
-              '<span class="absolute -left-[27px] top-1 grid h-4 w-4 place-items-center rounded-full bg-brand-600 ring-4 ring-brand-50"></span>' +
-              '<p class="text-sm font-medium text-slate-800">' + dash(x.tujuan_jabatan) + '</p>' +
+              '<span class="absolute -left-[26px] top-1 grid h-3.5 w-3.5 place-items-center ' +
+              'rounded-full bg-brand-600 ring-4 ring-brand-50"></span>' +
+              '<p class="text-sm font-semibold text-slate-800">' + dash(x.tujuan_jabatan) + '</p>' +
               '<p class="mt-0.5 text-xs text-slate-500">' + tanggal(x.tgl_disposisi) +
               (x.jam_disposisi ? ' &middot; ' + esc(x.jam_disposisi) : '') +
               (x.pengirim ? ' &middot; oleh ' + esc(x.pengirim) : '') + '</p>' +
-              (x.isi_disposisi ? '<p class="mt-1.5 text-sm text-slate-600">' + esc(x.isi_disposisi) + '</p>' : '') +
-              (x.opsi ? '<p class="mt-1 text-xs text-slate-500">Instruksi: ' + esc(x.opsi) + '</p>' : '') +
+              (x.isi_disposisi ? '<p class="mt-1.5 rounded-lg bg-slate-50 px-3 py-2 text-sm ' +
+                'text-slate-600">' + esc(x.isi_disposisi) + '</p>' : '') +
+              (x.opsi ? '<p class="mt-1 text-xs text-slate-500">Instruksi: <span ' +
+                'class="font-medium text-slate-700">' + esc(x.opsi) + '</span></p>' : '') +
               '<p class="mt-1.5">' + badge(x.status_selesai ? 'Selesai' : 'Sedang Berjalan',
                                            x.status_selesai ? 'green' : 'amber') + '</p>' +
               '</li>';
           }).join('') + '</ol>'
-        : '<p class="text-sm text-slate-400">Belum ada disposisi untuk surat ini.</p>';
+        : '<div class="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 ' +
+          'text-center"><p class="text-sm font-medium text-slate-500">Belum ada disposisi</p>' +
+          '<p class="mt-1 text-xs text-slate-400">Surat ini belum diteruskan ke unit mana pun.</p></div>';
+
+      var ringkas =
+        '<div class="mb-5 rounded-2xl bg-gradient-to-br from-brand-700 via-brand-600 to-emerald-500 ' +
+        'px-5 py-4 text-white shadow-lg shadow-brand-600/20">' +
+          '<p class="text-[11px] font-semibold uppercase tracking-widest text-white/70">Perihal</p>' +
+          '<p class="mt-1 text-base font-semibold leading-snug">' + dash(d.perihal) + '</p>' +
+          '<div class="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-white/85">' +
+            '<span>Agenda <b class="font-semibold text-white">' + dash(d.nomor_agenda) + '</b></span>' +
+            '<span>Nomor <b class="font-semibold text-white">' + dash(d.nomor_surat) + '</b></span>' +
+            '<span>Diterima <b class="font-semibold text-white">' +
+              tanggal(d.tgl_surat_terima) + '</b></span>' +
+          '</div>' +
+        '</div>';
+
+      var kiri = kartu('Rincian surat', 'surat',
+        baris('Pengirim', S.avatar(d.dari)) +
+        baris('Tujuan', dash(d.tujuan_jabatan)) +
+        baris('Tanggal surat', tanggal(d.tgl_surat)) +
+        baris('Jenis / Kategori', dash(d.jenis_surat) + ' &middot; ' + dash(d.kategori_surat)) +
+        baris('Kode arsip', dash(d.kode_arsip) + (d.keterangan_kode_arsip ?
+          ' <span class="text-slate-500">(' + esc(d.keterangan_kode_arsip) + ')</span>' : '')) +
+        baris('Status', badge(d.status_label, toneStatusSurat(d.status_label))) +
+        baris('Catatan', dash(d.catatan)));
+
+      var kiriBerkas = kartu('Lampiran', 'berkas', tombolBerkas(d.file_url, 'Buka lampiran surat'));
+
+      var kanan = kartu('Jejak disposisi', 'bagi',
+        '<p class="mb-4 text-xs text-slate-500">' +
+        (dispo.length ? dispo.length + ' disposisi tercatat untuk surat ini.'
+                      : 'Riwayat penerusan surat akan muncul di sini.') + '</p>' + jejak);
 
       S.openModal('Surat Masuk — ' + (d.nomor_surat || '#' + id),
-        '<dl class="mb-6">' +
-          fieldRow('Nomor agenda', dash(d.nomor_agenda)) +
-          fieldRow('Nomor surat', dash(d.nomor_surat)) +
-          fieldRow('Perihal', dash(d.perihal)) +
-          fieldRow('Pengirim', dash(d.dari)) +
-          fieldRow('Tujuan', dash(d.tujuan_jabatan)) +
-          fieldRow('Tanggal surat', tanggal(d.tgl_surat)) +
-          fieldRow('Tanggal diterima', tanggal(d.tgl_surat_terima)) +
-          fieldRow('Jenis / Kategori', dash(d.jenis_surat) + ' &middot; ' + dash(d.kategori_surat)) +
-          fieldRow('Kode arsip', dash(d.kode_arsip) + (d.keterangan_kode_arsip ?
-            ' <span class="text-slate-500">(' + esc(d.keterangan_kode_arsip) + ')</span>' : '')) +
-          fieldRow('Status', badge(d.status_label, toneStatusSurat(d.status_label))) +
-          fieldRow('Catatan', dash(d.catatan)) +
-          fieldRow('Berkas', linkBerkas(d.file_url, 'Lihat lampiran')) +
-        '</dl>' +
-        '<h4 class="mb-3 text-sm font-semibold text-slate-900">Jejak disposisi</h4>' + jejak);
+        ringkas +
+        '<div class="grid gap-5 lg:grid-cols-2">' +
+          '<div class="space-y-5">' + kiri + kiriBerkas + '</div>' +
+          '<div>' + kanan + '</div>' +
+        '</div>',
+        {
+          lebar: 'penuh',
+          alat: S.tombolCetak('Cetak lembar disposisi'),
+          cetak: function () { cetakSuratMasuk(d); }
+        });
     }).catch(function (err) {
       S.openModal('Detail Surat Masuk',
         '<p class="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">' + esc(err.message) + '</p>');
     });
+  }
+
+  /* Lembar cetak surat masuk: rincian di atas, jejak disposisi di bawah. */
+  function cetakSuratMasuk(d) {
+    var dispo = d.disposisi || [];
+    var jejak = dispo.length
+      ? '<ol class="jejak">' + dispo.map(function (x) {
+          return '<li><span class="siapa">' + esc(x.tujuan_jabatan || '-') + '</span> ' +
+            '<span class="kapan">' + esc(tanggalPolos(x.tgl_disposisi)) +
+            (x.jam_disposisi ? ' ' + esc(x.jam_disposisi) : '') +
+            (x.pengirim ? ' &mdash; oleh ' + esc(x.pengirim) : '') + '</span>' +
+            (x.isi_disposisi ? '<br>' + esc(x.isi_disposisi) : '') +
+            (x.opsi ? '<br><i>Instruksi: ' + esc(x.opsi) + '</i>' : '') +
+            '<br>Status: ' + (x.status_selesai ? 'Selesai' : 'Sedang berjalan') + '</li>';
+        }).join('') + '</ol>'
+      : '<p>Belum ada disposisi untuk surat ini.</p>';
+
+    S.cetak('Lembar Disposisi Surat Masuk',
+      '<table>' +
+        barisCetak('Nomor agenda', d.nomor_agenda) +
+        barisCetak('Nomor surat', d.nomor_surat) +
+        barisCetak('Perihal', d.perihal) +
+        barisCetak('Pengirim', d.dari) +
+        barisCetak('Tujuan', d.tujuan_jabatan) +
+        barisCetak('Tanggal surat', tanggalPolos(d.tgl_surat)) +
+        barisCetak('Tanggal diterima', tanggalPolos(d.tgl_surat_terima)) +
+        barisCetak('Jenis surat', d.jenis_surat) +
+        barisCetak('Kategori', d.kategori_surat) +
+        barisCetak('Kode arsip', d.kode_arsip) +
+        barisCetak('Status', d.status_label) +
+        barisCetak('Catatan', d.catatan) +
+      '</table>' +
+      '<h2>Jejak disposisi</h2>' + jejak +
+      '<h2>Disposisi / catatan pimpinan</h2>' +
+      '<div style="border:1px solid #cbd5e1;height:120px"></div>');
+  }
+
+  /* Tanggal untuk lembar cetak: tanda pisah panjang diganti tanda hubung biasa. */
+  function tanggalPolos(nilai) {
+    var teks = tanggal(nilai);
+    return teks === '\u2014' ? '-' : String(teks);
   }
 
   // ============================================================== SURAT KELUAR
@@ -579,18 +689,12 @@
           { title: 'Aksi', thClass: 'text-right kolom-aksi', tdClass: 'whitespace-nowrap kolom-aksi', render: function (r) {
               return S.tombolAksi([
                 { ikon: 'detail', warna: 'hijau', judul: 'Lihat detail surat', aksi: 'detail' },
-                { ikon: 'berkas', warna: 'biru', judul: r.file_url ? 'Buka berkas surat' : 'Tidak ada berkas',
-                  aksi: 'berkas', nonaktif: !r.file_url },
-                { ikon: 'berkas', warna: 'ungu',
-                  judul: r.file_arsip_url ? 'Buka berkas arsip' : 'Belum ada berkas arsip',
-                  aksi: 'arsip', nonaktif: !r.file_arsip_url },
                 S.boleh('kelola_surat')
                   ? { ikon: 'ubah', warna: 'kuning', judul: 'Ubah surat keluar', aksi: 'ubah' }
                   : null,
                 S.boleh('kelola_surat')
                   ? { ikon: 'hapus', warna: 'merah', judul: 'Hapus surat keluar', aksi: 'hapus' }
-                  : null,
-                { ikon: 'salin', warna: 'abu', judul: 'Salin nomor surat', aksi: 'salin' }
+                  : null
               ]); } }
         ],
         onRow: function (row) { detailSuratKeluar(row.id_suratkel); },
@@ -598,48 +702,93 @@
           if (!row) return;
           var alur = window.__simperaAlur || {};
           if (aksi === 'detail') detailSuratKeluar(row.id_suratkel);
-          else if (aksi === 'berkas' && row.file_url) window.open(row.file_url, '_blank', 'noopener');
-          else if (aksi === 'arsip' && row.file_arsip_url) window.open(row.file_arsip_url, '_blank', 'noopener');
           else if (aksi === 'ubah') alur.formSuratKeluar(row, tabel);
           else if (aksi === 'hapus') alur.hapusSuratKeluar(row, tabel);
-          else if (aksi === 'salin') S.salinTeks(row.nomor || '');
         }
       }).load();
     });
   };
 
   function detailSuratKeluar(id) {
-    S.modalLoading('Detail Surat Keluar');
+    S.modalLoading('Detail Surat Keluar', { lebar: 'penuh' });
     request('/surat-keluar/' + id).then(function (d) {
-      function daftar(items, kosong) {
+      function lencana(items, kosong) {
         if (!items || !items.length) return '<span class="text-slate-400">' + esc(kosong) + '</span>';
         return items.map(function (x) {
           return '<span class="badge badge-slate mb-1 mr-1">' + dash(x.nama_jabatan) + '</span>';
         }).join('');
       }
+
+      var ringkas =
+        '<div class="mb-5 rounded-2xl bg-gradient-to-br from-brand-700 via-brand-600 to-emerald-500 ' +
+        'px-5 py-4 text-white shadow-lg shadow-brand-600/20">' +
+          '<p class="text-[11px] font-semibold uppercase tracking-widest text-white/70">Perihal</p>' +
+          '<p class="mt-1 text-base font-semibold leading-snug">' + dash(d.perihal) + '</p>' +
+          '<div class="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-white/85">' +
+            '<span>Nomor <b class="font-semibold text-white">' + dash(d.nomor) + '</b></span>' +
+            '<span>Tanggal <b class="font-semibold text-white">' +
+              tanggal(d.tgl_suratkel) + '</b></span>' +
+            '<span>Jenis <b class="font-semibold text-white">' + dash(d.jenis_surat) + '</b></span>' +
+          '</div>' +
+        '</div>';
+
+      var kiri = kartu('Rincian surat', 'surat',
+        baris('Keterangan perihal', dash(d.keterangan_perihal)) +
+        baris('Unit pembuat', S.avatar(d.jabatan_pembuat)) +
+        baris('Penanda tangan', dash(d.tanda_tangan)) +
+        baris('Kode arsip', dash(d.kode_arsip) + (d.keterangan_kode_arsip ?
+          ' <span class="text-slate-500">(' + esc(d.keterangan_kode_arsip) + ')</span>' : '')) +
+        baris('Status', badge(d.status_label, toneStatusSurat(d.status_label))) +
+        baris('Dibuat oleh', dash(d.dibuat_oleh)));
+
+      var kanan = kartu('Tujuan & tembusan', 'bagi',
+        baris('Tujuan (jabatan)', lencana(d.tujuan_jabatan, 'Tidak ada tujuan internal')) +
+        baris('Tujuan lainnya', dash(d.tujuan_lainnya || d.tujuan)) +
+        baris('Tembusan', lencana(d.tembusan, 'Tidak ada tembusan')));
+
+      var kananBerkas = kartu('Berkas', 'berkas',
+        '<div class="space-y-3">' +
+        tombolBerkas(d.file_url, 'Buka berkas surat') +
+        tombolBerkas(d.file_arsip_url, 'Buka berkas arsip') + '</div>');
+
       S.openModal('Surat Keluar — ' + (d.nomor || '#' + id),
-        '<dl>' +
-          fieldRow('Nomor surat', dash(d.nomor)) +
-          fieldRow('Perihal', dash(d.perihal)) +
-          fieldRow('Keterangan perihal', dash(d.keterangan_perihal)) +
-          fieldRow('Tanggal', tanggal(d.tgl_suratkel)) +
-          fieldRow('Jenis', dash(d.jenis_surat)) +
-          fieldRow('Penanda tangan', dash(d.tanda_tangan)) +
-          fieldRow('Unit pembuat', dash(d.jabatan_pembuat)) +
-          fieldRow('Tujuan (jabatan)', daftar(d.tujuan_jabatan, 'Tidak ada tujuan internal')) +
-          fieldRow('Tujuan lainnya', dash(d.tujuan_lainnya || d.tujuan)) +
-          fieldRow('Tembusan', daftar(d.tembusan, 'Tidak ada tembusan')) +
-          fieldRow('Kode arsip', dash(d.kode_arsip) + (d.keterangan_kode_arsip ?
-            ' <span class="text-slate-500">(' + esc(d.keterangan_kode_arsip) + ')</span>' : '')) +
-          fieldRow('Status', badge(d.status_label, toneStatusSurat(d.status_label))) +
-          fieldRow('Berkas surat', linkBerkas(d.file_url, 'Lihat surat')) +
-          fieldRow('Berkas arsip', linkBerkas(d.file_arsip_url, 'Lihat arsip')) +
-          fieldRow('Dibuat oleh', dash(d.dibuat_oleh)) +
-        '</dl>');
+        ringkas +
+        '<div class="grid gap-5 lg:grid-cols-2">' +
+          '<div>' + kiri + '</div>' +
+          '<div class="space-y-5">' + kanan + kananBerkas + '</div>' +
+        '</div>',
+        {
+          lebar: 'penuh',
+          alat: S.tombolCetak('Cetak surat keluar'),
+          cetak: function () { cetakSuratKeluar(d); }
+        });
     }).catch(function (err) {
       S.openModal('Detail Surat Keluar',
         '<p class="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">' + esc(err.message) + '</p>');
     });
+  }
+
+  function cetakSuratKeluar(d) {
+    function namaJabatan(items) {
+      if (!items || !items.length) return '-';
+      return items.map(function (x) { return x.nama_jabatan; }).join(', ');
+    }
+    S.cetak('Lembar Surat Keluar',
+      '<table>' +
+        barisCetak('Nomor surat', d.nomor) +
+        barisCetak('Tanggal', tanggalPolos(d.tgl_suratkel)) +
+        barisCetak('Perihal', d.perihal) +
+        barisCetak('Keterangan perihal', d.keterangan_perihal) +
+        barisCetak('Jenis surat', d.jenis_surat) +
+        barisCetak('Unit pembuat', d.jabatan_pembuat) +
+        barisCetak('Penanda tangan', d.tanda_tangan) +
+        barisCetak('Tujuan (jabatan)', namaJabatan(d.tujuan_jabatan)) +
+        barisCetak('Tujuan lainnya', d.tujuan_lainnya || d.tujuan) +
+        barisCetak('Tembusan', namaJabatan(d.tembusan)) +
+        barisCetak('Kode arsip', d.kode_arsip) +
+        barisCetak('Status', d.status_label) +
+        barisCetak('Dibuat oleh', d.dibuat_oleh) +
+      '</table>');
   }
 
   // ================================================================= DISPOSISI
@@ -686,8 +835,7 @@
               !r.selesai
                 ? { ikon: 'selesai', warna: 'hijau', judul: 'Tandai selesai', aksi: 'selesai' }
                 : { ikon: 'selesai', warna: 'hijau', judul: 'Sudah selesai',
-                    aksi: 'selesai', nonaktif: true },
-              { ikon: 'salin', warna: 'abu', judul: 'Salin nomor surat', aksi: 'salin' }
+                    aksi: 'selesai', nonaktif: true }
             ]); } }
       ],
       onRow: function (row) { if (row.id_surat) detailSuratMasuk(row.id_surat); },
@@ -696,7 +844,6 @@
         var alur = window.__simperaAlur || {};
         if (aksi === 'detail' && row.id_surat) detailSuratMasuk(row.id_surat);
         else if (aksi === 'teruskan' && row.id_surat) alur.formDisposisi(row.id_surat, tabel);
-        else if (aksi === 'salin') S.salinTeks(row.nomor_surat || '');
         else if (aksi === 'selesai') {
           tombol.disabled = true;
           request('/disposisi/' + row.id_disposisi + '/selesai', {
@@ -738,8 +885,7 @@
         { title: 'Aksi', thClass: 'text-right kolom-aksi', tdClass: 'whitespace-nowrap kolom-aksi', render: function (r) {
             return S.tombolAksi([
               { ikon: 'disposisi', warna: 'kuning', judul: 'Lihat jejak tindak lanjut', aksi: 'jejak' },
-              { ikon: 'detail', warna: 'hijau', judul: 'Lihat detail surat', aksi: 'detail' },
-              { ikon: 'salin', warna: 'abu', judul: 'Salin nomor surat', aksi: 'salin' }
+              { ikon: 'detail', warna: 'hijau', judul: 'Lihat detail surat', aksi: 'detail' }
             ]); } }
       ],
       onRow: function (row) { detailMonitoring(row); },
@@ -747,7 +893,6 @@
         if (!row) return;
         if (aksi === 'jejak') detailMonitoring(row);
         else if (aksi === 'detail') detailSuratMasuk(row.id_surat);
-        else if (aksi === 'salin') S.salinTeks(row.nomor_surat || '');
       }
     }).load();
   };
@@ -774,7 +919,7 @@
 
       var arahan = (d.arahan || []).length
         ? '<ul class="mt-3 space-y-2">' + d.arahan.map(function (a) {
-            return '<li class="rounded-xl bg-slate-50 p-3">' +
+            return '<li class="rounded-xl border border-slate-200 bg-white p-3">' +
               '<p class="text-xs text-slate-500">' + dash(a.dari_jabatan) + ' &rarr; ' + dash(a.ke_jabatan) + '</p>' +
               '<p class="mt-1 text-sm text-slate-700">' + dash(a.pesan) + '</p></li>';
           }).join('') + '</ul>'

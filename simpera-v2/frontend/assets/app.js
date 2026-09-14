@@ -146,6 +146,40 @@
     });
   }
 
+  /* Data referensi jarang berubah tetapi sering dipakai formulir. Disimpan
+     sekali per sesi agar jendela "Catat surat" terbuka seketika, bukan
+     menunggu empat permintaan setiap kali. */
+  var simpananMaster = {};
+
+  function master(path) {
+    if (!simpananMaster[path]) {
+      simpananMaster[path] = request(path).catch(function (err) {
+        delete simpananMaster[path];
+        throw err;
+      });
+    }
+    return simpananMaster[path];
+  }
+
+  function lupakanMaster() { simpananMaster = {}; }
+
+  /* Diambil diam-diam setelah halaman siap, jadi sudah hangat saat dibutuhkan. */
+  var JALUR_PRAMUAT = [
+    '/master/jenis-surat', '/master/kategori-surat',
+    '/master/jabatan?limit=2000', '/master/kode-perihal?limit=500'
+  ];
+
+  function pramuatMaster() {
+    if (!state.token) return;
+    var mulai = function () {
+      JALUR_PRAMUAT.forEach(function (jalur) {
+        master(jalur).catch(function () { /* diam: ini hanya pemanasan */ });
+      });
+    };
+    if (window.requestIdleCallback) window.requestIdleCallback(mulai, { timeout: 3000 });
+    else setTimeout(mulai, 1200);
+  }
+
   function query(params) {
     var parts = [];
     Object.keys(params || {}).forEach(function (key) {
@@ -157,23 +191,135 @@
   }
 
   // --------------------------------------------------------------------- modal
-  function openModal(title, html) {
+  /* Lebar jendela ditulis utuh supaya Tailwind ikut memuatnya saat build. */
+  var LEBAR_MODAL = {
+    sedang: 'max-w-2xl',
+    besar: 'max-w-4xl',
+    lebar: 'max-w-5xl',
+    penuh: 'max-w-6xl'
+  };
+
+  /**
+   * Membuka jendela.
+   * opsi = { lebar: 'sedang|besar|lebar|penuh', alat: '<html tombol kepala>' }
+   */
+  function openModal(title, html, opsi) {
+    opsi = opsi || {};
+    var panel = el('modal-panel');
+    if (panel) {
+      panel.className = 'relative mx-auto flex min-h-full items-center p-3 sm:p-5 ' +
+        (LEBAR_MODAL[opsi.lebar] || LEBAR_MODAL.besar);
+    }
+    var alat = el('modal-alat');
+    if (alat) alat.innerHTML = opsi.alat || '';
+    cetakSekarang = typeof opsi.cetak === 'function' ? opsi.cetak : null;
     el('modal-title').textContent = title;
     el('modal-body').innerHTML = html;
     el('modal').classList.remove('hidden');
+    el('modal-body').scrollTop = 0;
     document.body.style.overflow = 'hidden';
   }
 
   function closeModal() {
     el('modal').classList.add('hidden');
     el('modal-body').innerHTML = '';
+    var alat = el('modal-alat');
+    if (alat) alat.innerHTML = '';
+    cetakSekarang = null;
     document.body.style.overflow = '';
   }
 
-  function modalLoading(title) {
+  function modalLoading(title, opsi) {
     openModal(title, '<div class="space-y-3">' +
       '<div class="skeleton h-4 w-2/3"></div><div class="skeleton h-4 w-full"></div>' +
-      '<div class="skeleton h-4 w-5/6"></div><div class="skeleton h-24 w-full"></div></div>');
+      '<div class="skeleton h-4 w-5/6"></div><div class="skeleton h-24 w-full"></div></div>',
+      opsi);
+  }
+
+  /* Isi cetak jendela yang sedang terbuka, dipasang lewat openModal(..., {cetak}). */
+  var cetakSekarang = null;
+
+  /* Tombol cetak siap pakai untuk kepala jendela. */
+  function tombolCetak(judul) {
+    return '<button type="button" class="btn-header" data-cetak title="' +
+      esc(judul || 'Cetak') + '">' +
+      '<svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">' +
+      '<path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.32 0 1.15-.129a1.125 1.125 0 0 0 1.03-1.12v-3.502c0-.56-.412-1.033-.97-1.11a48.403 48.403 0 0 0-1.21-.155m-14.19 0c-.558.077-.97.55-.97 1.11v3.502c0 .568.425 1.045.99 1.12l1.15.129m14.19 0-14.19 0M17.66 12V5.625c0-.621-.504-1.125-1.125-1.125H7.465c-.621 0-1.125.504-1.125 1.125V12"/>' +
+      '</svg>Cetak</button>';
+  }
+
+  /**
+   * Mencetak lewat iframe tersembunyi: tidak terhalang pemblokir jendela
+   * sembul, dan gaya halaman utama tidak ikut terbawa.
+   */
+  function cetak(judul, isiHtml) {
+    var lama = document.getElementById('bingkai-cetak');
+    if (lama) lama.parentNode.removeChild(lama);
+
+    var bingkai = document.createElement('iframe');
+    bingkai.id = 'bingkai-cetak';
+    bingkai.setAttribute('aria-hidden', 'true');
+    bingkai.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+    document.body.appendChild(bingkai);
+
+    var doc = bingkai.contentWindow.document;
+    doc.open();
+    doc.write('<!doctype html><html lang="id"><head><meta charset="utf-8">' +
+      '<title>' + esc(judul) + '</title><style>' + GAYA_CETAK + '</style></head><body>' +
+      '<header class="kop"><div><p class="kop-nama">Universitas Islam Malang</p>' +
+      '<p class="kop-sub">SIMPERA v2 &middot; Sistem Persuratan dan Kearsipan</p></div>' +
+      '<p class="kop-tgl">Dicetak ' + esc(tanggalJam(new Date())) + '</p></header>' +
+      '<h1>' + esc(judul) + '</h1>' + isiHtml +
+      '<footer class="kaki">Dokumen ini dicetak dari SIMPERA v2 oleh ' +
+      esc((state.user && (state.user.name || state.user.username)) || 'pengguna') +
+      '.</footer></body></html>');
+    doc.close();
+
+    var jalankan = function () {
+      try {
+        bingkai.contentWindow.focus();
+        bingkai.contentWindow.print();
+      } catch (e) {
+        toast('Peramban menolak perintah cetak.', 'err');
+      }
+      setTimeout(function () {
+        if (bingkai.parentNode) bingkai.parentNode.removeChild(bingkai);
+      }, 1000);
+    };
+    if (bingkai.contentWindow.document.readyState === 'complete') setTimeout(jalankan, 60);
+    else bingkai.onload = function () { setTimeout(jalankan, 60); };
+  }
+
+  var GAYA_CETAK =
+    '*{box-sizing:border-box}' +
+    'body{margin:0;padding:26px 30px;font:12px/1.55 "Segoe UI",Arial,sans-serif;color:#0f172a}' +
+    '.kop{display:flex;justify-content:space-between;align-items:flex-end;' +
+      'border-bottom:2.5px solid #047857;padding-bottom:10px;margin-bottom:18px}' +
+    '.kop-nama{margin:0;font-size:15px;font-weight:700;color:#047857;letter-spacing:.02em}' +
+    '.kop-sub{margin:2px 0 0;font-size:11px;color:#64748b}' +
+    '.kop-tgl{margin:0;font-size:10px;color:#94a3b8}' +
+    'h1{margin:0 0 16px;font-size:15px;font-weight:700}' +
+    'h2{margin:20px 0 8px;font-size:12px;font-weight:700;color:#047857;' +
+      'text-transform:uppercase;letter-spacing:.07em}' +
+    'table{width:100%;border-collapse:collapse;margin-bottom:4px}' +
+    'th,td{border:1px solid #cbd5e1;padding:6px 9px;text-align:left;vertical-align:top}' +
+    'th{width:30%;background:#ecfdf5;font-weight:600;color:#065f46}' +
+    'table.daftar th{width:auto;text-align:left}' +
+    'ol.jejak{margin:0;padding-left:18px}' +
+    'ol.jejak li{margin-bottom:10px}' +
+    'ol.jejak .siapa{font-weight:700}' +
+    'ol.jejak .kapan{color:#64748b;font-size:11px}' +
+    '.kaki{margin-top:22px;border-top:1px solid #e2e8f0;padding-top:8px;' +
+      'font-size:10px;color:#94a3b8}' +
+    '@page{margin:14mm}';
+
+  function tanggalJam(d) {
+    try {
+      return d.toLocaleString('id-ID', {
+        day: '2-digit', month: 'long', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+    } catch (e) { return d.toISOString(); }
   }
 
 
@@ -519,6 +665,7 @@
     toast: toast, debounce: debounce, request: request, kirimForm: kirimForm,
     query: query,
     openModal: openModal, closeModal: closeModal, modalLoading: modalLoading,
+    tombolCetak: tombolCetak, cetak: cetak, master: master,
     statCard: statCard, badge: badge, toneStatusSurat: toneStatusSurat,
     avatar: avatar, inisial: inisial, tombolAksi: tombolAksi, salinTeks: salinTeks,
     boleh: boleh, muatNotif: muatNotif,
@@ -545,6 +692,7 @@
     state.user = null;
     state.notifTotal = null;
     if (state.notifTimer) { clearInterval(state.notifTimer); state.notifTimer = null; }
+    lupakanMaster();
     try { window.localStorage.removeItem(TOKEN_KEY); } catch (e) { /* storage diblokir */ }
     showLogin();
     if (!silent) toast('Anda telah keluar.', 'info');
@@ -644,6 +792,7 @@
 
   function mulaiPantauNotif() {
     muatNotif();
+    pramuatMaster();
     if (state.notifTimer) clearInterval(state.notifTimer);
     state.notifTimer = setInterval(muatNotif, 60000);
   }
@@ -922,6 +1071,10 @@
     });
 
     el('modal').addEventListener('click', function (event) {
+      if (event.target.closest('[data-cetak]')) {
+        if (cetakSekarang) cetakSekarang();
+        return;
+      }
       if (event.target.hasAttribute('data-modal-close') ||
           event.target.closest('[data-modal-close]')) closeModal();
     });
