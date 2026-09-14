@@ -343,6 +343,12 @@
       '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; )</div></div></div>';
   }
 
+  /* Penuntasan disposisi adalah hak jabatan penerimanya. */
+  function bolehMenuntaskan(r) {
+    var jabatan = state.user && state.user.jabatan_id;
+    return !!jabatan && String(r.id_jabatan) === String(jabatan);
+  }
+
   /* Lencana peran atas satu disposisi: "Mendisposisikan" bagi pengirimnya,
      "Disposisi" bagi jabatan penerimanya — sama seperti aplikasi lama. */
   function statusDisposisi(r) {
@@ -917,10 +923,17 @@
                 ? { ikon: 'kirim', warna: 'ungu', judul: 'Teruskan disposisi',
                     aksi: 'teruskan', nonaktif: !r.id_surat }
                 : null,
-              !r.selesai
-                ? { ikon: 'selesai', warna: 'hijau', judul: 'Tandai selesai', aksi: 'selesai' }
-                : { ikon: 'selesai', warna: 'hijau', judul: 'Sudah selesai',
+              // Hanya jabatan penerima yang boleh menuntaskan, seperti
+              // aplikasi lama; yang lain melihat tombolnya tetapi mati.
+              r.selesai
+                ? { ikon: 'selesai', warna: 'hijau', judul: 'Sudah selesai',
                     aksi: 'selesai', nonaktif: true }
+                : bolehMenuntaskan(r)
+                  ? { ikon: 'selesai', warna: 'hijau', judul: 'Tandai selesai',
+                      aksi: 'selesai' }
+                  : { ikon: 'selesai', warna: 'hijau',
+                      judul: 'Disposisi ini bukan untuk jabatan Anda',
+                      aksi: 'selesai', nonaktif: true }
             ]); } }
       ],
       onRow: function (row) { if (row.id_surat) detailSuratMasuk(row.id_surat); },
@@ -929,19 +942,9 @@
         var alur = window.__simperaAlur || {};
         if (aksi === 'detail' && row.id_surat) detailSuratMasuk(row.id_surat);
         else if (aksi === 'teruskan' && row.id_surat) alur.formDisposisi(row.id_surat, tabel);
-        else if (aksi === 'selesai') {
-          tombol.disabled = true;
-          request('/disposisi/' + row.id_disposisi + '/selesai', {
-            method: 'POST', body: { catatan: 'Diselesaikan melalui SIMPERA v2' }
-          }).then(function () {
-            S.toast('Disposisi ditandai selesai.', 'ok');
-            tabel.reload();
-            S.muatNotif();
-          }).catch(function (err) {
-            S.toast(err.message, 'err');
-            tombol.disabled = false;
-          });
-        }
+        // Tandai selesai tidak langsung menyimpan: jendela "Catatan Disposisi"
+        // muncul dulu, sama seperti aplikasi lama.
+        else if (aksi === 'selesai') alur.formSelesaiDisposisi(row, tabel);
       }
     }).load();
   };

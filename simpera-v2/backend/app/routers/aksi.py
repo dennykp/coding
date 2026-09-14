@@ -432,8 +432,17 @@ def selesaikan(
     if (row.get("status_selesai") or "").strip():
         raise HTTPException(status_code=409, detail="Disposisi ini sudah selesai.")
 
-    db.execute_esurat("selesaikan_disposisi", (payload.catatan, id_disposisi, jabatan))
-    return {"id_disposisi": id_disposisi, "status": "selesai"}
+    catatan = payload.catatan.strip()
+    if not catatan:
+        raise HTTPException(status_code=400, detail="Catatan penyelesaian wajib diisi.")
+
+    db.execute_esurat("selesaikan_disposisi", (catatan, id_disposisi, jabatan))
+    return {
+        "id_disposisi": id_disposisi,
+        "status": "selesai",
+        "catatan_selesai": catatan,
+        "pesan": "Data berhasil diubah",
+    }
 
 
 @router.post("/disposisi/{id_disposisi}/dilihat")

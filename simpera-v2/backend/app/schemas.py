@@ -115,7 +115,9 @@ class DisposisiIn(BaseModel):
 
 
 class SelesaiDisposisiIn(BaseModel):
-    catatan: str = Field(default="", max_length=1000)
+    # Formulir "Catatan Disposisi" pada aplikasi lama mewajibkan catatan diisi,
+    # jadi kewajiban itu ditegakkan juga di sini, bukan hanya di peramban.
+    catatan: str = Field(min_length=1, max_length=1000)
 
 
 class SuratKeluarIn(BaseModel):

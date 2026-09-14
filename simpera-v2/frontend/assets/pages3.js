@@ -1027,9 +1027,80 @@
     });
   }
 
+  // =========================================================== SELESAIKAN DISPOSISI
+  /**
+   * Formulir "Catatan Disposisi", meniru modal_show_selesai_disposisi pada
+   * aplikasi lama: tombol Selesai tidak langsung menyimpan, tetapi membuka
+   * jendela yang mewajibkan catatan penyelesaian lebih dulu.
+   */
+  function formSelesaiDisposisi(row, tabel) {
+    S.openModal('Catatan Disposisi',
+      '<form id="form-selesai" class="space-y-5" novalidate>' +
+        '<div class="rounded-2xl border border-slate-200 bg-white p-4">' +
+          '<p class="text-xs uppercase tracking-wide text-slate-500">Nomor surat</p>' +
+          '<p class="mt-0.5 font-semibold text-slate-900">' + dash(row.nomor_surat) + '</p>' +
+          '<p class="mt-2 text-sm text-slate-600">' + dash(row.perihal) + '</p>' +
+          '<p class="mt-2 text-xs text-slate-500">Disposisi ke ' +
+          dash(row.tujuan_jabatan) + ' &middot; ' + tanggal(row.tgl_disposisi) + '</p>' +
+        '</div>' +
+        '<div class="panel panel-green">' +
+          '<p class="text-sm leading-relaxed text-emerald-900">Disposisi ini akan ditandai ' +
+          '<b>selesai</b>. Catatan di bawah tersimpan sebagai keterangan penyelesaian dan ' +
+          'terlihat oleh pengirim disposisi.</p>' +
+        '</div>' +
+        '<div>' +
+          '<label class="mb-1.5 block text-sm font-medium text-slate-700">Catatan ' +
+          '<span class="text-rose-500">*</span></label>' +
+          '<textarea name="catatan_selesai" rows="3" maxlength="1000" class="field" ' +
+          'placeholder="Beri Catatan…"></textarea>' +
+        '</div>' +
+        '<p id="selesai-error" class="hidden rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700"></p>' +
+        '<div class="flex justify-end gap-2 border-t border-slate-200 pt-4">' +
+          '<button type="button" class="btn-ghost" data-modal-close>Keluar</button>' +
+          '<button type="submit" class="btn-primary">Simpan</button>' +
+        '</div>' +
+      '</form>', { lebar: 'sedang' });
+
+    var form = document.getElementById('form-selesai');
+    var isian = form.querySelector('[name="catatan_selesai"]');
+    isian.focus();
+
+    form.addEventListener('submit', function (event) {
+      event.preventDefault();
+      var pesan = document.getElementById('selesai-error');
+      pesan.classList.add('hidden');
+
+      var catatan = (isian.value || '').trim();
+      if (!catatan) {
+        galat(pesan, 'Catatan penyelesaian wajib diisi.');
+        isian.focus();
+        return;
+      }
+
+      var tombol = form.querySelector('button[type=submit]');
+      tombol.disabled = true;
+      tombol.textContent = 'Menyimpan…';
+
+      request('/disposisi/' + row.id_disposisi + '/selesai',
+              { method: 'POST', body: { catatan: catatan } })
+        .then(function (hasil) {
+          S.closeModal();
+          S.toast(hasil.pesan || 'Data berhasil diubah', 'ok');
+          if (tabel) tabel.reload();
+          S.muatNotif();
+        })
+        .catch(function (err) {
+          galat(pesan, err.message);
+          tombol.disabled = false;
+          tombol.textContent = 'Simpan';
+        });
+    });
+  }
+
   window.__simperaAlur = {
     formVerifikasi: formVerifikasi,
     formDisposisi: formDisposisi,
+    formSelesaiDisposisi: formSelesaiDisposisi,
     formSuratMasuk: formSuratMasuk,
     hapusSuratMasuk: hapusSuratMasuk,
     formSuratKeluar: formSuratKeluar,
