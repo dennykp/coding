@@ -8,7 +8,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query
 
 from .. import db, security
-from ..common import clean_all, like, page_response, paginate
+from ..common import clean_all, like, page_response, paginate, status_disposisi
 
 router = APIRouter(tags=["disposisi"])
 
@@ -83,7 +83,7 @@ def daftar_disposisi(
         f"""
         SELECT d.id_disposisi, d.id_surat, d.tgl_disposisi, d.jam_disposisi,
                d.isi_disposisi, d.opsi, d.status_selesai, d.catatan_selesai,
-               d.dilihat, d.created_at,
+               d.dilihat, d.created_at, d.id_usrz, d.id_jabatan,
                s.nomor_surat, s.perihal, s.dari, s.tgl_surat_terima,
                jb.nama_jabatan AS tujuan_jabatan, u.name AS pengirim
         FROM tt_disposisi d
@@ -102,6 +102,7 @@ def daftar_disposisi(
         status = (item.get("status_selesai") or "").strip()
         item["selesai"] = bool(status)
         item["status_label"] = "Selesai" if status else "Sedang Berjalan"
+        item["status_disposisi"] = status_disposisi(item, user)
     return page_response(items, int(total or 0), page, per_page)
 
 

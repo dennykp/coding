@@ -94,3 +94,17 @@ def label_status(mapping: dict[int, str], value: Any) -> str:
         return mapping.get(int(value), "Tidak Diketahui")
     except (TypeError, ValueError):
         return "Tidak Diketahui"
+
+
+def status_disposisi(baris: dict[str, Any], user: dict[str, Any]) -> str:
+    """Label peran pengguna atas satu disposisi, seperti aplikasi lama.
+
+    DisposisiSuratController memberi label "Mendisposisikan" kepada pengguna
+    yang mengirim disposisi (id_usrz miliknya) dan "Disposisi" kepada jabatan
+    yang menerimanya; selain itu tanda hubung.
+    """
+    if user.get("id") and baris.get("id_usrz") == user["id"]:
+        return "Mendisposisikan"
+    if user.get("jabatan_id") and baris.get("id_jabatan") == user["jabatan_id"]:
+        return "Disposisi"
+    return "Disposisi" if user.get("can_view_all") else "-"

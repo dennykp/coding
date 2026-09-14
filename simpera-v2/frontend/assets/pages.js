@@ -343,6 +343,14 @@
       '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; )</div></div></div>';
   }
 
+  /* Lencana peran atas satu disposisi: "Mendisposisikan" bagi pengirimnya,
+     "Disposisi" bagi jabatan penerimanya — sama seperti aplikasi lama. */
+  function statusDisposisi(r) {
+    var label = r.status_disposisi || '-';
+    if (label === '-') return '<span class="text-slate-400">-</span>';
+    return badge(label, toneStatusSurat(label));
+  }
+
   function linkBerkas(url, label) {
     if (!url) return '<span class="text-slate-400">Tidak ada berkas</span>';
     return '<a href="' + esc(url) + '" target="_blank" rel="noopener" ' +
@@ -564,8 +572,9 @@
                 'text-slate-600">' + esc(x.isi_disposisi) + '</p>' : '') +
               (x.opsi ? '<p class="mt-1 text-xs text-slate-500">Instruksi: <span ' +
                 'class="font-medium text-slate-700">' + esc(x.opsi) + '</span></p>' : '') +
-              '<p class="mt-1.5">' + badge(x.status_selesai ? 'Selesai' : 'Sedang Berjalan',
-                                           x.status_selesai ? 'green' : 'amber') + '</p>' +
+              '<p class="mt-1.5 flex flex-wrap gap-1.5">' + statusDisposisi(x) +
+              badge(x.status_selesai ? 'Selesai' : 'Sedang Berjalan',
+                    x.status_selesai ? 'green' : 'amber') + '</p>' +
               '</li>';
           }).join('') + '</ol>'
         : '<div class="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 ' +
@@ -895,8 +904,11 @@
         { title: 'Isi', tdClass: 'max-w-[12rem]', render: function (r) {
             return '<span class="clamp-2">' + dash(r.isi_disposisi) + '</span>'; } },
         { title: 'Tanggal', tdClass: 'whitespace-nowrap', render: function (r) { return tanggal(r.tgl_disposisi); } },
-        { title: 'Status', render: function (r) {
-            return badge(r.status_label, toneStatusSurat(r.status_label)); } },
+        { title: 'Status disposisi', tdClass: 'whitespace-nowrap', render: function (r) {
+            return statusDisposisi(r); } },
+        { title: 'Selesai', tdClass: 'whitespace-nowrap', render: function (r) {
+            return r.selesai ? badge('Selesai', 'green')
+                             : '<span class="text-slate-400">-</span>'; } },
         { title: 'Aksi', thClass: 'text-right kolom-aksi', tdClass: 'whitespace-nowrap kolom-aksi', render: function (r) {
             return S.tombolAksi([
               { ikon: 'detail', warna: 'hijau', judul: 'Lihat detail surat', aksi: 'detail',

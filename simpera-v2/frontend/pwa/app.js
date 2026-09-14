@@ -166,6 +166,14 @@
       (peta[nada] || peta.abu) + '">' + esc(teks) + '</span>';
   }
 
+  /* Lencana peran atas satu disposisi, sama seperti aplikasi lama:
+     "Mendisposisikan" untuk pengirimnya, "Disposisi" untuk penerimanya. */
+  function lencanaDisposisi(d) {
+    var label = d.status_disposisi || '';
+    if (!label || label === '-') return '';
+    return lencana(label, label === 'Mendisposisikan' ? 'hijau' : 'biru');
+  }
+
   function kartuSurat(r, tombol, aksiLangsung) {
     return '<button type="button" class="card mb-3 block w-full p-4 text-left active:scale-[.995]" ' +
       'data-surat="' + esc(r.id_surat) + '"' +
@@ -317,9 +325,11 @@
                       dash(d.tujuan_jabatan) + ' · ' + tanggal(d.tgl_disposisi) + '</span>' +
                     '</span>' +
                   '</div>' +
-                  '<div class="mt-3 flex items-center justify-between">' +
-                    lencana(d.status_label, d.selesai ? 'hijau' : 'kuning') +
-                    '<span class="text-xs font-semibold text-brand-700">Buka</span>' +
+                  '<div class="mt-3 flex items-center justify-between gap-2">' +
+                    '<span class="flex flex-wrap items-center gap-1.5">' +
+                    lencanaDisposisi(d) +
+                    lencana(d.status_label, d.selesai ? 'hijau' : 'kuning') + '</span>' +
+                    '<span class="shrink-0 text-xs font-semibold text-brand-700">Buka</span>' +
                   '</div></button>';
               }).join('')
             : kartuKosong('Tidak ada disposisi yang sedang berjalan.'));
@@ -760,10 +770,27 @@
     });
   }
 
+  /* Judul tiap halaman, ikut tampil di tab peramban. */
+  var JUDUL = {
+    beranda: ['Beranda', 'Ringkasan pekerjaan hari ini'],
+    verifikasi: ['Verifikasi Surat', 'Surat masuk yang menunggu diperiksa'],
+    disposisi: ['Disposisi', 'Surat yang diteruskan ke jabatan Anda'],
+    notifikasi: ['Notifikasi', 'Pemberitahuan terbaru untuk Anda'],
+    akun: ['Akun', 'Identitas dan sesi Anda']
+  };
+
+  function gambarJudul() {
+    var j = JUDUL[state.rute] || JUDUL.beranda;
+    el('m-judul').textContent = j[0];
+    el('m-subjudul').textContent = j[1];
+    document.title = j[0] + ' · SIMPERA v2';
+  }
+
   function gambar() {
     var wadah = el('m-page');
     var render = halaman[state.rute] || halaman.beranda;
     tandaiNav();
+    gambarJudul();
     try {
       var hasil = render(wadah);
       if (hasil && hasil.catch) {

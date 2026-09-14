@@ -18,6 +18,7 @@ from ..common import (
     like,
     page_response,
     paginate,
+    status_disposisi,
 )
 
 router = APIRouter(tags=["surat"])
@@ -196,6 +197,7 @@ def detail_surat_masuk(
         """
         SELECT d.id_disposisi, d.tgl_disposisi, d.jam_disposisi, d.isi_disposisi,
                d.opsi, d.status_selesai, d.catatan_selesai, d.created_at,
+               d.id_usrz, d.id_jabatan,
                jb.nama_jabatan AS tujuan_jabatan, u.name AS pengirim
         FROM tt_disposisi d
         LEFT JOIN tm_jabatan jb ON jb.id_jabatan = d.id_jabatan
@@ -205,7 +207,10 @@ def detail_surat_masuk(
         """,
         (id_surat,),
     )
-    detail["disposisi"] = clean_all(disposisi)
+    baris_disposisi = clean_all(disposisi)
+    for baris in baris_disposisi:
+        baris["status_disposisi"] = status_disposisi(baris, user)
+    detail["disposisi"] = baris_disposisi
     return detail
 
 

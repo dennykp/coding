@@ -561,7 +561,10 @@
       'Disetujui': 'green', 'Menunggu Persetujuan': 'amber', 'Diarsipkan': 'sky',
       'Selesai': 'green', 'Sedang Berjalan': 'amber', 'Tuntas': 'green',
       'Dalam Proses': 'amber', 'Dipinjam': 'amber', 'Sudah Kembali': 'green',
-      'Terlampaui': 'rose', 'Mendekati Jatuh Tempo': 'amber'
+      'Terlampaui': 'rose', 'Mendekati Jatuh Tempo': 'amber',
+      // Label alur disposisi, mengikuti warna lencana aplikasi lama:
+      // pengirim hijau, penerima biru.
+      'Mendisposisikan': 'green', 'Disposisi': 'sky'
     };
     return map[label] || 'slate';
   }
@@ -1163,6 +1166,8 @@
     var item = MENU.filter(function (m) { return m.id === route; })[0];
     el('page-title').textContent = item ? item.label : 'SIMPERA v2';
     el('page-subtitle').textContent = item ? item.subtitle : '';
+    // Judul tab peramban ikut berganti supaya beberapa tab mudah dibedakan.
+    document.title = (item ? item.label + ' · ' : '') + 'SIMPERA v2';
   }
 
   function closeSidebar() {
