@@ -299,10 +299,33 @@ table.data tbody tr:hover { background: #f0fdf4; }
   font-size: .75rem; font-weight: 700; letter-spacing: .06em;
   text-transform: uppercase; color: #047857;
 }
-.kartu-isi { padding: 1.15rem; }
+.kartu-isi { padding: 1rem 1.15rem; }
+
+/* Dua kolom data berdampingan supaya kartu rincian tidak memanjang ke bawah
+   dan jendela detail cukup satu layar tanpa digulir. */
+.data-kisi { display: grid; grid-template-columns: 1fr 1fr; column-gap: 1.5rem; }
+.data-kisi > .lebar { grid-column: 1 / -1; }
+@media (max-width: 640px) { .data-kisi { grid-template-columns: 1fr; } }
+
+/* Garis waktu disposisi punya gulirannya sendiri: isi jendela tetap diam.
+   Tepi bawahnya dibuat memudar sebagai tanda daftarnya masih berlanjut. */
+.jejak-wadah { position: relative; }
+@media (min-width: 1024px) {
+  .jejak-gulir {
+    max-height: 44vh; overflow-y: auto; padding-right: .4rem;
+    scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;
+  }
+  .jejak-gulir::-webkit-scrollbar { width: 6px; }
+  .jejak-gulir::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+  .jejak-wadah.ada-sisa::after {
+    content: ""; position: absolute; left: 0; right: .4rem; bottom: 0; height: 2.5rem;
+    background: linear-gradient(to top, #ffffff 15%, rgba(255,255,255,0));
+    pointer-events: none;
+  }
+}
 
 /* Baris data: label di atas, nilai tebal di bawah — terbaca di kolom sempit. */
-.data-baris { padding: .6rem 0; border-bottom: 1px dashed #e2e8f0; }
+.data-baris { padding: .5rem 0; border-bottom: 1px dashed #e2e8f0; }
 .data-baris:last-child { border-bottom: 0; }
 .data-label {
   font-size: .6875rem; font-weight: 600; letter-spacing: .05em;

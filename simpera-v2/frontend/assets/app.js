@@ -251,8 +251,10 @@
   /**
    * Mencetak lewat iframe tersembunyi: tidak terhalang pemblokir jendela
    * sembul, dan gaya halaman utama tidak ikut terbawa.
+   * opsi = { subjudul: 'teks kecil di bawah judul' }
    */
-  function cetak(judul, isiHtml) {
+  function cetak(judul, isiHtml, opsi) {
+    opsi = opsi || {};
     var lama = document.getElementById('bingkai-cetak');
     if (lama) lama.parentNode.removeChild(lama);
 
@@ -262,17 +264,33 @@
     bingkai.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
     document.body.appendChild(bingkai);
 
+    var oleh = (state.user && (state.user.name || state.user.username)) || 'pengguna';
+
     var doc = bingkai.contentWindow.document;
     doc.open();
     doc.write('<!doctype html><html lang="id"><head><meta charset="utf-8">' +
       '<title>' + esc(judul) + '</title><style>' + GAYA_CETAK + '</style></head><body>' +
-      '<header class="kop"><div><p class="kop-nama">Universitas Islam Malang</p>' +
-      '<p class="kop-sub">SIMPERA v2 &middot; Sistem Persuratan dan Kearsipan</p></div>' +
-      '<p class="kop-tgl">Dicetak ' + esc(tanggalJam(new Date())) + '</p></header>' +
-      '<h1>' + esc(judul) + '</h1>' + isiHtml +
-      '<footer class="kaki">Dokumen ini dicetak dari SIMPERA v2 oleh ' +
-      esc((state.user && (state.user.name || state.user.username)) || 'pengguna') +
-      '.</footer></body></html>');
+
+      '<header class="kop">' +
+        '<div class="kop-lambang">U</div>' +
+        '<div class="kop-teks">' +
+          '<p class="kop-nama">Universitas Islam Malang</p>' +
+          '<p class="kop-sub">SIMPERA v2 &middot; Sistem Persuratan dan Kearsipan</p>' +
+        '</div>' +
+      '</header>' +
+      '<div class="kop-garis"></div>' +
+
+      '<div class="judul">' +
+        '<h1>' + esc(judul) + '</h1>' +
+        (opsi.subjudul ? '<p class="judul-sub">' + esc(opsi.subjudul) + '</p>' : '') +
+      '</div>' +
+
+      isiHtml +
+
+      '<footer class="kaki">' +
+        '<span>Dicetak ' + esc(tanggalJam(new Date())) + ' oleh ' + esc(oleh) + '</span>' +
+        '<span>SIMPERA v2 &middot; e-surat.unisma.ac.id</span>' +
+      '</footer></body></html>');
     doc.close();
 
     var jalankan = function () {
@@ -290,28 +308,65 @@
     else bingkai.onload = function () { setTimeout(jalankan, 60); };
   }
 
+  /* Gaya lembar cetak: satu halaman A4, berkop, tanpa warna latar tebal
+     supaya hemat tinta tetapi tetap rapi. */
   var GAYA_CETAK =
     '*{box-sizing:border-box}' +
-    'body{margin:0;padding:26px 30px;font:12px/1.55 "Segoe UI",Arial,sans-serif;color:#0f172a}' +
-    '.kop{display:flex;justify-content:space-between;align-items:flex-end;' +
-      'border-bottom:2.5px solid #047857;padding-bottom:10px;margin-bottom:18px}' +
-    '.kop-nama{margin:0;font-size:15px;font-weight:700;color:#047857;letter-spacing:.02em}' +
-    '.kop-sub{margin:2px 0 0;font-size:11px;color:#64748b}' +
-    '.kop-tgl{margin:0;font-size:10px;color:#94a3b8}' +
-    'h1{margin:0 0 16px;font-size:15px;font-weight:700}' +
-    'h2{margin:20px 0 8px;font-size:12px;font-weight:700;color:#047857;' +
-      'text-transform:uppercase;letter-spacing:.07em}' +
-    'table{width:100%;border-collapse:collapse;margin-bottom:4px}' +
-    'th,td{border:1px solid #cbd5e1;padding:6px 9px;text-align:left;vertical-align:top}' +
-    'th{width:30%;background:#ecfdf5;font-weight:600;color:#065f46}' +
-    'table.daftar th{width:auto;text-align:left}' +
-    'ol.jejak{margin:0;padding-left:18px}' +
-    'ol.jejak li{margin-bottom:10px}' +
-    'ol.jejak .siapa{font-weight:700}' +
-    'ol.jejak .kapan{color:#64748b;font-size:11px}' +
-    '.kaki{margin-top:22px;border-top:1px solid #e2e8f0;padding-top:8px;' +
-      'font-size:10px;color:#94a3b8}' +
-    '@page{margin:14mm}';
+    'body{margin:0;padding:0;font:11.5px/1.5 "Segoe UI",Arial,sans-serif;color:#111827}' +
+
+    /* kop surat */
+    '.kop{display:flex;align-items:center;gap:12px}' +
+    '.kop-lambang{width:38px;height:38px;border-radius:50%;background:#047857;color:#fff;' +
+      'font:700 19px/38px Georgia,serif;text-align:center;flex:0 0 auto}' +
+    '.kop-nama{margin:0;font-size:15.5px;font-weight:700;letter-spacing:.04em;color:#065f46;' +
+      'text-transform:uppercase}' +
+    '.kop-sub{margin:1px 0 0;font-size:10px;color:#6b7280;letter-spacing:.03em}' +
+    '.kop-garis{margin:7px 0 16px;height:3px;background:#047857;border-bottom:1px solid #047857;' +
+      'box-shadow:0 2px 0 #d1fae5}' +
+
+    /* judul dokumen */
+    '.judul{text-align:center;margin-bottom:14px}' +
+    '.judul h1{margin:0;font-size:13.5px;font-weight:700;letter-spacing:.14em;' +
+      'text-transform:uppercase;text-decoration:underline;text-underline-offset:4px}' +
+    '.judul-sub{margin:4px 0 0;font-size:10.5px;color:#4b5563;letter-spacing:.04em}' +
+
+    /* bagian */
+    '.bab{margin-bottom:12px;break-inside:avoid}' +
+    '.bab-judul{margin:0 0 5px;font-size:9.5px;font-weight:700;letter-spacing:.12em;' +
+      'text-transform:uppercase;color:#047857;border-bottom:1px solid #a7f3d0;padding-bottom:3px}' +
+
+    /* pasangan label-nilai dua kolom */
+    'table.pasangan{width:100%;border-collapse:collapse}' +
+    'table.pasangan td{padding:3.5px 8px 3.5px 0;vertical-align:top;font-size:11px}' +
+    'table.pasangan td.l{width:17%;color:#6b7280;white-space:nowrap}' +
+    'table.pasangan td.t{width:2%;color:#9ca3af}' +
+    'table.pasangan td.v{width:31%;font-weight:600}' +
+
+    /* kotak isi bebas (perihal) */
+    '.kotak{border:1px solid #d1d5db;border-left:3px solid #047857;border-radius:3px;' +
+      'padding:8px 10px;font-size:11.5px;font-weight:600}' +
+
+    /* tabel daftar */
+    'table.daftar{width:100%;border-collapse:collapse;font-size:10.5px}' +
+    'table.daftar th{background:#ecfdf5;border:1px solid #a7f3d0;padding:5px 7px;text-align:left;' +
+      'font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:#065f46}' +
+    'table.daftar td{border:1px solid #d1d5db;padding:5px 7px;vertical-align:top}' +
+    'table.daftar td.no{width:22px;text-align:center;color:#6b7280}' +
+    'table.daftar .catatan{color:#4b5563}' +
+    '.kosong{border:1px dashed #d1d5db;border-radius:3px;padding:10px;text-align:center;' +
+      'color:#9ca3af;font-size:10.5px}' +
+
+    /* ruang tulis tangan + tanda tangan */
+    '.tulis{border:1px solid #9ca3af;border-radius:3px;height:112px}' +
+    '.ttd{margin-top:10px;display:flex;justify-content:flex-end}' +
+    '.ttd-kotak{width:190px;text-align:center;font-size:10.5px}' +
+    '.ttd-garis{margin-top:52px;border-top:1px solid #6b7280;padding-top:3px;color:#4b5563}' +
+
+    /* kaki halaman */
+    '.kaki{display:flex;justify-content:space-between;margin-top:14px;border-top:1px solid #e5e7eb;' +
+      'padding-top:6px;font-size:9px;color:#9ca3af}' +
+
+    '@page{size:A4;margin:15mm 16mm}';
 
   function tanggalJam(d) {
     try {
