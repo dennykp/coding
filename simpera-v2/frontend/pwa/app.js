@@ -395,14 +395,22 @@
   function bukaSurat(idSurat) {
     sheetMemuat('Detail Surat');
     minta('/surat-masuk/' + idSurat).then(function (d) {
+      var jumlahDisposisi = (d.disposisi || []).length;
       var aksi = '';
       if (bolehVerifikasi() && d.status_surat === 0) {
         aksi += '<button data-aksi="verifikasi" data-id="' + idSurat +
           '" class="btn-primary w-full justify-center py-3">Verifikasi surat</button>';
       }
       if (bolehDisposisi() && d.status_surat === 1) {
-        aksi += '<button data-aksi="disposisi" data-id="' + idSurat +
-          '" class="btn-primary w-full justify-center py-3">Disposisikan surat</button>';
+        // Surat yang sudah pernah didisposisikan cukup diberi keterangan;
+        // penerusannya dikerjakan dari menu Disposisi, seperti aplikasi lama.
+        aksi += jumlahDisposisi
+          ? '<p class="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs ' +
+            'leading-relaxed text-sky-900">Surat ini sudah didisposisikan ke ' +
+            jumlahDisposisi + ' jabatan. Penerusan berikutnya dilakukan dari menu ' +
+            '<b>Disposisi</b>.</p>'
+          : '<button data-aksi="disposisi" data-id="' + idSurat +
+            '" class="btn-primary w-full justify-center py-3">Disposisikan surat</button>';
       }
       if (d.file_url) {
         aksi += '<a href="' + esc(d.file_url) + '" target="_blank" rel="noopener" ' +

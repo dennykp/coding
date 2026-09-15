@@ -521,14 +521,20 @@
                   ? { ikon: 'verifikasi', warna: 'hijau',
                       judul: 'Verifikasi surat', aksi: 'verifikasi' }
                   : null,
+                // Surat yang sudah pernah didisposisikan tidak lagi menawarkan
+                // tombol kirim; yang tampil hanya keterangan, dan penerusan
+                // dilakukan dari halaman Disposisi seperti aplikasi lama.
                 S.boleh('disposisi')
-                  ? { ikon: 'kirim', warna: 'ungu',
-                      judul: r.status_surat === 1 ? 'Disposisikan surat'
-                                                  : 'Surat belum diverifikasi',
-                      aksi: 'kirim-disposisi', nonaktif: r.status_surat !== 1 }
+                  ? (r.status_surat !== 1
+                      ? { ikon: 'kirim', warna: 'ungu', judul: 'Surat belum diverifikasi',
+                          aksi: 'kirim-disposisi', nonaktif: true }
+                      : (r.jumlah_disposisi
+                          ? { ikon: 'info', warna: 'biru', aksi: 'jejak',
+                              judul: 'Sudah didisposisikan ke ' + r.jumlah_disposisi +
+                                     ' jabatan — lihat jejaknya' }
+                          : { ikon: 'kirim', warna: 'ungu', judul: 'Disposisikan surat',
+                              aksi: 'kirim-disposisi' }))
                   : null,
-                // Jejak disposisi sudah tampil di jendela detail saat baris
-                // diklik, jadi tidak perlu tombolnya sendiri di sini.
                 S.boleh('kelola_surat')
                   ? { ikon: 'ubah', warna: 'kuning', judul: 'Ubah data surat', aksi: 'ubah' }
                   : null,
@@ -544,6 +550,7 @@
           if (aksi === 'detail') detailSuratMasuk(row.id_surat);
           else if (aksi === 'verifikasi') alur.formVerifikasi(row, tabel);
           else if (aksi === 'kirim-disposisi') alur.formDisposisi(row.id_surat, tabel);
+          else if (aksi === 'jejak') detailSuratMasuk(row.id_surat);
           else if (aksi === 'ubah') alur.formSuratMasuk(row, tabel);
           else if (aksi === 'hapus') alur.hapusSuratMasuk(row, tabel);
         }
