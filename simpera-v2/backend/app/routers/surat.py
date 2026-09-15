@@ -40,9 +40,16 @@ URUTAN_SURAT_KELUAR = {
 
 
 def _scope(user: dict[str, Any], column: str) -> tuple[str, list[Any]]:
+    """Batas pandang surat masuk bagi pengguna berjabatan.
+
+    SuratMasukController aplikasi lama menyaring daftar milik satu jabatan
+    dengan `id_jabatan = ... AND status_surat = 1`: surat yang belum
+    diverifikasi masih berada di tangan Admin Verifikasi, jadi belum tampil
+    di layar pimpinan. Aturan itu ditiru di sini.
+    """
     if user.get("can_view_all") or not user.get("jabatan_id"):
         return "", []
-    return f" AND {column} = %s", [user["jabatan_id"]]
+    return f" AND {column} = %s AND s.status_surat = 1", [user["jabatan_id"]]
 
 
 @router.get("/surat-masuk")

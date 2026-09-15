@@ -8,7 +8,7 @@
  *   dilindungi token, dan hasil basi bisa menyesatkan.
  * ========================================================================== */
 
-var VERSI = 'simpera-m-acf726b1a0';
+var VERSI = 'simpera-m-6526fcff72';
 var CANGKANG = [
   './',
   './index.html',

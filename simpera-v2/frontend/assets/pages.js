@@ -343,6 +343,16 @@
       '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; )</div></div></div>';
   }
 
+  /* Keterangan pengganti tombol kirim pada baris disposisi yang bukan milik
+     jabatan kita: menyebut siapa yang sedang menanganinya. */
+  function judulInfoDisposisi(r) {
+    if (r.status_disposisi === 'Mendisposisikan') {
+      return 'Anda yang mengirim disposisi ini — lihat jejaknya';
+    }
+    return 'Disposisi ini untuk ' + (r.tujuan_jabatan || 'jabatan lain') +
+           ' — lihat jejaknya';
+  }
+
   /* Penuntasan disposisi adalah hak jabatan penerimanya. */
   function bolehMenuntaskan(r) {
     var jabatan = state.user && state.user.jabatan_id;
@@ -926,9 +936,15 @@
             return S.tombolAksi([
               { ikon: 'detail', warna: 'hijau', judul: 'Lihat detail surat', aksi: 'detail',
                 nonaktif: !r.id_surat },
+              // Disposisi yang kita kirim sendiri tidak perlu tombol kirim
+              // lagi — cukup keterangan. Penerusan adalah hak jabatan
+              // penerimanya.
               S.boleh('disposisi')
-                ? { ikon: 'kirim', warna: 'ungu', judul: 'Teruskan disposisi',
-                    aksi: 'teruskan', nonaktif: !r.id_surat }
+                ? (bolehMenuntaskan(r)
+                    ? { ikon: 'kirim', warna: 'ungu', judul: 'Teruskan disposisi',
+                        aksi: 'teruskan', nonaktif: !r.id_surat }
+                    : { ikon: 'info', warna: 'biru', judul: judulInfoDisposisi(r),
+                        aksi: 'jejak', nonaktif: !r.id_surat })
                 : null,
               // Hanya jabatan penerima yang boleh menuntaskan, seperti
               // aplikasi lama; yang lain melihat tombolnya tetapi mati.
@@ -949,6 +965,7 @@
         var alur = window.__simperaAlur || {};
         if (aksi === 'detail' && row.id_surat) detailSuratMasuk(row.id_surat);
         else if (aksi === 'teruskan' && row.id_surat) alur.formDisposisi(row.id_surat, tabel);
+        else if (aksi === 'jejak' && row.id_surat) detailSuratMasuk(row.id_surat);
         // Tandai selesai tidak langsung menyimpan: jendela "Catatan Disposisi"
         // muncul dulu, sama seperti aplikasi lama.
         else if (aksi === 'selesai') alur.formSelesaiDisposisi(row, tabel);
