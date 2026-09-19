@@ -14,6 +14,9 @@ module.exports = {
     '../m/index.html',
     '../m/app.js'
   ],
+  // Jumlah kolom navigasi bawah dirangkai saat berjalan ('grid-cols-' + n)
+  // menurut peran pemakai, jadi Tailwind tidak bisa menemukannya di berkas.
+  safelist: ['grid-cols-3', 'grid-cols-4', 'grid-cols-5'],
   theme: {
     extend: {
       colors: {

@@ -21,8 +21,14 @@
     notif: null,
     notifTotal: null,
     timer: null,
-    swReg: null
+    swReg: null,
+    cari: ''
   };
+
+  /* Kotak cari ada di kepala, satu untuk seluruh aplikasi. Halaman daftar
+     yang sedang tampil menitipkan fungsi muat-ulangnya di sini supaya
+     ketikan di kepala langsung menyaring daftar yang terbuka. */
+  var pendengarCari = null;
 
   // ------------------------------------------------------------------ ringkas
   function el(id) { return document.getElementById(id); }
@@ -52,9 +58,33 @@
     return isFinite(n) ? n.toLocaleString('id-ID') : '0';
   }
 
+  /* Ikon garis 18px untuk petak Beranda. Digambar langsung sebagai SVG
+     supaya tidak ada berkas ikon tambahan yang harus diunduh. */
+  function garis(d) {
+    return '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" ' +
+      'stroke="currentColor" stroke-width="1.9" aria-hidden="true">' +
+      '<path stroke-linecap="round" stroke-linejoin="round" d="' + d + '"/></svg>';
+  }
+
+  var IKON = {
+    periksa: garis('m4.5 12.75 6 6 9-13.5'),
+    teruskan: garis('M6 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm0 0h1.5m10.5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm0 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm0-12-10.5 6m10.5 6-10.5-6'),
+    amplop: garis('M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75')
+  };
+
+  /* Gelar akademik dan gelar kehormatan di depan nama bukan bagian dari
+     nama panggilan, jadi dilewati: "Dr. H. Ahmad Subekti" -> "Ahmad". */
+  var GELAR = /^(dr|drs|dra|ir|prof|h|hj|kh|nyai|st|sp|mr|mrs|ms|tn|ny)\.?$/i;
+
+  function kataNama(nama) {
+    return String(nama || '').trim().split(/\s+/)
+      .filter(function (k) { return k && !GELAR.test(k.replace(/[.,]+$/, '')); });
+  }
+
   function inisial(nama) {
-    var bagian = String(nama || '?').trim().split(/\s+/);
-    return ((bagian[0] || '?').charAt(0) +
+    var bagian = kataNama(nama);
+    if (!bagian.length) bagian = ['?'];
+    return (bagian[0].charAt(0) +
             (bagian.length > 1 ? bagian[1].charAt(0) : '')).toUpperCase();
   }
 
@@ -179,20 +209,21 @@
 
   /* Bentuk skeleton dibuat menyerupai baris inbox (avatar bulat + tiga
      baris teks) supaya isi tidak "meloncat" saat data selesai dimuat. */
+  /* Skeleton dibuat sebentuk kartu surat supaya isi tidak "meloncat"
+     saat data selesai dimuat. */
   function kerangkaDaftar(n) {
     var out = '';
     for (var i = 0; i < (n || 4); i++) {
-      out += '<div class="baris-surat">' +
-               '<span class="baris-tanda"></span>' +
-               '<span class="skeleton h-11 w-11 shrink-0 rounded-full"></span>' +
-               '<span class="min-w-0 flex-1">' +
-                 '<span class="skeleton block h-4 w-1/3"></span>' +
-                 '<span class="skeleton mt-1.5 block h-3.5 w-full"></span>' +
-                 '<span class="skeleton mt-1.5 block h-3 w-1/2"></span>' +
+      out += '<div class="kartu-surat">' +
+               '<span class="skeleton h-[2.625rem] w-[2.625rem] shrink-0 rounded-full"></span>' +
+               '<span class="min-w-0">' +
+                 '<span class="skeleton block h-3.5 w-1/3"></span>' +
+                 '<span class="skeleton mt-2 block h-3.5 w-full"></span>' +
+                 '<span class="skeleton mt-2 block h-3 w-1/2"></span>' +
                '</span>' +
              '</div>';
     }
-    return '<div class="daftar-surat">' + out + '</div>';
+    return '<div class="flex flex-col gap-2.5">' + out + '</div>';
   }
 
   function lencana(teks, nada) {
@@ -220,50 +251,60 @@
 
      opsi: { attr, nama, waktu, judul, cuplikan, tebal, tombol, lencana } */
   function barisInbox(o) {
-    var tebal = o.tebal ? 'font-semibold text-slate-900' : 'font-medium text-slate-700';
-    return '<button type="button" class="baris-surat" ' + (o.attr || '') + '>' +
-      '<span class="baris-tanda">' +
-        (o.tebal ? '<span class="titik-baru" aria-label="Perlu perhatian"></span>' : '') +
-      '</span>' +
-      '<span class="grid h-11 w-11 shrink-0 place-items-center rounded-full text-xs font-semibold ' +
-        warnaAvatar(o.nama) + '">' + esc(inisial(o.nama)) + '</span>' +
-      '<span class="min-w-0 flex-1">' +
+    return '<button type="button" class="kartu-surat' + (o.tebal ? ' baru' : '') + '" ' +
+      (o.attr || '') + '>' +
+      '<span class="grid h-[2.625rem] w-[2.625rem] shrink-0 place-items-center rounded-full ' +
+        'text-[.78rem] font-semibold ' + warnaAvatar(o.nama) + '">' +
+        esc(inisial(o.nama)) + '</span>' +
+      '<span class="min-w-0">' +
         '<span class="flex items-baseline gap-2">' +
-          '<span class="min-w-0 flex-1 truncate text-[15px] ' + tebal + '">' + dash(o.nama) + '</span>' +
-          '<span class="shrink-0 text-[11px] text-slate-400">' +
-            esc(tanggalRingkas(o.waktu)) + '</span>' +
+          '<span class="kartu-dari">' + dash(o.nama) + '</span>' +
+          '<span class="kartu-jam">' + esc(tanggalRingkas(o.waktu)) + '</span>' +
         '</span>' +
-        '<span class="mt-0.5 block truncate text-[13px] ' +
-          (o.tebal ? 'font-medium text-slate-800' : 'text-slate-600') + '">' +
-          dash(o.judul) + '</span>' +
-        '<span class="clamp-2 mt-0.5 block text-[12px] leading-snug text-slate-400">' +
-          dash(o.cuplikan) + '</span>' +
-        ((o.lencana || o.tombol)
-          ? '<span class="mt-2 flex flex-wrap items-center gap-1.5">' +
-            (o.lencana || '') + (o.tombol || '') + '</span>'
-          : '') +
+        '<p class="kartu-perihal">' + dash(o.judul) + '</p>' +
+        '<p class="kartu-nomor">' + dash(o.cuplikan) + '</p>' +
+        (o.lencana ? '<span class="kartu-kaki">' + o.lencana + '</span>' : '') +
       '</span>' +
-      '<svg class="mt-1 h-4 w-4 shrink-0 text-slate-300" fill="none" stroke="currentColor" ' +
-        'stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">' +
-        '<path stroke-linecap="round" stroke-linejoin="round" d="m9 5 7 7-7 7"/></svg>' +
       '</button>';
   }
 
-  /* Pembungkus daftar: memberi latar putih dan garis pemisah antarbaris. */
+  /* Pembungkus daftar kartu: jarak antarkartu, bukan garis pemisah. */
   function daftarInbox(isi) {
-    return '<div class="daftar-surat">' + isi + '</div>';
+    return '<div class="flex flex-col gap-2.5">' + isi + '</div>';
   }
 
-  function kartuSurat(r, tombol, aksiLangsung) {
+  /* Penanda kecil di kaki kartu. */
+  function tanda(teks, jenis) {
+    return '<span class="tanda tanda-' + jenis + '">' + esc(teks) + '</span>';
+  }
+
+  function tandaStatus(status) {
+    var s = Number(status);
+    return s === 1 ? tanda('Diterima', 'oke')
+         : s === 2 ? tanda('Ditolak', 'tolak')
+         : tanda('Menunggu verifikasi', 'tunggu');
+  }
+
+  function tandaBerkas(jumlah) {
+    if (!jumlah) return '';
+    return '<span class="tanda tanda-netral">' +
+      '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+      'stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" ' +
+      'd="m18.4 12.1-6.9 6.9a4.2 4.2 0 0 1-6-6l7-6.9a2.8 2.8 0 0 1 4 4l-7 6.9a1.4 1.4 0 1 1-2-2l6.4-6.4"/>' +
+      '</svg> berkas</span>';
+  }
+
+  /* Kartu tidak lagi membawa tombol tindakan: seluruh kartu membuka detail,
+     dan keputusan diambil di sana setelah isi suratnya terbaca. */
+  function kartuSurat(r) {
     return barisInbox({
-      attr: 'data-surat="' + esc(r.id_surat) + '"' +
-            (aksiLangsung ? ' data-langsung="' + esc(aksiLangsung) + '"' : ''),
+      attr: 'data-surat="' + esc(r.id_surat) + '"',
       nama: r.dari,
       waktu: r.tgl_surat_terima,
       judul: r.perihal,
       cuplikan: r.nomor_surat,
       tebal: Number(r.read_surat) === 0,
-      tombol: tombol
+      lencana: tandaStatus(r.status_surat) + tandaBerkas(r.file_upload || r.file_url)
     });
   }
 
@@ -285,31 +326,69 @@
   // ------------------------------------------------------------------ halaman
   var halaman = {};
 
+  /* Beranda: ringkasan angka, lalu dua daftar terbaru.
+
+     Sebelumnya halaman ini hanya berisi petak angka dan daftar "perlu
+     tindakan", sehingga tidak ada cara melihat surat atau disposisi yang
+     baru masuk tanpa berpindah menu. Dua bagian di bawah menutup itu, dan
+     masing-masing punya tautan ke daftar lengkapnya. */
   halaman.beranda = function (wadah) {
     wadah.innerHTML = kerangkaDaftar(3);
+
+    function aman(janji) { return janji.catch(function () { return null; }); }
+
     return Promise.all([
       minta('/notifikasi?limit=8'),
-      minta('/dashboard/summary').catch(function () { return null; })
+      aman(minta('/dashboard/summary')),
+      aman(minta('/surat-masuk' + kueri({ per_page: 3, urut: 'terbaru' }))),
+      aman(minta('/disposisi' + kueri({ per_page: 3, selesai: false })))
     ]).then(function (res) {
-      var n = res[0], ringkas = res[1];
+      var n = res[0], ringkas = res[1], surat = res[2], dispo = res[3];
       var j = n.jumlah || {};
 
       var petak = [
-        { label: 'Perlu verifikasi', nilai: j.verifikasi || 0, nuansa: 'tile-green',
-          rute: 'verifikasi', tampil: bolehVerifikasi() },
-        { label: 'Disposisi masuk', nilai: j.disposisi || 0, nuansa: 'tile-amber',
-          rute: 'disposisi', tampil: true },
-        { label: 'Surat belum dibuka', nilai: j.surat_masuk || 0, nuansa: 'tile-sky',
-          rute: 'disposisi', tampil: true }
+        { label: 'Perlu verifikasi', nilai: j.verifikasi || 0, nuansa: 'petak-hijau',
+          ikon: IKON.periksa, rute: 'verifikasi', tampil: bolehVerifikasi() },
+        { label: 'Disposisi berjalan', nilai: j.disposisi || 0, nuansa: 'petak-kuning',
+          ikon: IKON.teruskan, rute: 'disposisi', tampil: bolehDisposisi() },
+        { label: 'Surat belum dibuka', nilai: j.surat_masuk || 0, nuansa: 'petak-biru',
+          ikon: IKON.amplop, rute: 'surat', tampil: true }
       ].filter(function (p) { return p.tampil; });
+
+      function bagian(judul, rute, isi, kosong) {
+        return '<div class="mt-6 flex items-center justify-between">' +
+            '<h2 class="text-sm font-semibold text-slate-900">' + esc(judul) + '</h2>' +
+            '<button type="button" data-pergi="' + rute + '" ' +
+              'class="text-xs font-medium text-brand-700">Lihat semua</button>' +
+          '</div><div class="mt-3">' + (isi || kartuKosong(kosong)) + '</div>';
+      }
+
+      var daftarSurat = (surat && (surat.items || []).length)
+        ? daftarInbox(surat.items.map(function (r) { return kartuSurat(r); }).join(''))
+        : '';
+
+      var daftarDispo = (dispo && (dispo.items || []).length)
+        ? daftarInbox(dispo.items.map(function (d) {
+            return barisInbox({
+              attr: 'data-disposisi="' + esc(d.id_disposisi) + '" data-surat="' + esc(d.id_surat) + '"',
+              nama: d.tujuan_jabatan,
+              waktu: d.tgl_disposisi,
+              judul: d.perihal,
+              cuplikan: d.nomor_surat,
+              tebal: !d.selesai,
+              lencana: tanda(d.status_label, d.selesai ? 'oke' : 'tunggu')
+            });
+          }).join(''))
+        : '';
 
       wadah.innerHTML =
         '<div class="grid grid-cols-2 gap-3">' +
           petak.map(function (p, i) {
-            return '<button type="button" data-pergi="' + p.rute + '" class="tile ' + p.nuansa +
-              ' text-left' + (i === 0 && petak.length === 3 ? ' col-span-2' : '') + '">' +
-              '<p class="tile-angka text-3xl font-bold tracking-tight">' + angka(p.nilai) + '</p>' +
-              '<p class="tile-label mt-1 text-sm font-semibold">' + esc(p.label) + '</p></button>';
+            return '<button type="button" data-pergi="' + p.rute + '" class="petak ' + p.nuansa +
+              (i === 0 && petak.length % 2 === 1 ? ' col-span-2' : '') + '">' +
+              '<span class="petak-ikon">' + p.ikon + '</span>' +
+              '<p class="petak-angka mt-2.5">' + angka(p.nilai) + '</p>' +
+              '<p class="petak-label">' + esc(p.label) + '</p></button>';
           }).join('') +
         '</div>' +
 
@@ -326,22 +405,25 @@
             '</div></div>'
           : '') +
 
-        '<div class="mt-5 flex items-center justify-between">' +
-          '<h2 class="text-sm font-semibold text-slate-900">Perlu tindakan</h2>' +
-          '<button type="button" data-pergi="notifikasi" class="text-xs font-medium text-brand-700">Lihat semua</button>' +
-        '</div>' +
-        '<div class="mt-3">' +
-          ((n.items || []).length
-            ? daftarInbox(n.items.slice(0, 6).map(barisNotif).join(''))
-            : kartuKosong('Tidak ada yang perlu ditindaklanjuti.')) +
-        '</div>';
+        bagian('Surat masuk terbaru', 'surat', daftarSurat,
+               'Belum ada surat untuk jabatan Anda.') +
+
+        (bolehDisposisi()
+          ? bagian('Disposisi terbaru', 'disposisi', daftarDispo,
+                   'Tidak ada disposisi yang sedang berjalan.')
+          : '') +
+
+        ((n.items || []).length
+          ? bagian('Perlu tindakan', 'notifikasi',
+                   daftarInbox(n.items.slice(0, 4).map(barisNotif).join('')), '')
+          : '');
     });
   };
 
   function barisNotif(x) {
     var nada = {
-      verifikasi: 'hijau', disposisi: 'kuning', surat_masuk: 'biru'
-    }[x.jenis] || 'abu';
+      verifikasi: 'tunggu', disposisi: 'netral', surat_masuk: 'netral'
+    }[x.jenis] || 'netral';
     var label = {
       verifikasi: 'Verifikasi', disposisi: 'Disposisi', surat_masuk: 'Surat masuk'
     }[x.jenis] || 'Info';
@@ -354,84 +436,106 @@
       cuplikan: x.nomor,
       // Semuanya memang menunggu tindakan, jadi selalu ditandai.
       tebal: true,
-      lencana: lencana(label, nada)
+      lencana: tanda(label, nada)
     });
   }
 
-  halaman.verifikasi = function (wadah) {
-    if (!bolehVerifikasi()) {
-      wadah.innerHTML = kartuKosong('Role Anda tidak berwenang memverifikasi surat.');
-      return Promise.resolve();
-    }
-    wadah.innerHTML =
-      '<div class="relative mb-3">' +
-        '<svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>' +
-        '<input id="m-cari-verifikasi" type="search" class="field field-search h-11" placeholder="Cari nomor, perihal, pengirim…">' +
-      '</div><div id="m-isi-verifikasi">' + kerangkaDaftar(4) + '</div>';
+  /* Satu pembangun halaman daftar surat, dipakai oleh Kotak masuk dan
+     Verifikasi. Keduanya memakai endpoint yang sama; yang berbeda hanya
+     chip penyaring bawaannya dan judul kosongnya. Backend sudah membatasi
+     surat menurut jabatan bagi peran non-pengawas, jadi Kotak masuk aman
+     dibuka semua peran. */
+  function halamanDaftarSurat(opsi) {
+    return function (wadah) {
+      if (opsi.wajib && !opsi.wajib()) {
+        wadah.innerHTML = kartuKosong(opsi.tolak);
+        return Promise.resolve();
+      }
 
-    var isi = el('m-isi-verifikasi');
-    var saring = '0';   // status surat yang sedang ditampilkan
-    var cariTerakhir = '';
+      var idIsi = 'm-isi-' + opsi.kunci;
+      wadah.innerHTML = '<div id="' + idIsi + '">' + kerangkaDaftar(4) + '</div>';
 
-    var CHIP = [
+      var isi = el(idIsi);
+
+      /* Bagi pemakai berjabatan yang bukan pemeriksa, backend hanya
+         mengembalikan surat yang sudah diverifikasi (status_surat = 1).
+         Chip "Menunggu" dan "Ditolak" karena itu selalu kosong bagi mereka,
+         jadi baris chip disembunyikan dan daftar tampil apa adanya. */
+      var pakaiChip = bolehVerifikasi() || boleh('can_view_all');
+      var chip = pakaiChip ? opsi.chip : null;
+      var saring = pakaiChip ? opsi.awal : '';
+
+      function kepala() { return chip ? chipPenyaring(chip, saring) : ''; }
+
+      function muat() {
+        isi.innerHTML = kepala() + kerangkaDaftar(3);
+        pasangChip();
+
+        var params = { per_page: 25, q: state.cari };
+        if (saring !== '') params.status = Number(saring);
+
+        return minta('/surat-masuk' + kueri(params))
+          .then(function (data) {
+            var items = data.items || [];
+            isi.innerHTML = kepala() +
+              (items.length
+                ? '<p class="mb-2 px-1 text-xs text-slate-500">' + angka(data.total) + ' surat</p>' +
+                  daftarInbox(items.map(function (r) { return kartuSurat(r); }).join(''))
+                : kartuKosong(state.cari
+                    ? 'Tidak ada surat yang cocok dengan "' + esc(state.cari) + '".'
+                    : (opsi.kosong[saring] || 'Belum ada surat.')));
+            pasangChip();
+          }).catch(function (err) {
+            isi.innerHTML = kepala() + kartuKosong(err.message);
+            pasangChip();
+          });
+      }
+
+      function pasangChip() {
+        Array.prototype.forEach.call(isi.querySelectorAll('[data-chip]'), function (b) {
+          b.addEventListener('click', function () {
+            if (saring === b.getAttribute('data-chip')) return;
+            saring = b.getAttribute('data-chip');
+            muat();
+          });
+        });
+      }
+
+      pendengarCari = muat;
+      return muat();
+    };
+  }
+
+  var CHIP_STATUS = [
+    { nilai: '', label: 'Semua' },
+    { nilai: '0', label: 'Menunggu' },
+    { nilai: '1', label: 'Diterima' },
+    { nilai: '2', label: 'Ditolak' }
+  ];
+
+  var KOSONG_STATUS = {
+    '': 'Belum ada surat untuk jabatan Anda.',
+    '0': 'Tidak ada surat yang menunggu verifikasi.',
+    '1': 'Belum ada surat yang diterima.',
+    '2': 'Belum ada surat yang ditolak.'
+  };
+
+  halaman.surat = halamanDaftarSurat({
+    kunci: 'surat', awal: '', chip: CHIP_STATUS, kosong: KOSONG_STATUS
+  });
+
+  halaman.verifikasi = halamanDaftarSurat({
+    kunci: 'verifikasi', awal: '0',
+    chip: [
       { nilai: '0', label: 'Perlu verifikasi' },
       { nilai: '1', label: 'Diterima' },
       { nilai: '2', label: 'Ditolak' },
       { nilai: '', label: 'Semua' }
-    ];
-
-    var KOSONG = {
-      '0': 'Tidak ada surat yang menunggu verifikasi.',
-      '1': 'Belum ada surat yang diterima.',
-      '2': 'Belum ada surat yang ditolak.',
-      '': 'Belum ada surat.'
-    };
-
-    function muat() {
-      isi.innerHTML = chipPenyaring(CHIP, saring) + kerangkaDaftar(3);
-      pasangChip();
-      var params = { per_page: 25, q: cariTerakhir };
-      if (saring !== '') params.status = Number(saring);
-
-      return minta('/surat-masuk' + kueri(params))
-        .then(function (data) {
-          var items = data.items || [];
-          // Tombol aksi hanya untuk surat yang memang masih bisa diverifikasi.
-          var daftar = items.map(function (r) {
-            var bisa = Number(r.status_surat) === 0;
-            return kartuSurat(
-              r,
-              bisa ? '<span class="rounded-lg bg-brand-600 px-2.5 py-1 text-[11px] font-semibold text-white">Verifikasi</span>' : '',
-              bisa ? 'verifikasi' : ''
-            );
-          }).join('');
-
-          isi.innerHTML = chipPenyaring(CHIP, saring) +
-            (items.length
-              ? '<p class="mb-2 px-1 text-xs text-slate-500">' + angka(data.total) + ' surat</p>' +
-                daftarInbox(daftar)
-              : kartuKosong(KOSONG[saring]));
-          pasangChip();
-        }).catch(function (err) {
-          isi.innerHTML = chipPenyaring(CHIP, saring) + kartuKosong(err.message);
-          pasangChip();
-        });
-    }
-
-    function pasangChip() {
-      Array.prototype.forEach.call(isi.querySelectorAll('[data-chip]'), function (b) {
-        b.addEventListener('click', function () {
-          if (saring === b.getAttribute('data-chip')) return;
-          saring = b.getAttribute('data-chip');
-          muat();
-        });
-      });
-    }
-
-    el('m-cari-verifikasi').addEventListener('input',
-      debounce(function (e) { cariTerakhir = e.target.value; muat(); }, 400));
-    return muat();
-  };
+    ],
+    kosong: KOSONG_STATUS,
+    wajib: bolehVerifikasi,
+    tolak: 'Peran Anda tidak berwenang memverifikasi surat.'
+  });
 
   halaman.disposisi = function (wadah) {
     wadah.innerHTML = kerangkaDaftar(4);
@@ -451,8 +555,9 @@
                   judul: d.perihal,
                   cuplikan: d.nomor_surat,
                   tebal: !d.selesai,
-                  lencana: lencanaDisposisi(d) +
-                           lencana(d.status_label, d.selesai ? 'hijau' : 'kuning')
+                  lencana: tanda(d.status_label, d.selesai ? 'oke' : 'tunggu') +
+                           (d.status_disposisi && d.status_disposisi !== '-'
+                             ? tanda(d.status_disposisi, 'netral') : '')
                 });
               }).join(''))
             : kartuKosong('Tidak ada disposisi yang sedang berjalan.'));
@@ -517,67 +622,112 @@
   function bolehVerifikasi() { return boleh('can_verify'); }
   function bolehDisposisi() { return boleh('can_disposisi'); }
 
+  /* Detail surat, disusun mengikuti cara aplikasi surel menampilkan satu
+     pesan: perihal sebagai judul, lalu baris pengirim, lalu isinya. Rincian
+     administratif (nomor agenda, kode arsip, tanggal) dilipat karena jarang
+     dibaca — kalau ditampilkan semua, lampiran dan tombol keputusan
+     terdorong jauh ke bawah layar. */
   function bukaSurat(idSurat) {
     sheetMemuat('Detail Surat');
     minta('/surat-masuk/' + idSurat).then(function (d) {
       var jumlahDisposisi = (d.disposisi || []).length;
-      var aksi = '';
-      if (bolehVerifikasi() && d.status_surat === 0) {
-        aksi += '<button data-aksi="verifikasi" data-id="' + idSurat +
-          '" class="btn-primary w-full justify-center py-3">Verifikasi surat</button>';
-      }
-      if (bolehDisposisi() && d.status_surat === 1) {
-        // Surat yang sudah pernah didisposisikan cukup diberi keterangan;
-        // penerusannya dikerjakan dari menu Disposisi, seperti aplikasi lama.
-        aksi += jumlahDisposisi
-          ? '<p class="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs ' +
-            'leading-relaxed text-sky-900">Surat ini sudah didisposisikan ke ' +
-            jumlahDisposisi + ' jabatan. Penerusan berikutnya dilakukan dari menu ' +
-            '<b>Disposisi</b>.</p>'
-          : '<button data-aksi="disposisi" data-id="' + idSurat +
-            '" class="btn-primary w-full justify-center py-3">Disposisikan surat</button>';
-      }
-      if (d.file_url) {
-        aksi += '<a href="' + esc(d.file_url) + '" target="_blank" rel="noopener" ' +
-          'class="btn-ghost w-full justify-center py-3">Buka lampiran</a>';
-      }
 
-      var jejak = (d.disposisi || []).length
-        ? '<ol class="mt-2 space-y-3 border-l border-slate-200 pl-4">' + d.disposisi.map(function (x) {
-            return '<li class="relative">' +
-              '<span class="absolute -left-[22px] top-1.5 h-2.5 w-2.5 rounded-full ' +
-              (x.status_selesai ? 'bg-brand-500' : 'bg-amber-400') + '"></span>' +
-              '<p class="text-sm font-medium text-slate-800">' + dash(x.tujuan_jabatan) + '</p>' +
-              '<p class="text-[11px] text-slate-400">' + tanggal(x.tgl_disposisi) +
-              (x.pengirim ? ' · ' + esc(x.pengirim) : '') + '</p>' +
+      var rinci = [
+        ['Nomor surat', d.nomor_surat],
+        ['Nomor agenda', d.nomor_agenda],
+        ['Tanggal surat', d.tgl_surat ? tanggal(d.tgl_surat) : ''],
+        ['Diterima', d.tgl_surat_terima ? tanggal(d.tgl_surat_terima) : ''],
+        ['Kode arsip', d.kode_arsip || d.id_kode_arsip]
+      ].filter(function (r) { return r[1]; })
+       .map(function (r) {
+         return '<dt>' + esc(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd>';
+       }).join('');
+
+      var jejak = jumlahDisposisi
+        ? '<ol class="jejak">' + d.disposisi.map(function (x) {
+            return '<li>' +
+              '<span class="simpul ' + (x.status_selesai ? 'selesai' : 'jalan') + '"><i></i></span>' +
+              '<p class="j-nama">' + dash(x.tujuan_jabatan) + '</p>' +
+              '<p class="j-meta">' + tanggal(x.tgl_disposisi) +
+                (x.pengirim ? ' · oleh ' + esc(x.pengirim) : '') + '</p>' +
               (x.isi_disposisi && x.isi_disposisi !== '-'
-                ? '<p class="mt-1 text-xs text-slate-600">' + esc(x.isi_disposisi) + '</p>' : '') +
+                ? '<p class="j-isi">' + esc(x.isi_disposisi) + '</p>' : '') +
               '</li>';
           }).join('') + '</ol>'
-        : '<p class="mt-2 text-xs text-slate-400">Belum ada disposisi.</p>';
+        : '<p class="d-kotak">Surat ini belum pernah didisposisikan.</p>';
 
-      bukaSheet(d.nomor_surat || 'Surat #' + idSurat,
-        '<div class="space-y-4">' +
-          '<div>' + lencana(d.status_label,
-            d.status_surat === 1 ? 'hijau' : d.status_surat === 2 ? 'merah' : 'kuning') + '</div>' +
-          '<div class="rounded-2xl bg-slate-50 p-4">' +
-            '<p class="text-sm text-slate-800">' + dash(d.perihal) + '</p>' +
-            '<p class="mt-2 text-xs text-slate-500">Dari ' + dash(d.dari) + '</p>' +
-            '<p class="text-xs text-slate-500">Untuk ' + dash(d.tujuan_jabatan) + '</p>' +
-            '<p class="text-xs text-slate-500">Diterima ' + tanggal(d.tgl_surat_terima) + '</p>' +
-            (d.jenis_surat ? '<p class="text-xs text-slate-500">Jenis ' + esc(d.jenis_surat) + '</p>' : '') +
+      /* Tindakan diletakkan di bawah, sesudah isinya terbaca. */
+      var aksi = '';
+      if (bolehVerifikasi() && d.status_surat === 0) {
+        aksi = '<button data-aksi="verifikasi" data-id="' + idSurat +
+          '" class="btn-primary btn-lg w-full justify-center">Verifikasi surat</button>';
+      } else if (bolehDisposisi() && d.status_surat === 1) {
+        aksi = jumlahDisposisi
+          ? '<p class="d-kotak">Surat ini sudah didisposisikan ke ' + jumlahDisposisi +
+            ' jabatan. Penerusan berikutnya dilakukan dari menu <b>Disposisi</b>.</p>'
+          : '<button data-aksi="disposisi" data-id="' + idSurat +
+            '" class="btn-primary btn-lg w-full justify-center">Disposisikan surat</button>';
+      }
+
+      bukaSheet(d.nomor_agenda ? 'Agenda ' + d.nomor_agenda : 'Detail surat',
+        '<h2 class="d-judul">' + dash(d.perihal) + '</h2>' +
+
+        '<div class="d-tag">' +
+          tandaStatus(d.status_surat) +
+          (d.jenis_surat ? tanda(d.jenis_surat, 'netral') : '') +
+          (d.kategori_surat ? tanda(d.kategori_surat, 'netral') : '') +
+        '</div>' +
+
+        '<div class="d-pengirim">' +
+          '<span class="grid h-11 w-11 shrink-0 place-items-center rounded-full ' +
+            'text-[.78rem] font-semibold ' + warnaAvatar(d.dari) + '">' +
+            esc(inisial(d.dari)) + '</span>' +
+          '<div class="min-w-0">' +
+            '<p class="d-nama">' + dash(d.dari) + '</p>' +
+            (d.tujuan_jabatan
+              ? '<p class="d-ke">kepada ' + esc(d.tujuan_jabatan) + '</p>'
+              : '') +
           '</div>' +
-          '<div><p class="text-sm font-semibold text-slate-900">Jejak disposisi</p>' + jejak + '</div>' +
-          (aksi ? '<div class="space-y-2 border-t border-slate-100 pt-4">' + aksi + '</div>' : '') +
-        '</div>');
+          '<span class="d-tgl">' + esc(tanggalRingkas(d.tgl_surat_terima)) + '</span>' +
+        '</div>' +
 
-      // Buka surat = menandainya sudah dibaca bila memang ditujukan ke kita.
+        (rinci
+          ? '<details class="d-lipat"><summary>Rincian surat' +
+              '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+              'stroke-width="2.4" aria-hidden="true"><path stroke-linecap="round" ' +
+              'stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg></summary>' +
+              '<dl class="d-rinci">' + rinci + '</dl></details>'
+          : '') +
+
+        (d.catatan && d.catatan !== '-'
+          ? '<p class="d-sub">Catatan</p><p class="d-kotak">' + esc(d.catatan) + '</p>' : '') +
+
+        (d.file_url
+          ? '<p class="d-sub">Lampiran</p>' +
+            '<a href="' + esc(d.file_url) + '" target="_blank" rel="noopener" class="d-berkas">' +
+              '<span class="lambang">PDF</span>' +
+              '<span class="min-w-0 flex-1">' +
+                '<p class="m-0 truncate text-[.81rem] font-medium text-slate-800">Berkas surat</p>' +
+                '<p class="m-0 mt-0.5 text-[.69rem] text-slate-500">Ketuk untuk membuka</p>' +
+              '</span>' +
+              '<svg class="h-4 w-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" ' +
+              'stroke-width="1.9" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" ' +
+              'stroke-linejoin="round" d="M13.5 6H5.2A2.2 2.2 0 0 0 3 8.2v10.6A2.2 2.2 0 0 0 5.2 21h10.6' +
+              'a2.2 2.2 0 0 0 2.2-2.2V10.5M21 3h-6m6 0v6m0-6-9 9"/></svg>' +
+            '</a>'
+          : '') +
+
+        '<p class="d-sub">Jejak disposisi</p>' + jejak +
+
+        (aksi ? '<div class="mt-6 border-t border-slate-100 pt-5">' + aksi + '</div>' : ''));
+
+      // Membuka surat menandainya sudah dibaca bila memang ditujukan ke kita.
       if (d.read_surat === 0 && state.user && String(d.id_jabatan) === String(state.user.jabatan_id)) {
         minta('/surat-masuk/' + idSurat + '/dibaca', { method: 'POST' })
           .then(muatNotif).catch(function () { /* bukan hal kritis */ });
       }
     }).catch(function (err) {
-      bukaSheet('Detail Surat',
+      bukaSheet('Detail surat',
         '<p class="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">' + esc(err.message) + '</p>');
     });
   }
@@ -867,14 +1017,39 @@
   }
 
   // ---------------------------------------------------------------- navigasi
-  var NAV = [
-    { id: 'beranda', label: 'Beranda', d: 'M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75' },
-    { id: 'verifikasi', label: 'Verifikasi', d: 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z' },
-    { id: 'disposisi', label: 'Disposisi', d: 'M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z' },
-    { id: 'akun', label: 'Akun', d: 'M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z' }
-  ];
+  var KATALOG_NAV = {
+    beranda:    { label: 'Beranda', d: 'M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75' },
+    surat:      { label: 'Surat masuk', d: 'M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75' },
+    verifikasi: { label: 'Verifikasi', d: 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z' },
+    disposisi:  { label: 'Disposisi', d: 'M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z' },
+    akun:       { label: 'Akun', d: 'M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z' }
+  };
+
+  /* Menu disusun menurut kewenangan, bukan daftar tetap.
+
+     Sebelumnya keempat menu selalu tampil, sehingga pemegang jabatan seperti
+     Wakil Rektor (role Kepala) melihat menu Verifikasi yang begitu dibuka
+     hanya menjawab "tidak berwenang" — sementara tidak ada satu pun menu
+     untuk membaca surat masuk. Kotak masuk kini selalu ada; Verifikasi dan
+     Disposisi hanya muncul bagi yang memang berwenang. */
+  var NAV = [];
+
+  function susunNav() {
+    var id = ['beranda', 'surat'];
+    if (bolehVerifikasi()) id.push('verifikasi');
+    if (bolehDisposisi()) id.push('disposisi');
+    id.push('akun');
+
+    NAV = id.map(function (k) {
+      return { id: k, label: KATALOG_NAV[k].label, d: KATALOG_NAV[k].d };
+    });
+    return NAV;
+  }
 
   function bangunNav() {
+    susunNav();
+    el('m-nav').querySelector('div').className =
+      'grid grid-cols-' + NAV.length;
     el('m-nav').querySelector('div').innerHTML = NAV.map(function (n) {
       return '<button type="button" data-rute="' + n.id + '" ' +
         'class="relative flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium text-slate-400">' +
@@ -906,22 +1081,41 @@
   /* Judul tiap halaman, ikut tampil di tab peramban. */
   var JUDUL = {
     beranda: ['Beranda', 'Ringkasan pekerjaan hari ini'],
+    surat: ['Surat masuk', 'Surat yang ditujukan ke jabatan Anda'],
     verifikasi: ['Verifikasi Surat', 'Surat masuk yang menunggu diperiksa'],
     disposisi: ['Disposisi', 'Surat yang diteruskan ke jabatan Anda'],
     notifikasi: ['Notifikasi', 'Pemberitahuan terbaru untuk Anda'],
     akun: ['Akun', 'Identitas dan sesi Anda']
   };
 
+  function salamJam() {
+    var jam = new Date().getHours();
+    return jam < 11 ? 'Selamat pagi' : jam < 15 ? 'Selamat siang' :
+           jam < 18 ? 'Selamat sore' : 'Selamat malam';
+  }
+
+  /* Nama depan saja: judul kepala hanya satu baris, dan nama lengkap
+     berikut gelar sering tidak muat di layar ponsel. */
+  function namaDepan(u) {
+    var bagian = kataNama((u && (u.name || u.username)) || '');
+    return bagian.length ? bagian[0].replace(/,$/, '') : '';
+  }
+
   function gambarJudul() {
     var j = JUDUL[state.rute] || JUDUL.beranda;
+    if (state.rute === 'beranda') {
+      var depan = namaDepan(state.user);
+      j = [salamJam() + (depan ? ', ' + depan : ''), j[1]];
+    }
     el('m-judul').textContent = j[0];
     el('m-subjudul').textContent = j[1];
-    document.title = j[0] + ' · SIMPERA v2';
+    document.title = (JUDUL[state.rute] || JUDUL.beranda)[0] + ' · SIMPERA v2';
   }
 
   function gambar() {
     var wadah = el('m-page');
     var render = halaman[state.rute] || halaman.beranda;
+    pendengarCari = null;
     tandaiNav();
     gambarJudul();
     try {
@@ -971,7 +1165,8 @@
     state.user = u;
     el('m-avatar').textContent = inisial(u.name || u.username);
     el('m-nama').textContent = u.name || u.username || '—';
-    el('m-jabatan').textContent = (u.role_label || '') +
+    el('m-jabatan').textContent = u.nama_jabatan || u.role_label || '';
+    el('m-jabatan').title = (u.role_label || '') +
       (u.nama_jabatan ? ' · ' + u.nama_jabatan : '');
     var jam = new Date().getHours();
     el('m-salam').textContent =
@@ -1034,6 +1229,17 @@
     });
 
     el('m-bell').addEventListener('click', function () { keRute('notifikasi'); });
+
+    el('m-avatar').addEventListener('click', function () { keRute('akun'); });
+
+    /* Mengetik di kepala menyaring daftar yang terbuka. Dari halaman yang
+       bukan daftar surat, ketikan memindahkan ke Kotak masuk lebih dulu
+       supaya hasilnya ada tempat tampilnya. */
+    el('m-cari').addEventListener('input', debounce(function (e) {
+      state.cari = e.target.value.trim();
+      if (pendengarCari) pendengarCari();
+      else if (state.cari) keRute('surat');
+    }, 400));
 
     el('m-nav').addEventListener('click', function (event) {
       var tombol = event.target.closest('[data-rute]');
