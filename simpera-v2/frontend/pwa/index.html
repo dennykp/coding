@@ -14,8 +14,8 @@
 <link rel="apple-touch-icon" href="icon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="../assets/app.css?v=5c0e6215b2">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="../assets/app.css?v=366c0caf8f">
 </head>
 <body class="h-full bg-canvas text-slate-700 antialiased">
 
@@ -89,7 +89,7 @@
     </div>
   </header>
 
-  <div class="px-4">
+  <div id="m-konteks" class="px-4">
     <div class="kepala-konteks">
       <h1 id="m-judul">Beranda</h1>
       <span id="m-jabatan" class="tanda-peran truncate max-w-[52%]">—</span>
@@ -124,6 +124,34 @@
   </div>
 </div>
 
+<!-- Penampil lampiran. Berkas dibuka di dalam aplikasi, bukan diunduh
+     diam-diam; tombol di kaki menyediakan jalan keluar bila penampil
+     bawaan peramban bermasalah. -->
+<div id="m-berkas" class="fixed inset-0 z-[70] hidden flex flex-col bg-slate-900/95 backdrop-blur-sm">
+  <div class="flex items-center gap-3 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+.75rem)] text-white">
+    <button type="button" data-berkas-close class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/15" aria-label="Tutup lampiran">
+      <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+    </button>
+    <div class="min-w-0 flex-1">
+      <p id="m-berkas-nama" class="truncate text-sm font-medium">Lampiran</p>
+      <p id="m-berkas-ukuran" class="text-[11px] text-white/60"></p>
+    </div>
+  </div>
+  <div id="m-berkas-isi" class="min-h-0 flex-1 overflow-auto bg-white"></div>
+  <div id="m-berkas-kaki" class="hidden flex gap-2 px-4 pb-[calc(env(safe-area-inset-bottom)+.75rem)] pt-3">
+    <a id="m-berkas-tab" href="#" target="_blank" rel="noopener"
+       class="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-white/15 py-3 text-sm font-medium text-white">
+      <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.2A2.2 2.2 0 0 0 3 8.2v10.6A2.2 2.2 0 0 0 5.2 21h10.6a2.2 2.2 0 0 0 2.2-2.2V10.5M21 3h-6m6 0v6m0-6-9 9"/></svg>
+      Buka di tab baru
+    </a>
+    <a id="m-berkas-unduh" href="#"
+       class="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-white py-3 text-sm font-semibold text-slate-900">
+      <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+      Unduh
+    </a>
+  </div>
+</div>
+
 <div id="m-toasts" class="pointer-events-none fixed inset-x-4 bottom-24 z-[60] flex flex-col gap-2"></div>
 
 <div id="m-boot" class="grid min-h-screen place-items-center">
@@ -133,6 +161,6 @@
   </div>
 </div>
 
-<script src="app.js?v=ad6eb1098d"></script>
+<script src="app.js?v=abca6acde6"></script>
 </body>
 </html>

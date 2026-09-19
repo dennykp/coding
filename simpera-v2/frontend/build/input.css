@@ -562,32 +562,93 @@ table.data tbody tr:hover { background: #f0fdf4; }
   background: linear-gradient(#f6f8f7 72%, rgba(246,248,247,0));
 }
 
-/* --- petak ringkasan di Beranda ---
-   Versi PWA memakai kartu putih, bukan blok gradien seperti .tile di versi
-   desktop: di satu layar ponsel petak ini berdiri tepat di atas daftar
-   kartu surat, dan dua bahasa visual yang berbeda membuat halaman ramai.
-   Warna hanya dipakai pada angka dan ikon, secukupnya untuk membedakan. */
-.petak {
-  position: relative; width: 100%; text-align: left;
-  background: #fff; border: 1px solid #eef2f0; border-radius: 1.125rem;
-  padding: .9rem .95rem 1rem;
-  box-shadow: 0 1px 1px rgba(16,27,23,.04), 0 4px 10px -6px rgba(16,27,23,.16);
-  transition: transform .12s ease;
+/* --- panel sapaan Beranda ---
+   Satu blok berwarna di puncak halaman, lalu sisanya tenang: pola yang
+   dipakai aplikasi super seperti Gojek, dan alasannya praktis — angka
+   yang paling sering dicari duduk di bidang yang paling menarik mata,
+   sementara daftar surat di bawahnya tetap mudah dipindai. */
+.sapa {
+  position: relative; overflow: hidden;
+  border-radius: 1.5rem; padding: 1.15rem 1.15rem 1.05rem; color: #fff;
+  background: linear-gradient(135deg, #059669 0%, #047857 52%, #065f46 100%);
+  box-shadow: 0 10px 24px -14px rgba(4, 95, 70, .85);
 }
-.petak:active { transform: scale(.985); }
-.petak-ikon {
-  width: 1.875rem; height: 1.875rem; border-radius: .7rem;
-  display: grid; place-items: center;
+/* Dua lingkaran tipis memberi kedalaman tanpa menambah berkas gambar. */
+.sapa::before, .sapa::after {
+  content: ""; position: absolute; border-radius: 50%;
+  border: 1.5rem solid rgba(255, 255, 255, .07); pointer-events: none;
 }
-.petak-angka { font-size: 1.7rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; }
-.petak-label { margin-top: .1rem; font-size: .765rem; font-weight: 500; color: #64748b; }
+.sapa::before { width: 13rem; height: 13rem; right: -4.5rem; top: -5.5rem; }
+.sapa::after { width: 9rem; height: 9rem; left: -3.5rem; bottom: -4.5rem; border-width: 1rem; }
 
-.petak-hijau .petak-ikon { background: #e8f5ef; color: #05543e; }
-.petak-hijau .petak-angka { color: #05543e; }
-.petak-kuning .petak-ikon { background: #fdf3e5; color: #a55a08; }
-.petak-kuning .petak-angka { color: #a55a08; }
-.petak-biru .petak-ikon { background: #e4f2fb; color: #075985; }
-.petak-biru .petak-angka { color: #075985; }
+.sapa-kepala { position: relative; display: flex; align-items: center; gap: .7rem; }
+.sapa-avatar {
+  flex: none; width: 2.6rem; height: 2.6rem; border-radius: 50%;
+  display: grid; place-items: center;
+  background: rgba(255, 255, 255, .18); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .25);
+  font-size: .8rem; font-weight: 700; letter-spacing: .02em;
+}
+.sapa-halo { font-size: .72rem; color: rgba(236, 253, 245, .85); }
+.sapa-nama {
+  margin-top: .05rem; font-size: 1.05rem; font-weight: 700; letter-spacing: -.015em;
+  line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sapa-jabatan {
+  flex: none; align-self: flex-start; max-width: 42%;
+  font-size: .66rem; font-weight: 600; letter-spacing: .02em;
+  background: rgba(255, 255, 255, .17); border-radius: 999px; padding: .2rem .55rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Angka kunci: dibaca berderet, dipisah garis tipis, bukan kotak sendiri. */
+.sapa-angka {
+  position: relative; margin-top: 1rem; display: grid; gap: 0;
+  background: rgba(255, 255, 255, .12); border-radius: 1rem; padding: .7rem .25rem;
+}
+.sapa-angka > * { text-align: center; padding: 0 .35rem; }
+.sapa-angka > * + * { box-shadow: inset 1px 0 0 rgba(255, 255, 255, .18); }
+.sapa-n { font-size: 1.3rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.2; }
+.sapa-l { margin-top: .1rem; font-size: .63rem; line-height: 1.25; color: rgba(236, 253, 245, .82); }
+
+/* --- pintasan ---
+   Empat tombol ikon bulat: tujuan yang paling sering dituju, terjangkau
+   satu ketukan dari layar pertama. */
+.pintas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .5rem; }
+.pintas-btn { display: flex; flex-direction: column; align-items: center; gap: .4rem; padding: .25rem 0; }
+.pintas-btn:active .pintas-ikon { transform: scale(.92); }
+.pintas-ikon {
+  width: 2.9rem; height: 2.9rem; border-radius: 1rem;
+  display: grid; place-items: center; transition: transform .12s ease;
+}
+.pintas-ikon svg { width: 1.3rem; height: 1.3rem; }
+.pintas-l {
+  font-size: .655rem; font-weight: 500; line-height: 1.2; color: #475569; text-align: center;
+}
+.pintas-hijau  { background: #dcf3e9; color: #05643f; }
+.pintas-kuning { background: #fdf0dd; color: #9a4f06; }
+.pintas-biru   { background: #dfeefb; color: #0b5d88; }
+.pintas-ungu   { background: #ece7fb; color: #5b34c4; }
+.pintas-merah  { background: #fce8ec; color: #ab1236; }
+
+/* Kepala bagian daftar di Beranda. */
+.bagian-kepala {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin: 1.5rem .25rem .7rem;
+}
+.bagian-kepala h2 { margin: 0; font-size: .875rem; font-weight: 700; letter-spacing: -.01em; color: #0f172a; }
+.bagian-kepala button { font-size: .72rem; font-weight: 600; color: #047857; }
+
+/* Ringkasan tahun: deret angka mendatar, bukan kartu bertumpuk. */
+.strip {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  background: #fff; border: 1px solid #eef2f0; border-radius: 1.125rem;
+  padding: .85rem .5rem;
+  box-shadow: 0 1px 1px rgba(16,27,23,.04), 0 4px 10px -6px rgba(16,27,23,.16);
+}
+.strip > * { text-align: center; padding: 0 .4rem; }
+.strip > * + * { border-left: 1px solid #eef2f0; }
+.strip-n { font-size: 1.05rem; font-weight: 700; letter-spacing: -.02em; color: #0f172a; font-variant-numeric: tabular-nums; }
+.strip-l { margin-top: .1rem; font-size: .655rem; color: #64748b; }
 
 .kepala-konteks { display: flex; align-items: baseline; gap: .5rem; padding: .15rem .25rem 0; }
 .kepala-konteks h1 { margin: 0; font-size: 1.19rem; font-weight: 600; letter-spacing: -.01em; color: #0f172a; }

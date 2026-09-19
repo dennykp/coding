@@ -28,11 +28,13 @@ module.exports = {
         }
       },
       fontFamily: {
-        // Poppins dimuat dari Google Fonts di index.html. Daftar sesudahnya
-        // adalah cadangan, jadi teks tetap terbaca wajar bila font gagal
-        // diunduh — misalnya saat ponsel sedang tanpa jaringan.
-        sans: ['Poppins', 'ui-sans-serif', 'system-ui', '-apple-system',
-               'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif']
+        // Plus Jakarta Sans: huruf geometris bertepi lembut, angkanya punya
+        // lebar seragam (tabular) sehingga kolom angka tetap lurus. Poppins
+        // ditaruh sesudahnya supaya pemasangan lama yang fontnya sudah
+        // tersimpan tidak berubah drastis saat jaringan sedang putus.
+        sans: ['Plus Jakarta Sans', 'Poppins', 'ui-sans-serif', 'system-ui',
+               '-apple-system', 'Segoe UI', 'Roboto', 'Helvetica Neue',
+               'Arial', 'sans-serif']
       }
     }
   },
