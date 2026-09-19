@@ -44,6 +44,49 @@ termigrasi ke DB `esurat` di server baru:
 | `arteri_master_lokasi` | 3 |
 | `arteri_sirkulasi` | 0 |
 
+## Indeks database — regresi MariaDB → MySQL 8
+
+Setelah pindah, menu **Surat Masuk** di SIMPERA v2 jadi sangat lambat. Sebabnya
+subquery korelasi pada query daftar surat:
+
+```sql
+(SELECT COUNT(*) FROM tt_disposisi d WHERE d.id_surat = s.id_surat)
+    AS jumlah_disposisi
+```
+
+`tt_disposisi` (14.477 baris) tidak punya indeks pada `id_surat` — dan memang
+tidak pernah punya, termasuk di server lama. Bedanya optimizer: MariaDB 10.11
+menyelesaikannya dalam 0–1 detik, MySQL 8.0.46 lebih dari 45 detik untuk query
+yang sama persis pada data yang sama.
+
+Statistik InnoDB juga basi sesudah impor: `tt_suratmasuk` dilaporkan 0 baris
+padahal isinya 10.084, sehingga optimizer memilih rencana yang buruk.
+
+Perbaikan yang diterapkan di server baru:
+
+```sql
+ANALYZE TABLE tt_suratmasuk, tt_disposisi, tt_suratkeluar, users, tm_jabatan;
+
+CREATE INDEX idx_disposisi_id_surat        ON tt_disposisi (id_surat);
+CREATE INDEX idx_disposisi_jabatan_dilihat ON tt_disposisi (id_jabatan, dilihat);
+CREATE INDEX idx_sk_tujuan_surat           ON tt_suratkeluar_tujuan (surat_id);
+CREATE INDEX idx_sk_tembusan_surat         ON tt_suratkeluar_tembusan (surat_id_tembusan);
+```
+
+Hasil:
+
+| | Sebelum | Sesudah |
+|---|---|---|
+| Daftar surat masuk | >45 detik | **21 ms** |
+| Hitungan notifikasi | pindai 14.477 baris | `rows=1` |
+| Join surat keluar tujuan | pindai 1.764 baris | `rows=1` |
+
+Indeks hanya menambah jalur baca; tidak ada data yang berubah. Jumlah baris
+sesudahnya tetap sama: 10.084 surat masuk, 14.477 disposisi, 843 pengguna.
+
+Indeks yang sama layak ditambahkan di server lama juga — di sana pun querynya
+memindai tabel penuh, hanya saja MariaDB menyembunyikan dampaknya.
+
 ## Kesiapan server baru
 
 | | |
