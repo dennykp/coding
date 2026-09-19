@@ -186,6 +186,38 @@ chmod +x perbaiki-batas-upload.sh
 ./perbaiki-batas-upload.sh
 ```
 
+### 5. Domain simpera.unisma.ac.id (opsional, butuh root)
+
+`simpera.unisma.ac.id` sudah menunjuk ke IP server ini (15.232.15.85), sama
+seperti `program-unggulan.unisma.ac.id`. Untuk melayaninya:
+
+```bash
+sudo EMAIL=alamat@unisma.ac.id sh pasang-domain-simpera.sh
+```
+
+Skrip menyalin `nginx-simpera-domain.conf` menjadi vhost tersendiri, lalu
+meminta sertifikat baru lewat `certbot --nginx`. Vhost lama tidak dibuka
+sama sekali, jadi `/program`, `/esurat/`, `/hls/` dan `/public/cctv_app/`
+tidak berubah, begitu juga sertifikat `program-unggulan.unisma.ac.id`.
+
+Jalur URL sengaja dibuat sama (`/simpera-v2/...`) karena manifest PWA
+memakai path mutlak sebagai scope; aplikasi yang sudah terpasang di ponsel
+lewat domain lama tetap berjalan.
+
+`e-surat.unisma.ac.id` menunjuk ke **114.7.136.204** — mesin yang berbeda.
+Tidak ada perintah di repositori ini yang bisa mempengaruhinya.
+
+### 6. Pustaka penampil PDF (sekali saja per server)
+
+```bash
+sh ambil-pdfjs.sh /var/www/html/simpera-v2/frontend/m
+```
+
+PDF.js tidak disimpan di repositori (±1,4 MB, tidak pernah diubah). Skrip
+mengunduhnya dengan versi dan sidik jari sha256 yang dikunci, dan berhenti
+kalau sidik jarinya tidak cocok. Tanpa berkas ini lampiran PDF jatuh ke
+penampil cadangan (iframe) yang kosong di Chrome Android.
+
 ## Catatan operasional
 
 - **Server lama tetap jalan.** Tidak ada langkah di sini yang mematikannya.
