@@ -68,6 +68,23 @@
       .filter(function (k) { return k && !GELAR.test(k.replace(/[.,]+$/, '')); });
   }
 
+  /* Nama dan jabatan di basis data e-surat sering ditulis KAPITAL SEMUA
+     ("ADMIN VERIFIKASI", "WAKIL REKTOR I"). Di kepala aplikasi itu terbaca
+     seperti berteriak, jadi dirapikan jadi huruf judul.
+
+     Dua pagar supaya singkatan tidak ikut rusak: hanya yang berisi lebih
+     dari satu kata yang disentuh (kata tunggal seperti "LPPM" atau "BAAK"
+     hampir selalu singkatan), dan di dalamnya kata sepanjang tiga huruf ke
+     bawah tetap kapital ("UPT", angka Romawi "I", "III"). */
+  function rapikanKapital(teks) {
+    var t = String(teks || '').trim();
+    if (!t || t !== t.toUpperCase() || t.indexOf(' ') === -1) return t;
+    return t.split(/(\s+)/).map(function (kata) {
+      if (/^\s+$/.test(kata) || kata.replace(/[^A-Z]/g, '').length <= 3) return kata;
+      return kata.charAt(0) + kata.slice(1).toLowerCase();
+    }).join('');
+  }
+
   function inisial(nama) {
     var bagian = kataNama(nama);
     if (!bagian.length) bagian = ['?'];
@@ -482,6 +499,20 @@
     'a4 4 0 0 0 0-5.656 4 4 0 0 0-5.656 0l-8.415 8.585a6 6 0 1 0 8.486 8.486L20.5 13"/>' +
     '</svg></span>';
 
+  /* Baris mana yang ditandai "menunggu Anda".
+
+     Bagi pemeriksa, itu surat yang belum diverifikasi — bukan yang belum
+     dibaca. Di data sungguhan hampir seluruh surat bertanda belum dibaca,
+     sehingga penanda itu justru mewarnai semua baris sekaligus dan tidak
+     membedakan apa pun. Surat yang sudah diverifikasi tidak pernah
+     ditandai. Bagi peran lain — yang hanya menerima surat terverifikasi —
+     penandanya tetap "belum dibaca". */
+  function perluPerhatian(r) {
+    var status = Number(r.status_surat);
+    if (bolehVerifikasi()) return status === 0;
+    return status !== 1 ? false : Number(r.read_surat) === 0;
+  }
+
   /* Di kartu, status hanya ditampilkan kalau memang ada yang perlu
      diketahui. "Diterima" muncul di hampir semua baris — daftar penyaring
      untuk jabatan memang cuma memuat surat yang sudah diterima — jadi
@@ -504,7 +535,7 @@
       // kode yang hampir sama di setiap baris, sedangkan catatan benar-benar
       // memberi tahu isinya. Nomornya tetap terbaca di rincian surat.
       cuplikan: r.catatan && r.catatan !== '-' ? r.catatan : '',
-      tebal: Number(r.read_surat) === 0,
+      tebal: perluPerhatian(r),
       klip: Boolean(r.file_upload || r.file_url),
       lencana: tandaStatusKartu(r.status_surat)
     });
@@ -1364,8 +1395,8 @@
   function pasangUser(u) {
     state.user = u;
     el('m-avatar').textContent = inisial(u.name || u.username);
-    el('m-nama').textContent = u.name || u.username || '—';
-    el('m-jabatan').textContent = u.nama_jabatan || u.role_label || '';
+    el('m-nama').textContent = rapikanKapital(u.name || u.username) || '—';
+    el('m-jabatan').textContent = rapikanKapital(u.nama_jabatan || u.role_label);
     el('m-jabatan').title = (u.role_label || '') +
       (u.nama_jabatan ? ' · ' + u.nama_jabatan : '');
     gambarAngka();
