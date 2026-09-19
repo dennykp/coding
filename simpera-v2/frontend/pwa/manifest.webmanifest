@@ -1,0 +1,41 @@
+{
+  "id": "/simpera-v2/m/",
+  "name": "SIMPERA v2 Mobile",
+  "short_name": "SIMPERA",
+  "description": "Verifikasi dan disposisi surat UNISMA langsung dari ponsel.",
+  "start_url": "/simpera-v2/m/",
+  "scope": "/simpera-v2/m/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f6f8f7",
+  "theme_color": "#047857",
+  "lang": "id",
+  "dir": "ltr",
+  "categories": ["productivity", "business"],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Verifikasi surat",
+      "short_name": "Verifikasi",
+      "url": "/simpera-v2/m/#/verifikasi"
+    },
+    {
+      "name": "Disposisi masuk",
+      "short_name": "Disposisi",
+      "url": "/simpera-v2/m/#/disposisi"
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+# ============================================================================
+# SIMPERA v2 — hanya berlaku untuk folder /simpera-v2.
+# Aturan mod_rewrite pada .htaccess anak menggantikan aturan induk untuk
+# folder ini, sehingga permintaan /simpera-v2/api/... tidak lagi jatuh ke
+# index.php Laravel. Berkas .htaccess milik aplikasi lain tidak disentuh.
+# ============================================================================
+
+RewriteEngine On
+RewriteBase /simpera-v2/
+
+# Teruskan header Authorization (dibutuhkan JWT).
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# Proksi /simpera-v2/api/... ke layanan Python (uvicorn) di port 8123.
+RewriteRule ^api/(.*)$ http://127.0.0.1:8123/api/$1 [P,L,QSA]
+RewriteRule ^api$      http://127.0.0.1:8123/api/health [P,L]
+
+# Sisanya dilayani sebagai berkas statis; rute SPA memakai hash (#/...)
+# sehingga tidak memerlukan fallback tambahan.
+DirectoryIndex index.html
+
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set Referrer-Policy "same-origin"
+
+  # Halaman selalu diperiksa ulang ke server. Tanpa ini, index.html lama bisa
+  # bertahan di peramban dan merujuk berkas versi lama.
+  <FilesMatch "\.(html|webmanifest)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+
+  # Berkas js/css dirujuk dengan penanda versi (?v=<sidik isi>) yang berubah
+  # setiap isinya berubah, jadi aman disimpan lama. Lihat build/stamp.js.
+  <FilesMatch "\.(js|css)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+
+  # Service worker dikecualikan dan diletakkan terakhir supaya menang atas
+  # aturan js di atas: ia yang mengatur cache PWA, jadi harus selalu segar.
+  <FilesMatch "^sw\.js$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>
+
+# Jangan pernah sajikan berkas konfigurasi dari folder ini.
+<FilesMatch "^\.(env|git)">
+  Require all denied
+</FilesMatch>

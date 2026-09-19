@@ -1,0 +1,432 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===========================================================================
+   Gaya khusus SIMPERA v2.
+
+   Ditulis di luar @layer supaya tidak ikut dipangkas oleh pemindai konten
+   Tailwind — sebagian nama kelas dirangkai di JavaScript (mis. 'badge-' +
+   tone) sehingga tidak pernah muncul sebagai teks utuh di berkas sumber.
+
+   Ukuran dan jarak dalam komponen (tombol kecil, kolom isian dengan ikon)
+   diberikan lewat kelas turunan seperti .btn-sm dan .field-search, bukan
+   lewat utilitas padding Tailwind, karena preflight Tailwind menyetel
+   padding:0 pada input/select/textarea/button.
+   =========================================================================== */
+
+:root { color-scheme: light; }
+
+body { -webkit-font-smoothing: antialiased; }
+
+/* --- kolom isian --- */
+.field {
+  width: 100%;
+  border-radius: .75rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  font-size: .875rem;
+  color: #0f172a;
+  padding: .625rem .875rem;
+  transition: border-color .15s, box-shadow .15s;
+}
+.field::placeholder { color: #94a3b8; }
+.field:focus {
+  outline: none;
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16,185,129,.18);
+}
+.field:disabled { background: #f8fafc; color: #94a3b8; }
+
+/* Ruang untuk ikon di dalam kolom isian. */
+.field-search { padding-left: 2.25rem; }
+.field-eye { padding-right: 2.75rem; }
+
+/* Kotak centang dan tombol pilihan memakai warna tema, bukan biru bawaan
+   peramban. Utilitas text-* Tailwind tidak berpengaruh tanpa plugin forms. */
+input[type="checkbox"],
+input[type="radio"] { accent-color: #059669; }
+
+/* --- tombol --- */
+.btn-primary {
+  display: inline-flex; align-items: center; gap: .5rem;
+  border-radius: .75rem; background: #059669; color: #fff;
+  font-size: .875rem; font-weight: 600;
+  transition: background .15s, box-shadow .15s, opacity .15s;
+  padding: .55rem 1rem;
+  box-shadow: 0 1px 2px rgba(5,150,105,.25);
+}
+.btn-primary:hover { background: #047857; }
+.btn-primary:focus-visible { outline: 2px solid #34d399; outline-offset: 2px; }
+.btn-primary:disabled { opacity: .6; cursor: not-allowed; }
+
+.btn-ghost {
+  display: inline-flex; align-items: center; gap: .5rem;
+  border-radius: .75rem; border: 1px solid #e2e8f0; background: #fff;
+  font-size: .875rem; font-weight: 500; color: #475569;
+  padding: .5rem .875rem;
+  transition: background .15s, border-color .15s;
+}
+.btn-ghost:hover { background: #f8fafc; border-color: #cbd5e1; }
+.btn-ghost:disabled { opacity: .55; cursor: not-allowed; }
+
+/* Ukuran tombol. Dipakai sebagai kelas tersendiri, bukan utilitas padding,
+   karena preflight Tailwind menyetel padding:0 pada elemen form dengan
+   kespesifikan yang mengalahkan utilitas tanpa kespesifikan. */
+.btn-sm { padding: .35rem .75rem; font-size: .75rem; gap: .35rem; }
+.btn-lg { padding: .75rem 1rem; font-size: 1rem; }
+
+/* --- kartu & navigasi --- */
+.card {
+  border-radius: 1rem; background: #fff; border: 1px solid rgba(226,232,240,.9);
+  box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 8px 24px -14px rgba(15,23,42,.12);
+}
+
+/* --------------------------------------------------------------------------
+   Sidebar terang bergaya Metronic.
+   Label memakai kontras penuh; menu aktif ditandai pil hijau, penanda garis
+   di tepi kiri, dan kotak ikon yang terisi penuh warna aksennya.
+   -------------------------------------------------------------------------- */
+.nav-link {
+  position: relative;
+  display: flex; align-items: center; gap: .7rem;
+  border-radius: .875rem; padding: .5rem .7rem;
+  min-height: 2.875rem;
+  font-size: .875rem; font-weight: 500; color: #334155;
+  transition: background .15s, color .15s;
+}
+.nav-link:hover { background: #f8fafc; color: #0f172a; }
+.nav-link.active { background: #ecfdf5; color: #065f46; font-weight: 600; }
+
+/* Penanda tipis di tepi kiri menu yang sedang terbuka. */
+.nav-link.active::before {
+  content: ""; position: absolute; left: -.75rem; top: 50%;
+  height: 1.5rem; width: 3px; border-radius: 0 3px 3px 0;
+  background: #059669; transform: translateY(-50%);
+}
+
+/* Kotak ikon bernuansa warna aksen tiap menu. */
+.nav-icon {
+  display: grid; place-items: center; flex: none;
+  width: 2.125rem; height: 2.125rem; border-radius: .75rem;
+  background: color-mix(in srgb, var(--aksen) 24%, #fff);
+  color: color-mix(in srgb, var(--aksen) 72%, #0f172a);
+  transition: background .15s, color .15s, box-shadow .15s;
+}
+.nav-link:hover .nav-icon { background: color-mix(in srgb, var(--aksen) 38%, #fff); }
+.nav-link.active .nav-icon {
+  background: color-mix(in srgb, var(--aksen) 88%, #0f172a);
+  color: #fff;
+  box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--aksen) 80%, transparent);
+}
+.nav-icon svg { width: 1.1rem; height: 1.1rem; flex: none; }
+
+/* Cadangan untuk peramban tanpa color-mix(). */
+@supports not (background: color-mix(in srgb, red 20%, #fff)) {
+  .nav-icon { background: #f1f5f9; color: #334155; }
+  .nav-link:hover .nav-icon { background: #e2e8f0; }
+  .nav-link.active .nav-icon { background: #059669; color: #fff; }
+}
+
+/* Label menu tidak boleh terpotong maupun menghilang. */
+.nav-teks { min-width: 0; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis;
+            white-space: nowrap; }
+
+/* Angka pekerjaan yang menunggu, mis. jumlah surat perlu verifikasi. */
+.nav-hitung {
+  flex: none; min-width: 1.4rem; border-radius: 9999px;
+  background: #f43f5e; color: #fff; padding: 0 .4rem;
+  font-size: .6875rem; font-weight: 700; line-height: 1.4rem; text-align: center;
+}
+.nav-link.active .nav-hitung { background: #059669; }
+
+.nav-section {
+  padding: 1.15rem .7rem .4rem; font-size: .6875rem; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase; color: #94a3b8;
+}
+.nav-section:first-child { padding-top: .35rem; }
+
+/* --------------------------------------------------------------------------
+   Kartu ringkasan. Warnanya dibuat pekat supaya angka langsung menonjol,
+   bukan pastel yang pudar.
+   -------------------------------------------------------------------------- */
+.tile {
+  border-radius: 1.25rem; padding: 1.25rem; border: 1px solid transparent;
+  color: #fff;
+}
+.tile-green {
+  background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+  box-shadow: 0 12px 24px -14px rgba(4, 120, 87, .7);
+}
+.tile-sky {
+  background: linear-gradient(135deg, #38bdf8 0%, #0369a1 100%);
+  box-shadow: 0 12px 24px -14px rgba(3, 105, 161, .7);
+}
+.tile-amber {
+  background: linear-gradient(135deg, #fbbf24 0%, #b45309 100%);
+  box-shadow: 0 12px 24px -14px rgba(180, 83, 9, .7);
+}
+.tile-violet {
+  background: linear-gradient(135deg, #a78bfa 0%, #6d28d9 100%);
+  box-shadow: 0 12px 24px -14px rgba(109, 40, 217, .7);
+}
+.tile-rose {
+  background: linear-gradient(135deg, #fb7185 0%, #be123c 100%);
+  box-shadow: 0 12px 24px -14px rgba(190, 18, 60, .7);
+}
+/* Teks di dalam kartu pekat selalu putih, termasuk keterangan kecilnya. */
+.tile .tile-angka { color: #fff; }
+.tile .tile-label { color: rgba(255, 255, 255, .95); }
+.tile .tile-catatan { color: rgba(255, 255, 255, .8); }
+
+/* Panel keterangan di kepala halaman: latar muda, teks gelap — beda peran
+   dengan kartu angka di atas, jadi warnanya pun tidak dipekatkan. */
+.panel { border-radius: 1.25rem; padding: 1.25rem; border: 1px solid transparent; }
+.panel-green { background: #ecfdf5; border-color: #6ee7b7; }
+.panel-sky   { background: #eff6ff; border-color: #93c5fd; }
+
+/* Baris notifikasi pada lonceng. */
+.notif-item {
+  display: flex; gap: .75rem; width: 100%; text-align: left;
+  padding: .75rem 1rem; border-bottom: 1px solid #f1f5f9;
+  transition: background .15s;
+}
+.notif-item:last-child { border-bottom: 0; }
+.notif-item:hover { background: #f8fafc; }
+
+/* Pemilih tahun: baru tampil setelah daftar tahun siap, dan hanya pada
+   layar lebar agar judul halaman tidak terpotong di ponsel. */
+.year-picker { display: none; }
+@media (min-width: 640px) {
+  /* Tombolnya memakai tata letak flex, jadi kelas siap ini pun harus flex. */
+  .year-picker.is-ready { display: flex; }
+}
+
+/* --- lencana status: warna padat dengan teks putih supaya mudah dipindai --- */
+.badge {
+  display: inline-flex; align-items: center; gap: .3rem;
+  border-radius: 9999px; padding: .2rem .65rem;
+  font-size: .7rem; font-weight: 700; white-space: nowrap;
+  color: #fff; letter-spacing: .01em;
+}
+.badge-green  { background: #059669; }
+.badge-amber  { background: #d97706; }
+.badge-rose   { background: #e11d48; }
+.badge-slate  { background: #64748b; }
+.badge-sky    { background: #0284c7; }
+
+/* --- tabel: kepala tabel hijau, seperti aplikasi e-surat --- */
+.table-wrap { overflow-x: auto; border-radius: 1rem; }
+table.data { width: 100%; border-collapse: separate; border-spacing: 0; font-size: .8125rem; }
+table.data thead th {
+  position: sticky; top: 0; background: #047857; text-align: left;
+  padding: .8rem .75rem; font-size: .7rem; font-weight: 700;
+  letter-spacing: .05em; text-transform: uppercase; color: #ffffff;
+  border-bottom: 0; white-space: nowrap;
+}
+table.data thead th:first-child { border-top-left-radius: .75rem; }
+table.data thead th:last-child { border-top-right-radius: .75rem; }
+table.data tbody td { padding: .7rem .75rem; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+table.data tbody tr:last-child td { border-bottom: 0; }
+.clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* Kolom aksi tetap terlihat walau tabel digeser ke samping. Latar diberi
+   warna sendiri supaya isi kolom lain tidak menembus di belakangnya. */
+table.data th.kolom-aksi,
+table.data td.kolom-aksi {
+  position: sticky; right: 0; z-index: 1;
+  background: #fff;
+  box-shadow: -6px 0 10px -9px rgba(15, 23, 42, .22);
+}
+table.data thead th.kolom-aksi { background: #047857; z-index: 2; }
+table.data tbody tr:hover td.kolom-aksi { background: #f0fdf4; }
+table.data tbody tr:hover { background: #f0fdf4; }
+
+/* Nomor surat / nomor arsip: boleh patah di pemisah agar kolom tidak melebar. */
+.nomor { overflow-wrap: anywhere; word-break: break-word; }
+
+/* --- keadaan memuat & pemberitahuan --- */
+.skeleton {
+  background: linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 37%,#f1f5f9 63%);
+  background-size: 400% 100%; animation: shimmer 1.3s ease-in-out infinite;
+  border-radius: .5rem;
+}
+@keyframes shimmer { 0% { background-position: 100% 50% } 100% { background-position: 0 50% } }
+
+.toast {
+  pointer-events: auto; border-radius: .9rem; padding: .75rem 1rem;
+  font-size: .8125rem; color: #fff; box-shadow: 0 12px 30px -12px rgba(15,23,42,.45);
+  animation: rise .2s ease-out;
+}
+.toast-ok   { background: #047857; }
+.toast-err  { background: #be123c; }
+.toast-info { background: #334155; }
+@keyframes rise { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
+
+/* ======================================================== jendela (modal)
+   Kepala jendela memakai gradasi hijau supaya seluruh jendela — detail,
+   formulir, maupun konfirmasi — terasa satu keluarga. */
+.modal-header {
+  background: linear-gradient(120deg, #065f46 0%, #047857 45%, #059669 100%);
+  color: #ffffff;
+}
+.modal-header h3 { color: #ffffff; }
+.modal-close {
+  border-radius: .6rem; padding: .375rem; color: rgba(255,255,255,.75);
+  transition: background-color .15s, color .15s;
+}
+.modal-close:hover { background: rgba(255,255,255,.18); color: #ffffff; }
+
+/* Tombol kecil di kepala jendela (mis. Cetak). */
+.btn-header {
+  display: inline-flex; align-items: center; gap: .4rem;
+  border-radius: .6rem; background: rgba(255,255,255,.16);
+  padding: .4rem .75rem; font-size: .75rem; font-weight: 600; color: #ffffff;
+  border: 1px solid rgba(255,255,255,.28);
+  transition: background-color .15s;
+}
+.btn-header:hover { background: rgba(255,255,255,.28); }
+
+/* --- kartu di dalam jendela detail --- */
+.kartu {
+  background: #ffffff; border-radius: 1rem; border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px rgba(15,23,42,.04);
+  overflow: hidden;
+}
+.kartu-kepala {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .75rem 1.15rem;
+  background: #ecfdf5; border-bottom: 1px solid #d1fae5;
+  font-size: .75rem; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: #047857;
+}
+.kartu-isi { padding: 1rem 1.15rem; }
+
+/* Dua kolom data berdampingan supaya kartu rincian tidak memanjang ke bawah
+   dan jendela detail cukup satu layar tanpa digulir. */
+.data-kisi { display: grid; grid-template-columns: 1fr 1fr; column-gap: 1.5rem; }
+.data-kisi > .lebar { grid-column: 1 / -1; }
+@media (max-width: 640px) { .data-kisi { grid-template-columns: 1fr; } }
+
+/* Garis waktu disposisi punya gulirannya sendiri: isi jendela tetap diam.
+   Tepi bawahnya dibuat memudar sebagai tanda daftarnya masih berlanjut. */
+.jejak-wadah { position: relative; }
+@media (min-width: 1024px) {
+  .jejak-gulir {
+    max-height: 44vh; overflow-y: auto; padding-right: .4rem;
+    scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;
+  }
+  .jejak-gulir::-webkit-scrollbar { width: 6px; }
+  .jejak-gulir::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+  .jejak-wadah.ada-sisa::after {
+    content: ""; position: absolute; left: 0; right: .4rem; bottom: 0; height: 2.5rem;
+    background: linear-gradient(to top, #ffffff 15%, rgba(255,255,255,0));
+    pointer-events: none;
+  }
+}
+
+/* Baris data: label di atas, nilai tebal di bawah — terbaca di kolom sempit. */
+.data-baris { padding: .5rem 0; border-bottom: 1px dashed #e2e8f0; }
+.data-baris:last-child { border-bottom: 0; }
+.data-label {
+  font-size: .6875rem; font-weight: 600; letter-spacing: .05em;
+  text-transform: uppercase; color: #64748b;
+}
+.data-nilai { margin-top: .2rem; font-size: .875rem; color: #0f172a; overflow-wrap: anywhere; }
+
+/* --- bagian formulir --- */
+.bagian {
+  background: #ffffff; border-radius: 1rem; border: 1px solid #e2e8f0;
+  padding: 1.15rem;
+}
+.bagian-judul {
+  display: flex; align-items: center; gap: .5rem; margin-bottom: .9rem;
+  font-size: .75rem; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: #047857;
+}
+.bagian-judul::before {
+  content: ""; width: .3rem; height: 1rem; border-radius: 999px;
+  background: linear-gradient(#10b981, #047857);
+}
+
+/* Kotak unggah berkas. */
+.unggah {
+  display: block; border: 1.5px dashed #a7f3d0; border-radius: .9rem;
+  background: #f0fdf4; padding: 1rem; cursor: pointer;
+  transition: border-color .15s, background-color .15s;
+}
+.unggah:hover { border-color: #34d399; background: #ecfdf5; }
+.unggah input[type=file] {
+  display: block; width: 100%; margin-top: .7rem; font-size: .8125rem; color: #475569;
+}
+.unggah input[type=file]::file-selector-button {
+  margin-right: .75rem; border: 0; border-radius: .55rem;
+  background: #047857; color: #ffffff; padding: .45rem .85rem;
+  font-size: .75rem; font-weight: 600; cursor: pointer;
+}
+.unggah input[type=file]::file-selector-button:hover { background: #065f46; }
+
+/* ============================================ daftar pilih yang dapat dicari
+   Pengganti Select2 pada aplikasi lama: tombol + panel berisi kotak cari.
+   Elemen <select> aslinya dibiarkan di tempatnya (tak terlihat) supaya tetap
+   jadi sumber nilai bagi formulir dan validasi peramban. */
+.select2 { position: relative; }
+
+.select2-asli {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  opacity: 0; pointer-events: none; z-index: -1;
+}
+
+.select2-tombol {
+  position: relative; display: flex; align-items: center; gap: .5rem;
+  text-align: left; cursor: pointer;
+}
+.select2-tombol .select2-teks {
+  flex: 1 1 auto; min-width: 0; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.select2-tombol.kosong .select2-teks { color: #94a3b8; }
+.select2-panah {
+  width: 1rem; height: 1rem; flex: 0 0 auto; color: #94a3b8;
+  transition: transform .15s;
+}
+.select2.terbuka .select2-panah { transform: rotate(180deg); }
+.select2.terbuka .select2-tombol { border-color: #059669; box-shadow: 0 0 0 3px rgba(5,150,105,.18); }
+.select2-tombol:disabled { background: #f8fafc; color: #94a3b8; cursor: not-allowed; }
+
+/* Sebagian <select> memakai kelas utilitas untuk lebar; tombolnya ikut penuh. */
+.select2 > .select2-tombol.field { width: 100%; }
+
+.select2-panel {
+  position: absolute; z-index: 50; left: 0; right: 0; top: calc(100% + .25rem);
+  background: #ffffff; border: 1px solid #e2e8f0; border-radius: .75rem;
+  box-shadow: 0 18px 40px -18px rgba(15,23,42,.45), 0 2px 6px rgba(15,23,42,.06);
+  overflow: hidden; min-width: 12rem;
+}
+.select2.ke-atas .select2-panel { top: auto; bottom: calc(100% + .25rem); }
+
+.select2-cari { padding: .5rem; border-bottom: 1px solid #f1f5f9; background: #f8fafc; }
+.select2-kotak {
+  width: 100%; border-radius: .55rem; border: 1px solid #cbd5e1; background: #ffffff;
+  padding: .4rem .6rem; font-size: .8125rem; color: #0f172a;
+}
+.select2-kotak:focus { outline: none; border-color: #059669; box-shadow: 0 0 0 3px rgba(5,150,105,.18); }
+
+.select2-daftar { max-height: 15rem; overflow-y: auto; padding: .25rem; }
+.select2-daftar::-webkit-scrollbar { width: 6px; }
+.select2-daftar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+
+.select2-opsi {
+  display: block; width: 100%; border-radius: .5rem; padding: .45rem .6rem;
+  text-align: left; font-size: .8125rem; color: #334155; cursor: pointer;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.select2-opsi.netral { color: #94a3b8; }
+.select2-opsi.sorot { background: #f0fdf4; color: #065f46; }
+.select2-opsi.dipilih { background: #047857; color: #ffffff; font-weight: 600; }
+.select2-kosong { padding: .75rem .6rem; text-align: center; font-size: .8125rem; color: #94a3b8; }
+
+@media print {
+  #sidebar, header, footer, #toasts { display: none !important; }
+  .lg\:pl-72 { padding-left: 0 !important; }
+}

@@ -1,0 +1,21 @@
+# Unit systemd untuk API SIMPERA v2.
+# Pasang sebagai root:
+#   cp deploy/simpera-v2.service /etc/systemd/system/
+#   systemctl daemon-reload && systemctl enable --now simpera-v2
+[Unit]
+Description=SIMPERA v2 API (FastAPI) - e-surat UNISMA
+After=network.target mariadb.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/home/esurat193/e-surat.unisma.ac.id/public_html/simpera-v2-api/backend
+Environment="PYTHONUNBUFFERED=1"
+EnvironmentFile=-/home/esurat193/e-surat.unisma.ac.id/public_html/simpera-v2-api/backend/.env
+ExecStart=/home/esurat193/e-surat.unisma.ac.id/public_html/simpera-v2-api/venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8123
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="SIMPERA v2">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#10b981"/>
+      <stop offset="1" stop-color="#047857"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#g)"/>
+  <g fill="none" stroke="#ffffff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="118" y="160" width="276" height="192" rx="28"/>
+    <path d="M118 186l122 88a28 28 0 0 0 32 0l122-88"/>
+  </g>
+  <circle cx="382" cy="352" r="58" fill="#ffffff"/>
+  <path d="M356 352l18 18 34-38" fill="none" stroke="#047857" stroke-width="22"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
