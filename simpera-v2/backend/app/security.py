@@ -40,6 +40,18 @@ GLOBAL_VIEW_ROLES = {1, 3, 5, 10, 30}
 # Role yang boleh mengelola arsip terintegrasi (modul Arteri).
 ARSIP_MANAGE_ROLES = {1, 3, 4, 5, 10, 30}
 
+# Kewenangan tindakan. Didefinisikan di sini, bukan di router, supaya satu
+# aturan dipakai bersama oleh penegakan di server dan oleh tampilan: profil
+# pengguna membawa flag can_* sehingga antarmuka tidak perlu menyalin ulang
+# daftar role. Mengubah kewenangan cukup di berkas ini.
+#
+# Catatan: User Input (role 5, mis. akun fitri) bertugas memasukkan surat,
+# bukan memverifikasinya — verifikasi adalah wewenang Admin Verifikasi.
+ROLE_VERIFIKASI = {1, 3}          # Superadmin, Admin Verifikasi
+ROLE_DISPOSISI = {1, 2, 10}       # Superadmin, Kepala, Admin Khusus
+ROLE_BUAT_SURAT = {1, 3, 5}       # Superadmin, Admin Verifikasi, User Input
+ROLE_KELOLA_SURAT = {1, 3, 5}     # menambah, mengubah, menghapus surat
+
 
 def verify_password(plain: str, hashed: str | None) -> bool:
     if not hashed:
@@ -97,6 +109,10 @@ def decorate(user: dict[str, Any]) -> dict[str, Any]:
         "role_label": ROLE_LABELS.get(role_id, f"Role {role_id}"),
         "can_view_all": role_id in GLOBAL_VIEW_ROLES,
         "can_manage_arsip": role_id in ARSIP_MANAGE_ROLES,
+        "can_verify": role_id in ROLE_VERIFIKASI,
+        "can_disposisi": role_id in ROLE_DISPOSISI,
+        "can_buat_surat": role_id in ROLE_BUAT_SURAT,
+        "can_kelola_surat": role_id in ROLE_KELOLA_SURAT,
     }
 
 

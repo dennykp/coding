@@ -20,8 +20,11 @@ module.exports = {
         }
       },
       fontFamily: {
-        sans: ['ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI',
-               'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif']
+        // Poppins dimuat dari Google Fonts di index.html. Daftar sesudahnya
+        // adalah cadangan, jadi teks tetap terbaca wajar bila font gagal
+        // diunduh — misalnya saat ponsel sedang tanpa jaringan.
+        sans: ['Poppins', 'ui-sans-serif', 'system-ui', '-apple-system',
+               'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif']
       }
     }
   },

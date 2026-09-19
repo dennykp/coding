@@ -27,13 +27,12 @@ from ..schemas import DisposisiIn, SelesaiDisposisiIn, SuratKeluarIn, Verifikasi
 
 router = APIRouter(tags=["alur-surat"])
 
-# Role yang berwenang, mengikuti pembagian tugas di aplikasi Laravel.
-# Catatan: User Input (role 5, mis. akun fitri) bertugas memasukkan surat,
-# bukan memverifikasinya — verifikasi adalah wewenang Admin Verifikasi.
-ROLE_VERIFIKASI = {1, 3}          # Superadmin, Admin Verifikasi
-ROLE_DISPOSISI = {1, 2, 10}       # Superadmin, Kepala, Admin Khusus
-ROLE_BUAT_SURAT = {1, 3, 5}       # Superadmin, Admin Verifikasi, User Input
-ROLE_KELOLA_SURAT = {1, 3, 5}     # menambah, mengubah, menghapus surat
+# Kewenangan peran kini didefinisikan di security.py supaya penegakan di
+# server dan flag can_* yang dipakai tampilan berasal dari satu sumber.
+ROLE_VERIFIKASI = security.ROLE_VERIFIKASI
+ROLE_DISPOSISI = security.ROLE_DISPOSISI
+ROLE_BUAT_SURAT = security.ROLE_BUAT_SURAT
+ROLE_KELOLA_SURAT = security.ROLE_KELOLA_SURAT
 
 STATUS_VERIFIKASI = {0: "Diproses", 1: "Diterima", 2: "Ditolak"}
 
