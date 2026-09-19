@@ -1,0 +1,33 @@
+# Unit systemd untuk API SIMPERA v2 di server program-unggulan.
+#
+# Pasang sebagai root:
+#   sudo cp deploy-server-baru/simpera-v2.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now simpera-v2
+#
+# Beda dari unit server lama: seluruh path pindah ke /var/www/html/simpera-v2,
+# dan After= menunjuk mysql (server baru memakai MySQL 8, bukan MariaDB).
+
+[Unit]
+Description=SIMPERA v2 API (FastAPI) - program-unggulan UNISMA
+After=network.target mysql.service
+Wants=mysql.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/html/simpera-v2/backend
+Environment="PYTHONUNBUFFERED=1"
+EnvironmentFile=-/var/www/html/simpera-v2/backend/.env
+ExecStart=/var/www/html/simpera-v2/venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8123
+Restart=always
+RestartSec=5
+
+# Pengetatan ringan. Backend hanya perlu menulis ke folder lampiran e-surat.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/var/www/html/esurat/public
+
+[Install]
+WantedBy=multi-user.target
