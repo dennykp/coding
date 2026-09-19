@@ -1,0 +1,39 @@
+<!-- ============ LEMBAR QRIS: BAYAR DENDA ============ -->
+<div class="qris-tirai" id="qris-tirai" role="dialog" aria-modal="true"
+     aria-labelledby="qris-tajuk" hidden>
+  <div class="qris-lembar" role="document">
+    <div class="qris-pegang"></div>
+
+    <div class="qris-judul">
+      <strong id="qris-tajuk">Bayar denda &middot; QRIS</strong>
+      <span class="plat" id="qris-plat">&mdash;</span>
+    </div>
+
+    <div class="qris-nom" id="qris-nom">Rp 0</div>
+    <div class="qris-ket" id="qris-ket">Denda parkir liar</div>
+
+    <div class="qris-bingkai" id="qris-bingkai">
+      <img class="qris-gbr" id="qris-gbr" src="qris.png" alt="Kode QRIS pembayaran denda">
+    </div>
+    <div class="qris-gagal" id="qris-gagal">
+      Gambar QRIS belum terpasang.<br>
+      Unggah berkas <b>qris.png</b> ke folder <b>/pwa</b>.
+    </div>
+
+    <ol class="qris-langkah">
+      <li><b>1</b><span>Pengendara membuka aplikasi bank atau dompet digital,
+          pilih menu <b>Bayar</b> / <b>Scan QR</b>.</span></li>
+      <li><b>2</b><span>Arahkan kamera ke kode di atas, isi nominal
+          <b id="qris-nom2">Rp 0</b>.</span></li>
+      <li><b>3</b><span>Tekan tombol hijau <b>hanya setelah</b> layar pengendara
+          menunjukkan transaksi <b>BERHASIL</b>.</span></li>
+    </ol>
+
+    <div class="qris-acuan" id="qris-acuan">&mdash;</div>
+
+    <div class="qris-aksi">
+      <button class="tb tb-bukan" type="button" id="qris-batal">Batal</button>
+      <button class="tb tb-utama" type="button" id="qris-lunas">Sudah dibayar</button>
+    </div>
+  </div>
+</div>

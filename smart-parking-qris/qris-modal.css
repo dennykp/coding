@@ -1,0 +1,65 @@
+/* ---------- LEMBAR QRIS (BAYAR DENDA) ----------
+   Uang tidak lagi berpindah tangan di gerbang. Petugas menunjukkan
+   kode, pengendara memindai dari HP-nya sendiri. Karena itu kode
+   dibuat sebesar mungkin - layar dibaca sambil berdiri, sering di
+   bawah matahari - dan latarnya dipaksa putih walau aplikasi sedang
+   gelap, supaya kamera tetap bisa mengunci kode. */
+.qris-tirai {
+  position: fixed; inset: 0; z-index: 95; display: none;
+  background: rgba(6,12,22,.62);
+  backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+  align-items: flex-end; justify-content: center;
+}
+.qris-tirai.tampil { display: flex; animation: qris-pudar .2s ease-out; }
+@keyframes qris-pudar { from { opacity: 0 } to { opacity: 1 } }
+
+.qris-lembar {
+  width: 100%; max-width: 420px; max-height: 92dvh; overflow-y: auto;
+  background: var(--kartu); color: var(--tinta);
+  border-radius: var(--r-besar) var(--r-besar) 0 0;
+  padding: 10px 18px 0;
+  box-shadow: var(--bayang-2);
+  animation: qris-naik .26s cubic-bezier(.2,.8,.3,1);
+}
+@keyframes qris-naik { from { transform: translateY(100%) } to { transform: none } }
+@media (min-width: 560px) {
+  .qris-tirai  { align-items: center; }
+  .qris-lembar { border-radius: var(--r-besar); max-height: 88dvh; }
+}
+
+.qris-pegang { width: 42px; height: 4px; border-radius: 999px;
+               background: var(--garis); margin: 2px auto 12px; }
+.qris-judul { display: flex; align-items: center; gap: 10px; }
+.qris-judul strong { font-size: 15px; font-weight: 700; }
+.qris-judul .plat { margin-left: auto; font-family: var(--mono); font-size: 12px;
+                    font-weight: 700; background: var(--latar); color: var(--tinta-2);
+                    border: 1px solid var(--garis); border-radius: 8px; padding: 4px 9px; }
+
+.qris-nom { text-align: center; margin: 15px 0 3px; font-size: 27px; font-weight: 800;
+            letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.qris-ket { text-align: center; font-size: 11.5px; color: var(--tinta-3); }
+
+/* Latar putih dipaksa: di mode gelap kode yang ikut menggelap jadi
+   susah dipindai kamera HP. */
+.qris-bingkai { margin-top: 13px; padding: 10px; border-radius: var(--r-kartu);
+                background: #fff; border: 1px solid var(--garis); }
+.qris-gbr { display: block; width: 100%; max-height: 38dvh; object-fit: contain;
+            margin: 0 auto; border-radius: 12px; cursor: zoom-in; }
+.qris-gagal { display: none; text-align: center; font-size: 12px; font-weight: 600;
+              line-height: 1.7; color: var(--merah-700); background: var(--merah-50);
+              border-radius: var(--r-kecil); padding: 26px 14px; margin-top: 13px; }
+
+.qris-langkah { list-style: none; margin: 14px 0 0; padding: 0; }
+.qris-langkah li { display: flex; gap: 9px; align-items: flex-start;
+                   font-size: 12px; color: var(--tinta-2); margin-bottom: 8px; }
+.qris-langkah > li > b { flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%;
+                  background: var(--hijau-50); color: var(--hijau-600); font-size: 10.5px;
+                  font-weight: 700; display: grid; place-items: center; margin-top: 1px; }
+
+.qris-acuan { margin-top: 10px; padding: 9px 11px; border-radius: var(--r-kecil);
+              background: var(--latar); text-align: center; font-family: var(--mono);
+              font-size: 11px; font-weight: 700; color: var(--tinta-2);
+              word-break: break-all; }
+.qris-aksi { display: flex; gap: 9px; position: sticky; bottom: 0; margin-top: 14px;
+             padding: 11px 0 calc(14px + var(--aman-bawah)); background: var(--kartu);
+             box-shadow: 0 -10px 12px -8px rgba(16,24,40,.10); }
