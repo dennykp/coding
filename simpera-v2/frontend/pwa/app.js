@@ -58,20 +58,34 @@
     return isFinite(n) ? n.toLocaleString('id-ID') : '0';
   }
 
-  /* Ikon garis 18px untuk petak Beranda. Digambar langsung sebagai SVG
-     supaya tidak ada berkas ikon tambahan yang harus diunduh. */
-  function garis(d) {
-    return '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" ' +
-      'stroke="currentColor" stroke-width="1.9" aria-hidden="true">' +
-      '<path stroke-linecap="round" stroke-linejoin="round" d="' + d + '"/></svg>';
+  /* Ikon Lucide (lucide.dev, ISC) digambar langsung sebagai SVG supaya
+     tidak ada berkas ikon tambahan yang harus diunduh dan PWA tetap utuh
+     saat luring. Gayanya mengikuti bawaan Lucide: kotak 24, garis 2,
+     ujung membulat. */
+  function ikon(isi, tebal) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+      'stroke-width="' + (tebal || 2) + '" stroke-linecap="round" ' +
+      'stroke-linejoin="round" aria-hidden="true">' + isi + '</svg>';
   }
 
   var IKON = {
-    periksa: garis('m4.5 12.75 6 6 9-13.5'),
-    teruskan: garis('M6 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm0 0h1.5m10.5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm0 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm0-12-10.5 6m10.5 6-10.5-6'),
-    amplop: garis('M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75'),
-    lonceng: garis('M14.9 17.1a23.8 23.8 0 0 0 5.4-1.3A9 9 0 0 1 18 9.8V9A6 6 0 0 0 6 9v.8a9 9 0 0 1-2.3 6c1.7.6 3.6 1 5.5 1.3m5.7 0a24.3 24.3 0 0 1-5.7 0m5.7 0a3 3 0 1 1-5.7 0'),
-    orang: garis('M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.1a7.5 7.5 0 0 1 15 0A17.9 17.9 0 0 1 12 21.75c-2.7 0-5.2-.6-7.5-1.65Z')
+    // lucide: inbox
+    amplop: ikon('<path d="M22 12h-6l-2 3h-4l-2-3H2"/>' +
+      '<path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89' +
+      'A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>'),
+    // lucide: circle-check-big
+    periksa: ikon('<path d="M21.8 10A10 10 0 1 1 17 3.34"/><path d="m9 11 3 3L22 4"/>'),
+    // lucide: share-2
+    teruskan: ikon('<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/>' +
+      '<circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.83 3.98"/>' +
+      '<path d="m15.41 6.51-6.82 3.98"/>'),
+    // lucide: bell
+    lonceng: ikon('<path d="M10.27 21a2 2 0 0 0 3.46 0"/>' +
+      '<path d="M3.26 15.33A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.67C19.41 13.96 18 12.5 18 8' +
+      'A6 6 0 0 0 6 8c0 4.5-1.41 5.96-2.74 7.33"/>'),
+    // lucide: user
+    orang: ikon('<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>' +
+      '<circle cx="12" cy="7" r="4"/>')
   };
 
   /* Gelar akademik dan gelar kehormatan di depan nama bukan bagian dari
@@ -565,8 +579,8 @@
     return Promise.all([
       minta('/notifikasi?limit=8'),
       aman(minta('/dashboard/summary')),
-      aman(minta('/surat-masuk' + kueri({ per_page: 3, urut: 'terbaru' }))),
-      aman(minta('/disposisi' + kueri({ per_page: 3, selesai: false })))
+      aman(minta('/surat-masuk' + kueri({ per_page: 4, urut: 'terbaru' }))),
+      aman(minta('/disposisi' + kueri({ per_page: 4, selesai: false })))
     ]).then(function (res) {
       var n = res[0], ringkas = res[1], surat = res[2], dispo = res[3];
       var j = n.jumlah || {};
@@ -647,17 +661,15 @@
             '</div>'
           : '') +
 
-        bagianKepala('Surat masuk terbaru', 'surat') +
+        // Dua daftar saja: surat masuk sebagai yang utama, disposisi tepat
+        // di bawahnya. Daftar "Perlu tindakan" dihapus — isinya cuma
+        // mengulang dua daftar ini dengan kata lain.
+        bagianKepala('Surat masuk', 'surat') +
         (daftarSurat || kartuKosong('Belum ada surat untuk jabatan Anda.')) +
 
         (bolehDisposisi()
-          ? bagianKepala('Disposisi terbaru', 'disposisi') +
+          ? bagianKepala('Disposisi', 'disposisi') +
             (daftarDispo || kartuKosong('Tidak ada disposisi yang sedang berjalan.'))
-          : '') +
-
-        ((n.items || []).length
-          ? bagianKepala('Perlu tindakan', 'notifikasi') +
-            daftarInbox(n.items.slice(0, 4).map(barisNotif).join(''))
           : '');
     });
   };

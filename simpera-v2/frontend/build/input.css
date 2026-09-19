@@ -620,24 +620,29 @@ table.data tbody tr:hover { background: #f0f9f0; }
 .sapa-l { margin-top: .1rem; font-size: .63rem; line-height: 1.25; color: rgba(236, 253, 245, .82); }
 
 /* --- pintasan ---
-   Empat tombol ikon bulat: tujuan yang paling sering dituju, terjangkau
-   satu ketukan dari layar pertama. */
+   Empat tombol ikon: tujuan yang paling sering dituju, terjangkau satu
+   ketukan dari layar pertama.
+
+   Latar ikon sengaja pekat, bukan warna pudar. Di layar ponsel yang dilihat
+   sambil jalan, blok warna padat dengan ikon putih jauh lebih cepat dikenali
+   daripada tint tipis — dan deretan ini memang jadi menu utama Beranda. */
 .pintas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .5rem; }
-.pintas-btn { display: flex; flex-direction: column; align-items: center; gap: .4rem; padding: .25rem 0; }
-.pintas-btn:active .pintas-ikon { transform: scale(.92); }
+.pintas-btn { display: flex; flex-direction: column; align-items: center; gap: .45rem; padding: .25rem 0; }
+.pintas-btn:active .pintas-ikon { transform: scale(.94); }
 .pintas-ikon {
-  width: 2.9rem; height: 2.9rem; border-radius: 1rem;
-  display: grid; place-items: center; transition: transform .12s ease;
+  width: 3.1rem; height: 3.1rem; border-radius: 1.1rem;
+  display: grid; place-items: center; color: #fff;
+  transition: transform .3s ease-in-out, box-shadow .3s ease-in-out;
 }
-.pintas-ikon svg { width: 1.3rem; height: 1.3rem; }
+.pintas-ikon svg { width: 1.45rem; height: 1.45rem; }
 .pintas-l {
-  font-size: .655rem; font-weight: 500; line-height: 1.2; color: #475569; text-align: center;
+  font-size: .675rem; font-weight: 600; line-height: 1.2; color: #334155; text-align: center;
 }
-.pintas-hijau  { background: #e6f4e6; color: #05643f; }
-.pintas-kuning { background: #fef6e7; color: #9a4f06; }
-.pintas-biru   { background: #dfeefb; color: #0b5d88; }
-.pintas-ungu   { background: #ece7fb; color: #5b34c4; }
-.pintas-merah  { background: #fce8ec; color: #ab1236; }
+.pintas-hijau  { background: #009000; box-shadow: 0 6px 14px -6px rgba(0, 144, 0, .65); }
+.pintas-kuning { background: #f59e0b; box-shadow: 0 6px 14px -6px rgba(245, 158, 11, .65); }
+.pintas-biru   { background: #1d4ed8; box-shadow: 0 6px 14px -6px rgba(29, 78, 216, .6); }
+.pintas-ungu   { background: #6d28d9; box-shadow: 0 6px 14px -6px rgba(109, 40, 217, .6); }
+.pintas-merah  { background: #e11d48; box-shadow: 0 6px 14px -6px rgba(225, 29, 72, .6); }
 
 /* Kepala bagian daftar di Beranda. */
 .bagian-kepala {
