@@ -241,7 +241,7 @@
   }
 
   /* Deretan chip penyaring di atas daftar. Nilai aktif ditandai lewat
-     data-chip supaya penanganan kliknya terpusat di pasangPenyaring(). */
+     data-chip supaya penanganan kliknya terpusat di pasangChip(). */
   function chipPenyaring(daftar, aktif) {
     var isi = daftar.map(function (c) {
       var dipilih = c.nilai === aktif;

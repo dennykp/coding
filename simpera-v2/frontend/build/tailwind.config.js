@@ -1,5 +1,8 @@
 /** Konfigurasi Tailwind untuk SIMPERA v2 — tema hijau. */
 module.exports = {
+  // Folder PWA bernama "pwa" di repositori tetapi dipasang sebagai "m" di
+  // server. Keduanya didaftarkan supaya satu config ini menghasilkan CSS
+  // yang sama di mana pun dibangun; glob yang tidak ada diabaikan Tailwind.
   content: [
     '../index.html',
     '../assets/app.js',
@@ -7,7 +10,9 @@ module.exports = {
     '../assets/pages2.js',
     '../assets/pages3.js',
     '../pwa/index.html',
-    '../pwa/app.js'
+    '../pwa/app.js',
+    '../m/index.html',
+    '../m/app.js'
   ],
   theme: {
     extend: {
