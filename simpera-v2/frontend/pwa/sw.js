@@ -8,7 +8,7 @@
  *   dilindungi token, dan hasil basi bisa menyesatkan.
  * ========================================================================== */
 
-var VERSI = 'simpera-m-4f6ccc3c54';
+var VERSI = 'simpera-m-94009663ee';
 var CANGKANG = [
   './',
   './index.html',
@@ -16,7 +16,7 @@ var CANGKANG = [
   './icon.svg',
   './icon-maskable.svg',
   '../assets/app.css?v=509688a86c',
-  'app.js?v=7dce7f093d'
+  'app.js?v=fb8d47cfac'
 ];
 
 self.addEventListener('install', function (event) {
