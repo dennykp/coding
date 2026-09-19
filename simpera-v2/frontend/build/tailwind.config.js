@@ -42,7 +42,7 @@ module.exports = {
         // lebar seragam (tabular) sehingga kolom angka tetap lurus. Poppins
         // ditaruh sesudahnya supaya pemasangan lama yang fontnya sudah
         // tersimpan tidak berubah drastis saat jaringan sedang putus.
-        sans: ['Plus Jakarta Sans', 'Poppins', 'ui-sans-serif', 'system-ui',
+        sans: ['Poppins', 'ui-sans-serif', 'system-ui',
                '-apple-system', 'Segoe UI', 'Roboto', 'Helvetica Neue',
                'Arial', 'sans-serif']
       }

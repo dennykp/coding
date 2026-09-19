@@ -14,8 +14,8 @@
 <link rel="apple-touch-icon" href="icon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="../assets/app.css?v=cf04b31690">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../assets/app.css?v=ab13b213fc">
 </head>
 <body class="h-full bg-canvas text-slate-700 antialiased">
 
@@ -72,41 +72,48 @@
 
 <!-- ===================== APLIKASI ===================== -->
 <section id="m-app" class="hidden min-h-full pb-24">
-  <!-- Kepala: pil pencarian mengapung di atas kanvas (gaya kotak masuk
-       surel), bukan blok hijau. Nama dan salam pindah ke Beranda supaya
-       kepala tetap ringkas di setiap halaman. -->
-  <header class="kepala-apung">
-    <div class="pil-cari">
-      <svg class="h-[17px] w-[17px] flex-none text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.2-5.2m0 0a7.5 7.5 0 1 0-10.6-10.6 7.5 7.5 0 0 0 10.6 10.6Z"/>
-      </svg>
-      <input id="m-cari" type="search" autocomplete="off" placeholder="Cari surat, nomor, pengirim" aria-label="Cari surat">
-      <button type="button" id="m-bell" class="pil-lonceng" aria-label="Notifikasi">
-        <svg class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M14.9 17.1a23.8 23.8 0 0 0 5.4-1.3A9 9 0 0 1 18 9.8V9A6 6 0 0 0 6 9v.8a9 9 0 0 1-2.3 6c1.7.6 3.6 1 5.5 1.3m5.7 0a24.3 24.3 0 0 1-5.7 0m5.7 0a3 3 0 1 1-5.7 0"/></svg>
-        <span id="m-bell-badge" class="angka hidden"></span>
+  <!-- Puncak hijau: identitas pemakai, satu tombol tindakan, lalu tiga
+       angka yang benar-benar jadi pekerjaannya hari ini. Lembar putih di
+       bawahnya naik menutupi sebagian puncak, jadi daftar surat terbaca
+       sebagai bidang tenang yang terpisah dari panel berwarna. -->
+  <header class="puncak">
+    <div class="puncak-baris">
+      <button type="button" id="m-avatar" class="puncak-avatar" aria-label="Akun">?</button>
+      <div class="puncak-id">
+        <p id="m-nama" class="puncak-nama">—</p>
+        <p id="m-jabatan" class="puncak-peran">—</p>
+      </div>
+      <button type="button" id="m-bell" class="puncak-tombol" aria-label="Notifikasi">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M10.27 21a2 2 0 0 0 3.46 0"/>
+          <path d="M3.26 15.33A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.67C19.41 13.96 18 12.5 18 8A6 6 0 0 0 6 8c0 4.5-1.41 5.96-2.74 7.33"/>
+        </svg>
+        <span>Notifikasi</span>
+        <span id="m-bell-badge" class="puncak-angka-kecil hidden"></span>
       </button>
-      <button type="button" id="m-avatar" class="pil-saya" aria-label="Akun">?</button>
     </div>
+    <div id="m-angka" class="puncak-petak"></div>
   </header>
 
-  <div id="m-konteks" class="px-2.5">
-    <div class="kepala-konteks">
-      <h1 id="m-judul">Beranda</h1>
-      <span id="m-jabatan" class="tanda-peran truncate max-w-[52%]">—</span>
+  <!-- Lembar isi -->
+  <div class="lembaran">
+    <div class="cari-kotak">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/>
+      </svg>
+      <input id="m-cari" type="search" autocomplete="off" placeholder="Cari surat, nomor, pengirim" aria-label="Cari surat">
     </div>
-    <p id="m-subjudul" class="mt-0.5 px-1 text-xs text-slate-500"></p>
-    <p id="m-salam" class="sr-only"></p>
-    <p id="m-nama" class="sr-only"></p>
+
+    <div id="m-chip"></div>
+
+    <div class="bagian-baris">
+      <p id="m-judul" class="bagian-label">Surat masuk</p>
+      <p id="m-subjudul" class="bagian-hitung"></p>
+    </div>
+
+    <main id="m-page"></main>
   </div>
-
-  <main id="m-page" class="px-2.5 pt-3"></main>
 </section>
-
-<!-- Tombol aksi mengambang. Isinya bukan daftar menu — menu sudah ada di
-     bawah — melainkan pekerjaan yang sedang menunggu pemakai ini. -->
-<button type="button" id="m-fab" class="fab hidden" aria-label="Tindakan cepat">
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-</button>
 
 <!-- Navigasi bawah -->
 <nav id="m-nav" class="fixed inset-x-0 bottom-0 z-30 hidden border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
@@ -171,6 +178,6 @@
   </div>
 </div>
 
-<script src="app.js?v=d493fc9d4d"></script>
+<script src="app.js?v=8efd9c8eef"></script>
 </body>
 </html>

@@ -482,9 +482,9 @@ table.data tbody tr:hover { background: #f0f9f0; }
 /* --- chip penyaring --- */
 .chip-baris {
   display: flex;
-  gap: .5rem;
+  gap: .45rem;
   overflow-x: auto;
-  padding: .25rem .25rem .75rem;
+  padding: .85rem .65rem .1rem;
   scrollbar-width: none;
 }
 .chip-baris::-webkit-scrollbar { display: none; }
@@ -493,17 +493,18 @@ table.data tbody tr:hover { background: #f0f9f0; }
   display: inline-flex;
   flex: none;
   align-items: center;
-  gap: .375rem;
+  gap: .35rem;
   border-radius: 9999px;
-  background: #f1f5f9;
-  color: #475569;
-  padding: .45rem .9rem;
-  font-size: .8125rem;
+  border: 1px solid #e8edea;
+  background: #fff;
+  color: #64748b;
+  padding: .42rem .85rem;
+  font-size: .76rem;
   font-weight: 500;
-  transition: background-color .15s, color .15s, transform .1s;
+  transition: all .3s ease-in-out;
 }
 .chip:active { transform: scale(.97); }
-.chip-aktif { background: #009000; color: #ffffff; font-weight: 600; }
+.chip-aktif { background: #e6f4e6; border-color: #009000; color: #064e3b; font-weight: 600; }
 
 .chip-jumlah {
   border-radius: 9999px;
@@ -514,7 +515,7 @@ table.data tbody tr:hover { background: #f0f9f0; }
   font-weight: 700;
   line-height: 1.15rem;
 }
-.chip-aktif .chip-jumlah { background: rgba(255,255,255,.25); color: #ffffff; }
+.chip-aktif .chip-jumlah { background: #009000; color: #fff; }
 
 /* ===========================================================================
    Kotak masuk & detail surat (PWA).
@@ -526,219 +527,193 @@ table.data tbody tr:hover { background: #f0f9f0; }
    setelah isinya terbaca.
    =========================================================================== */
 
-/* --- pil pencarian di kepala --- */
-.pil-cari {
-  display: flex; align-items: center; gap: .7rem;
-  background: #fff; border: 1px solid #e2e8f0; border-radius: 999px;
-  padding: .45rem .45rem .45rem .95rem;
-  box-shadow: 0 1px 2px rgba(16,27,23,.06), 0 8px 20px -12px rgba(16,27,23,.3);
-}
-.pil-cari input {
-  flex: 1; min-width: 0; border: 0; background: none; padding: .35rem 0;
-  font: inherit; font-size: .845rem; color: #064e3b;
-}
-.pil-cari input::placeholder { color: #94a3b8; }
-.pil-cari input:focus { outline: none; }
-.pil-cari:focus-within { border-color: #009000; }
+/* ===========================================================================
+   Kepala hijau + lembar isi (PWA).
 
-/* Tombol di dalam pil: lonceng dan avatar. Keduanya bulat dengan ukuran
-   sasaran sentuh yang sama, supaya sisi kanan pil tetap rata. */
-.pil-lonceng {
-  position: relative; flex: none; display: grid; place-items: center;
-  width: 2.125rem; height: 2.125rem; border-radius: 999px;
-  color: #475569; background: none; border: 0;
-}
-.pil-lonceng:active { background: #f1f5f9; }
-.pil-lonceng .angka {
-  position: absolute; top: -1px; right: -1px; min-width: 1.05rem;
-  padding: 0 .22rem; border-radius: 999px;
-  background: #e11d48; color: #fff; border: 2px solid #fff;
-  font-size: .6rem; font-weight: 700; line-height: 1rem; text-align: center;
-}
-.pil-saya {
-  flex: none; width: 2.125rem; height: 2.125rem; border-radius: 999px;
-  display: grid; place-items: center; border: 0;
-  background: #009000; color: #fff;
-  font-size: .72rem; font-weight: 600; letter-spacing: .02em;
-}
-.pil-saya:active { background: #064e3b; }
-
-/* Kepala mengapung di atas kanvas, bukan blok hijau penuh: pil pencarian
-   yang jadi jangkar, sama seperti kotak masuk surel di ponsel. */
-.kepala-apung {
-  position: sticky; top: 0; z-index: 30;
-  padding: calc(env(safe-area-inset-top, 0px) + .625rem) 1rem .875rem;
-  background: linear-gradient(#f8fafc 72%, rgba(246,248,247,0));
-}
-
-/* --- panel sapaan Beranda ---
-   Satu blok berwarna di puncak halaman, lalu sisanya tenang: pola yang
-   dipakai aplikasi super seperti Gojek, dan alasannya praktis — angka
-   yang paling sering dicari duduk di bidang yang paling menarik mata,
-   sementara daftar surat di bawahnya tetap mudah dipindai. */
-.sapa {
-  position: relative; overflow: hidden;
-  border-radius: 1.5rem; padding: 1.15rem 1.15rem 1.05rem; color: #fff;
-  background: linear-gradient(135deg, #009000 0%, #009000 52%, #065f46 100%);
-  box-shadow: 0 10px 24px -14px rgba(4, 95, 70, .85);
+   Susunannya: satu bidang hijau berisi identitas dan tiga angka, lalu lembar
+   putih bersudut besar yang naik menutupi sebagian bidang itu. Warna
+   terkumpul di satu tempat, dan daftar surat — bagian yang benar-benar
+   dibaca — duduk di atas kertas putih yang tenang.
+   =========================================================================== */
+.puncak {
+  position: relative;
+  padding: calc(env(safe-area-inset-top, 0px) + 1.1rem) 1.15rem 3.25rem;
+  background: linear-gradient(160deg, #047857 0%, #009000 55%, #05a005 100%);
+  color: #fff;
 }
 /* Dua lingkaran tipis memberi kedalaman tanpa menambah berkas gambar. */
-.sapa::before, .sapa::after {
-  content: ""; position: absolute; border-radius: 50%;
+.puncak::before, .puncak::after {
+  content: ''; position: absolute; border-radius: 50%;
   border: 1.5rem solid rgba(255, 255, 255, .07); pointer-events: none;
 }
-.sapa::before { width: 13rem; height: 13rem; right: -4.5rem; top: -5.5rem; }
-.sapa::after { width: 9rem; height: 9rem; left: -3.5rem; bottom: -4.5rem; border-width: 1rem; }
+.puncak::before { width: 13rem; height: 13rem; right: -4.5rem; top: -5.5rem; }
+.puncak::after  { width: 9rem;  height: 9rem;  left: -3.5rem; bottom: -1.5rem; border-width: 1rem; }
 
-.sapa-kepala { position: relative; display: flex; align-items: center; gap: .7rem; }
-.sapa-avatar {
-  flex: none; width: 2.6rem; height: 2.6rem; border-radius: 50%;
-  display: grid; place-items: center;
-  background: rgba(255, 255, 255, .18); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .25);
-  font-size: .8rem; font-weight: 700; letter-spacing: .02em;
+.puncak-baris { position: relative; display: flex; align-items: center; gap: .7rem; }
+.puncak-avatar {
+  flex: none; display: grid; place-items: center; width: 2.75rem; height: 2.75rem;
+  border-radius: 50%; border: 2px solid rgba(255, 255, 255, .55);
+  background: rgba(255, 255, 255, .16); color: #fff;
+  font-size: .82rem; font-weight: 600; letter-spacing: .01em;
+  transition: transform .3s ease-in-out;
 }
-.sapa-halo { font-size: .72rem; color: rgba(236, 253, 245, .85); }
-.sapa-nama {
-  margin-top: .05rem; font-size: 1.05rem; font-weight: 700; letter-spacing: -.015em;
-  line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.sapa-jabatan {
-  flex: none; align-self: flex-start; max-width: 42%;
-  font-size: .66rem; font-weight: 600; letter-spacing: .02em;
-  background: rgba(255, 255, 255, .17); border-radius: 999px; padding: .2rem .55rem;
+.puncak-avatar:active { transform: scale(.94); }
+.puncak-id { min-width: 0; flex: 1; }
+.puncak-nama {
+  margin: 0; font-size: .95rem; font-weight: 600; line-height: 1.25;
+  letter-spacing: -.01em;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-
-/* Angka kunci: dibaca berderet, dipisah garis tipis, bukan kotak sendiri. */
-.sapa-angka {
-  position: relative; margin-top: 1rem; display: grid; gap: 0;
-  background: rgba(255, 255, 255, .12); border-radius: 1rem; padding: .7rem .25rem;
+.puncak-peran {
+  margin: .05rem 0 0; font-size: .72rem; font-weight: 400;
+  color: rgba(236, 253, 245, .8);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.sapa-angka > * { text-align: center; padding: 0 .35rem; }
-.sapa-angka > * + * { box-shadow: inset 1px 0 0 rgba(255, 255, 255, .18); }
-.sapa-n { font-size: 1.3rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.2; }
-.sapa-l { margin-top: .1rem; font-size: .63rem; line-height: 1.25; color: rgba(236, 253, 245, .82); }
-
-/* --- pintasan ---
-   Empat tombol ikon: tujuan yang paling sering dituju, terjangkau satu
-   ketukan dari layar pertama.
-
-   Latar ikon sengaja pekat, bukan warna pudar. Di layar ponsel yang dilihat
-   sambil jalan, blok warna padat dengan ikon putih jauh lebih cepat dikenali
-   daripada tint tipis — dan deretan ini memang jadi menu utama Beranda. */
-.pintas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .5rem; }
-.pintas-btn { display: flex; flex-direction: column; align-items: center; gap: .45rem; padding: .25rem 0; }
-.pintas-btn:active .pintas-ikon { transform: scale(.94); }
-.pintas-ikon {
-  width: 3.1rem; height: 3.1rem; border-radius: 1.1rem;
-  display: grid; place-items: center; color: #fff;
-  transition: transform .3s ease-in-out, box-shadow .3s ease-in-out;
+.puncak-tombol {
+  position: relative; flex: none; display: inline-flex; align-items: center; gap: .4rem;
+  padding: .5rem .85rem; border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, .35); background: rgba(255, 255, 255, .14);
+  color: #fff; font-size: .75rem; font-weight: 500;
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  transition: background-color .3s ease-in-out, transform .3s ease-in-out;
 }
-.pintas-ikon svg { width: 1.45rem; height: 1.45rem; }
-.pintas-l {
-  font-size: .675rem; font-weight: 600; line-height: 1.2; color: #334155; text-align: center;
+.puncak-tombol:active { transform: scale(.96); background: rgba(255, 255, 255, .22); }
+.puncak-tombol svg { width: 1rem; height: 1rem; }
+.puncak-angka-kecil {
+  position: absolute; top: -.3rem; right: -.3rem; min-width: 1.15rem;
+  padding: 0 .3rem; border-radius: 999px; background: #f59e0b; color: #4a2a00;
+  font-size: .625rem; font-weight: 700; line-height: 1.15rem; text-align: center;
 }
-.pintas-hijau  { background: #009000; box-shadow: 0 6px 14px -6px rgba(0, 144, 0, .65); }
-.pintas-kuning { background: #f59e0b; box-shadow: 0 6px 14px -6px rgba(245, 158, 11, .65); }
-.pintas-biru   { background: #1d4ed8; box-shadow: 0 6px 14px -6px rgba(29, 78, 216, .6); }
-.pintas-ungu   { background: #6d28d9; box-shadow: 0 6px 14px -6px rgba(109, 40, 217, .6); }
-.pintas-merah  { background: #e11d48; box-shadow: 0 6px 14px -6px rgba(225, 29, 72, .6); }
 
-/* Kepala bagian daftar di Beranda. */
-.bagian-kepala {
+/* Tiga angka: dibaca berderet dan dipisah garis tipis, bukan kotak sendiri —
+   satu blok yang tenang, bukan tiga benda yang bersaing. */
+.puncak-petak {
+  position: relative; display: grid; margin-top: 1.15rem;
+  border-radius: 1.25rem; padding: .9rem .35rem;
+  background: rgba(255, 255, 255, .13); border: 1px solid rgba(255, 255, 255, .2);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+.petak {
+  display: block; text-align: center; padding: 0 .35rem; color: #fff;
+  background: none; border: 0; transition: transform .3s ease-in-out;
+}
+.petak + .petak { box-shadow: inset 1px 0 0 rgba(255, 255, 255, .2); }
+.petak:active { transform: scale(.96); }
+.petak-n {
+  display: block; font-size: 1.35rem; font-weight: 600; line-height: 1.2;
+  letter-spacing: -.02em; font-variant-numeric: tabular-nums;
+}
+.petak-l {
+  display: block; margin-top: .1rem; font-size: .655rem; font-weight: 400;
+  line-height: 1.25; color: rgba(236, 253, 245, .85);
+}
+
+/* Lembar isi menutupi ujung bawah puncak. */
+.lembaran {
+  position: relative; z-index: 1; margin-top: -2.1rem;
+  /* Kertas putih harus sampai ke bawah layar; kalau tidak, kanvas abu
+     muncul sebagai pita kosong di bawah baris terakhir. */
+  min-height: calc(100vh - 12rem); padding: 1rem .35rem 1.5rem;
+  background: #fff; border-radius: 1.75rem 1.75rem 0 0;
+  box-shadow: 0 -8px 28px -18px rgba(6, 78, 59, .45);
+}
+
+.cari-kotak {
+  display: flex; align-items: center; gap: .6rem; margin: 0 .65rem;
+  padding: .7rem .95rem; border-radius: 1rem;
+  background: #f4f7f5; border: 1px solid #e8edea;
+  transition: border-color .3s ease-in-out, background-color .3s ease-in-out;
+}
+.cari-kotak:focus-within { border-color: #009000; background: #fff; }
+.cari-kotak svg { flex: none; width: 1.05rem; height: 1.05rem; color: #94a3b8; }
+.cari-kotak input {
+  flex: 1; min-width: 0; border: 0; background: transparent;
+  font-size: .82rem; color: #1f2d28;
+}
+.cari-kotak input::placeholder { color: #9aa8a2; }
+.cari-kotak input:focus { outline: none; }
+
+/* Judul bagian di atas daftar: huruf kecil berspasi, seperti label bagian
+   pada kotak masuk surel. Jumlah baris duduk di kanannya. */
+.bagian-baris {
   display: flex; align-items: baseline; justify-content: space-between;
-  margin: 1.5rem .35rem .7rem;
+  gap: .6rem; margin: 1.15rem .95rem .35rem;
 }
-.bagian-kepala h2 { margin: 0; font-size: .875rem; font-weight: 700; letter-spacing: -.01em; color: #064e3b; }
-.bagian-kepala button { font-size: .72rem; font-weight: 600; color: #009000; }
-
-/* Ringkasan tahun: deret angka mendatar, bukan kartu bertumpuk. */
-.strip {
-  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
-  background: #fff; border: 1px solid #e8edf2; border-radius: 1.125rem;
-  padding: .85rem .5rem;
-  box-shadow: 0 1px 1px rgba(16,27,23,.04), 0 4px 10px -6px rgba(16,27,23,.16);
+.bagian-label {
+  margin: 0; font-size: .655rem; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: #94a3b8;
 }
-.strip > * { text-align: center; padding: 0 .4rem; }
-.strip > * + * { border-left: 1px solid #e8edf2; }
-.strip-n { font-size: 1.05rem; font-weight: 700; letter-spacing: -.02em; color: #064e3b; font-variant-numeric: tabular-nums; }
-.strip-l { margin-top: .1rem; font-size: .655rem; color: #64748b; }
-
-.kepala-konteks { display: flex; align-items: baseline; gap: .5rem; padding: .15rem .35rem 0; }
-.kepala-konteks h1 { margin: 0; font-size: 1.19rem; font-weight: 600; letter-spacing: -.01em; color: #064e3b; }
-.tanda-peran {
-  margin-left: auto; font-size: .69rem; font-weight: 600; letter-spacing: .03em;
-  color: #064e3b; background: #e6f4e6; border-radius: 999px; padding: .18rem .55rem;
+.bagian-hitung {
+  margin: 0; font-size: .69rem; font-weight: 500; color: #94a3b8;
+  font-variant-numeric: tabular-nums;
 }
 
-/* --- kartu surat --- */
-/* Kartu dibuat selebar mungkin dan jaraknya rapat, meniru kotak masuk
-   surel: yang dibaca adalah perihalnya, jadi setiap milimeter lebar
-   berarti satu kata lagi yang muat sebelum terpotong. Bayangannya
-   ditipiskan karena kartu yang berdempetan dengan bayangan tebal
-   terlihat seperti tumpukan, bukan daftar. */
-.kartu-surat {
+/* ===========================================================================
+   Daftar surat (PWA).
+
+   Baris, bukan kartu: tepi kirinya lurus dari atas ke bawah, dipisah garis
+   rambut. Bentuk ini yang bikin daftar panjang cepat dipindai — mata hanya
+   turun, tidak melompati jarak antarkartu.
+   =========================================================================== */
+.daftar { display: flex; flex-direction: column; }
+
+.baris {
   position: relative; width: 100%; text-align: left;
-  display: grid; grid-template-columns: .44rem 2.625rem 1fr; gap: .55rem;
-  align-items: start;
-  background: #fff; border: 1px solid #edf1f5; border-radius: .95rem;
-  padding: .8rem .8rem .8rem .7rem;
-  box-shadow: 0 1px 2px rgba(16,27,23,.045);
-  transition: transform .3s ease-in-out, box-shadow .3s ease-in-out;
+  display: flex; gap: .8rem; align-items: flex-start;
+  padding: .95rem .95rem .9rem;
+  background: #fff; border: 0; border-bottom: 1px solid #f0f3f1;
+  transition: background-color .3s ease-in-out;
 }
-.kartu-surat:active {
-  transform: scale(.99);
-  box-shadow: 0 2px 6px rgba(16,27,23,.1);
-}
-/* Pita tepi kiri menandai yang belum dibaca. */
-/* Titik kecil hijau UNISMA menandai surat yang belum dibaca. Kolomnya
-   selalu ada — juga saat kosong — supaya avatar dan teks tetap lurus
-   antara baris yang sudah dan belum dibaca. */
-.kartu-titik { width: .44rem; height: .44rem; margin-top: .98rem; border-radius: 999px; }
-/* Belum dibaca diberi latar bernuansa hijau muda dan tepi yang sewarna,
-   bukan hanya huruf tebal: di daftar sepanjang layar ponsel, perbedaan
-   berat huruf saja terlalu halus untuk terlihat sambil menggulir. */
-.kartu-surat.baru {
-  background: #f2faf2; border-color: #c4e5c4;
-}
-.kartu-surat.baru .kartu-titik { background: #009000; }
-/* Prioritas tinggi memakai kuning emas, dan menang atas titik hijau. */
-.kartu-surat.penting .kartu-titik { background: #f59e0b; }
+.baris:last-child { border-bottom: 0; }
+.baris:active { background: #f4f7f5; }
+/* Belum dibaca: latar hijau sangat muda. Di daftar sepanjang layar ponsel,
+   beda berat huruf saja terlalu halus untuk terlihat sambil menggulir. */
+.baris.baru { background: #f2faf2; }
+.baris.baru:active { background: #e6f4e6; }
 
-/* Pengirim selalu tebal — itu yang dicari mata lebih dulu saat memindai
-   daftar. Yang membedakan surat belum dibaca bukan tebalnya nama, tapi
-   warnanya, titik hijau di tepi, dan perihal yang ikut menebal. */
-.kartu-dari {
-  flex: 1; min-width: 0; font-size: .86rem; font-weight: 700; color: #475569;
+.baris-ava {
+  position: relative; flex: none; display: grid; place-items: center;
+  width: 2.75rem; height: 2.75rem; border-radius: 50%;
+  font-size: .8rem; font-weight: 600; letter-spacing: .01em;
+}
+/* Titik kecil di bahu lingkaran inisial menandai yang belum dibaca. */
+.baris-titik {
+  position: absolute; right: -.05rem; bottom: .05rem;
+  width: .6rem; height: .6rem; border-radius: 50%;
+  background: #009000; box-shadow: 0 0 0 2px #f2faf2;
+}
+.baris.penting .baris-titik { background: #f59e0b; }
+
+.baris-isi { min-width: 0; flex: 1; }
+.baris-atas { display: flex; align-items: baseline; gap: .6rem; }
+.baris-dari {
+  flex: 1; min-width: 0; font-size: .855rem; font-weight: 600; color: #334155;
   letter-spacing: -.005em;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.kartu-surat.baru .kartu-dari { color: #064e3b; }
-.kartu-jam { flex: none; font-size: .655rem; color: #64748b; font-variant-numeric: tabular-nums; }
-.kartu-klip { flex: none; display: inline-flex; color: #94a3b8; align-self: center; }
-.kartu-klip svg { width: .72rem; height: .72rem; }
-.kartu-surat.baru .kartu-klip { color: #64748b; }
-.kartu-perihal {
-  margin: .2rem 0 0; font-size: .875rem; line-height: 1.38; color: #64748b;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-}
-.kartu-surat.baru .kartu-perihal { font-weight: 600; color: #064e3b; }
-.kartu-nomor {
-  margin: .28rem 0 0; font-size: .69rem; color: #64748b;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+.baris.baru .baris-dari { color: #064e3b; font-weight: 700; }
+.baris-kanan { flex: none; display: inline-flex; align-items: center; gap: .3rem; }
+.baris-jam {
+  font-size: .675rem; font-weight: 400; color: #94a3b8;
   font-variant-numeric: tabular-nums;
 }
-.kartu-kaki { display: flex; align-items: center; gap: .4rem; margin-top: .5rem; flex-wrap: wrap; }
+.baris.baru .baris-jam { color: #059669; font-weight: 500; }
+.kartu-klip { flex: none; display: inline-flex; color: #b4c0ba; }
+.kartu-klip svg { width: .78rem; height: .78rem; }
+.baris.baru .kartu-klip { color: #059669; }
 
-.tanda {
-  display: inline-flex; align-items: center; gap: .3rem;
-  border-radius: .44rem; padding: .22rem .56rem;
-  font-size: .655rem; font-weight: 600; letter-spacing: .015em;
+.baris-hal {
+  display: block; margin-top: .16rem; font-size: .8125rem; font-weight: 500;
+  line-height: 1.35; color: #475569;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.tanda-tunggu { background: #fef6e7; color: #b45309; }
-.tanda-oke    { background: #e6f4e6; color: #064e3b; }
-.tanda-tolak  { background: #fdeef1; color: #be123c; }
-.tanda-netral { background: #f1f5f9; color: #64748b; }
+.baris.baru .baris-hal { color: #064e3b; font-weight: 600; }
+.baris-cuplik {
+  display: -webkit-box; margin-top: .2rem; font-size: .76rem; font-weight: 400;
+  line-height: 1.45; color: #94a3b8;
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.baris-kaki { display: flex; align-items: center; gap: .4rem; margin-top: .5rem; flex-wrap: wrap; }
 
 /* --- detail surat --- */
 /* ===========================================================================
@@ -749,43 +724,31 @@ table.data tbody tr:hover { background: #f0f9f0; }
    Sisanya netral sejuk, supaya satu warna itu selalu berarti sesuatu.
    =========================================================================== */
 
-/* --- navigasi bawah: pil kapsul penanda menu aktif ---
-   Ikon dan label tidak berpindah saat menu berganti; hanya pil di belakang
-   ikon yang muncul, seperti bilah navigasi Google Workspace. */
+/* --- navigasi bawah ---
+   Menu aktif ditandai ikon hijau pekat dan labelnya ikut menebal; yang lain
+   abu garis. Tata letaknya diam — tidak ada yang bergeser atau membesar,
+   hanya warna yang beralih. */
 .nav-btn {
   position: relative; display: flex; flex-direction: column; align-items: center;
-  gap: .18rem; padding: .45rem 0 .3rem; background: none; border: 0;
+  gap: .22rem; padding: .6rem 0 .45rem; background: none; border: 0;
   -webkit-tap-highlight-color: transparent;
 }
 .nav-pil {
-  display: grid; place-items: center; width: 4rem; height: 2rem; border-radius: 999px;
-  color: #64748b; background: transparent;
+  display: grid; place-items: center; width: 2.6rem; height: 1.85rem;
+  border-radius: .9rem; color: #94a3b8; background: transparent;
   transition: background-color .3s ease-in-out, color .3s ease-in-out;
 }
 .nav-btn:active .nav-pil { transform: scale(.94); }
 .nav-btn[aria-current="page"] .nav-pil { background: #e6f4e6; color: #009000; }
 .nav-label {
-  font-size: .655rem; font-weight: 500; line-height: 1.2; color: #64748b;
-  transition: color .3s ease-in-out, font-weight .3s ease-in-out;
+  font-size: .655rem; font-weight: 400; line-height: 1.2; color: #94a3b8;
+  transition: color .3s ease-in-out;
 }
 .nav-btn[aria-current="page"] .nav-label { color: #064e3b; font-weight: 600; }
 .nav-titik {
-  position: absolute; top: .3rem; right: 50%; margin-right: -1.15rem;
+  position: absolute; top: .5rem; right: 50%; margin-right: -1rem;
   width: .44rem; height: .44rem; border-radius: 999px; background: #f59e0b;
 }
-
-/* --- tombol aksi mengambang ---
-   Kotak membulat lembut, bukan lingkaran penuh: lebih dekat ke bahasa
-   Material 3 dan lebih tenang di samping pil navigasi. */
-.fab {
-  position: fixed; right: 1.05rem; z-index: 40;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 5.25rem);
-  display: grid; place-items: center; width: 3.5rem; height: 3.5rem;
-  border: 0; border-radius: 1.25rem; color: #fff; background: #009000;
-  box-shadow: 0 6px 16px -4px rgba(0, 144, 0, .45), 0 2px 6px rgba(6, 78, 59, .18);
-  transition: transform .3s ease-in-out, box-shadow .3s ease-in-out;
-}
-.fab:active { transform: scale(.93); box-shadow: 0 3px 10px -4px rgba(0, 144, 0, .5); }
 
 /* Pengganti tombol di kaki lembar ketika pemakai ini sudah memberi
    disposisi: pernyataan, bukan tombol mati yang menggoda ditekan lagi. */
@@ -874,7 +837,7 @@ table.data tbody tr:hover { background: #f0f9f0; }
 .chip-instruksi.dipilih svg { opacity: 1; }
 
 /* --- umpan balik sentuh yang sama di seluruh aplikasi --- */
-.kartu-surat, .petak, .pintas-btn, .btn-primary, .chip, .d-berkas {
+.baris, .petak, .btn-primary, .chip, .d-berkas {
   transition: transform .3s ease-in-out, box-shadow .3s ease-in-out,
               background-color .3s ease-in-out, border-color .3s ease-in-out;
 }
@@ -1015,8 +978,8 @@ table.data tbody tr:hover { background: #f0f9f0; }
 .jejak .j-isi { margin: .44rem 0 0; font-size: .78rem; line-height: 1.55; color: #475569; }
 
 @media (prefers-reduced-motion: reduce) {
-  .kartu-surat { transition: none; }
-  .kartu-surat:active { transform: none; }
+  .baris { transition: none; }
+  .baris:active { background: #fff; }
 }
 
 @media print {
