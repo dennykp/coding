@@ -4,6 +4,28 @@ Berkas di folder ini menyiapkan SIMPERA v2 di `15.232.15.85`
 (`program-unggulan.unisma.ac.id`), di samping e-surat yang sudah dipindah lebih
 dulu ke `/var/www/html/esurat`.
 
+## SUDAH DIJALANKAN — 19 September 2026
+
+Pemindahan sudah selesai dan terverifikasi. Ringkasannya:
+
+| Pemeriksaan | Hasil |
+|---|---|
+| `/simpera-v2/` | 200 |
+| `/simpera-v2/api/health` | 200 — `database: up`, `schema: esurat`, `arteri_ready: true` |
+| Login kredensial palsu | 401 bersih (bukan 500) — jalur DB + bcrypt terbukti jalan |
+| PWA `/simpera-v2/m/` | 200 |
+| `/simpera-v2/backend/.env` | 404 — backend di luar akar web |
+| Header cache | sama persis dengan `.htaccess` server lama |
+| `/`, `/public/cctv_app/`, `/esurat/` | 200 — tidak terpengaruh |
+
+Batas unggah juga sudah diperbaiki: nginx `client_max_body_size 32M`, PHP-FPM
+`upload_max_filesize 32M` / `post_max_size 40M`. Diuji dengan unggahan 5 MB
+sungguhan — diterima, `error_code 0`, http 200.
+
+`main.py` sudah dipatch di server agar CORS dibaca dari `CORS_ORIGINS`
+(cadangan `main.py.bak-*` ada di sebelahnya). **Patch itu belum masuk repo** —
+lihat bagian berikutnya.
+
 ## Yang sudah selesai
 
 **Databasenya tidak perlu dipindah lagi.** SIMPERA v2 dan e-surat memakai
@@ -35,21 +57,24 @@ termigrasi ke DB `esurat` di server baru:
 `node`/`npm` hanya dibutuhkan kalau nanti CSS Tailwind di-build ulang
 (`frontend/build`). Tidak diperlukan untuk memindahkan aplikasinya.
 
-## Dua perubahan kode yang diperlukan
+## Dua perubahan kode
 
-Keduanya di `simpera-v2/backend/app/`, dan **belum** dikerjakan — perlu
-persetujuan karena menyentuh kode aplikasi, bukan sekadar konfigurasi.
+Keduanya di `simpera-v2/backend/app/`. Yang pertama **sudah diterapkan di
+server** karena tanpa itu aplikasinya tidak bisa jalan; yang kedua belum.
+Keduanya belum masuk repo — sumbernya ada di branch
+`claude/esurat-api-arteri-integration-4jn6gk`, bukan branch ini.
 
-**1. CORS di `main.py` (wajib).** Daftar origin-nya hardcoded:
+**1. CORS di `main.py` — SUDAH DITERAPKAN DI SERVER.** Daftar origin-nya
+hardcoded:
 
 ```python
 allow_origins=["https://e-surat.unisma.ac.id", "http://localhost:8123"]
 ```
 
 Origin di server baru berbeda, jadi permintaan dari peramban akan ditolak.
-Sebaiknya dijadikan bisa diatur lewat environment, misalnya
-`CORS_ORIGINS` yang dipisah koma, supaya tidak perlu ganti kode lagi saat
-domainnya berubah.
+Diganti jadi `allow_origins=_asal_diizinkan()`, yang membaca `CORS_ORIGINS`
+(dipisah koma) dari environment dan **jatuh kembali ke daftar lama bila tidak
+diisi** — jadi perilaku di server asal tidak berubah sama sekali.
 
 **2. Path `.env` Laravel di `config.py` (sebaiknya).** Konstanta
 `LARAVEL_ENV_CANDIDATES` menunjuk path server lama saja:
