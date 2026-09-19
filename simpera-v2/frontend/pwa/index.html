@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="../assets/app.css?v=5d875d2e14">
+<link rel="stylesheet" href="../assets/app.css?v=7a68e55c3c">
 </head>
 <body class="h-full bg-canvas text-slate-700 antialiased">
 
@@ -102,25 +102,35 @@
   <main id="m-page" class="px-4 pt-3"></main>
 </section>
 
+<!-- Tombol aksi mengambang. Isinya bukan daftar menu — menu sudah ada di
+     bawah — melainkan pekerjaan yang sedang menunggu pemakai ini. -->
+<button type="button" id="m-fab" class="fab hidden" aria-label="Tindakan cepat">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+</button>
+
 <!-- Navigasi bawah -->
 <nav id="m-nav" class="fixed inset-x-0 bottom-0 z-30 hidden border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
   <div class="grid grid-cols-4"></div>
 </nav>
 
 <!-- Lembar geser & toast -->
+<!-- Lembar geser. Satu kolom flex: kepala dan kaki tetap, badan yang
+     menggulir — supaya tombol keputusan selalu terjangkau tanpa perlu
+     menggulir sampai ujung. -->
 <div id="m-sheet" class="fixed inset-0 z-50 hidden">
   <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" data-sheet-close></div>
-  <div class="absolute inset-x-0 bottom-0 max-h-[92vh] overflow-hidden rounded-t-3xl bg-white">
-    <div class="flex items-start gap-3 border-b border-slate-100 px-5 py-4">
-      <div class="min-w-0 flex-1">
-        <span class="mx-auto mb-3 block h-1 w-10 rounded-full bg-slate-200"></span>
-        <h2 id="m-sheet-title" class="truncate text-base font-semibold text-slate-900">Detail</h2>
+  <div class="lembar">
+    <div class="lembar-kepala">
+      <span class="lembar-grip" data-sheet-close></span>
+      <div class="lembar-baris">
+        <p id="m-sheet-title" class="lembar-judul">Detail</p>
+        <button type="button" data-sheet-close class="lembar-tutup" aria-label="Tutup">
+          <svg class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="2.1" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+        </button>
       </div>
-      <button data-sheet-close class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" aria-label="Tutup">
-        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
-      </button>
     </div>
-    <div id="m-sheet-body" class="max-h-[75vh] overflow-y-auto px-5 py-5"></div>
+    <div id="m-sheet-body" class="lembar-isi"></div>
+    <div id="m-sheet-kaki" class="lembar-kaki hidden"></div>
   </div>
 </div>
 
@@ -161,6 +171,6 @@
   </div>
 </div>
 
-<script src="app.js?v=abca6acde6"></script>
+<script src="app.js?v=b89689efd5"></script>
 </body>
 </html>

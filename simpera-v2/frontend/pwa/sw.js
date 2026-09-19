@@ -8,15 +8,15 @@
  *   dilindungi token, dan hasil basi bisa menyesatkan.
  * ========================================================================== */
 
-var VERSI = 'simpera-m-854eeb08a0';
+var VERSI = 'simpera-m-cc44037989';
 var CANGKANG = [
   './',
   './index.html',
   './manifest.webmanifest',
   './icon.svg',
   './icon-maskable.svg',
-  '../assets/app.css?v=5d875d2e14',
-  'app.js?v=abca6acde6'
+  '../assets/app.css?v=7a68e55c3c',
+  'app.js?v=b89689efd5'
 ];
 
 self.addEventListener('install', function (event) {

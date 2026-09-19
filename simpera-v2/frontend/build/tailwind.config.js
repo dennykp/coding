@@ -20,12 +20,22 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        canvas: '#f6f8f7',
+        // Kanvas abu sejuk; kartu tetap putih bersih supaya isinya menonjol.
+        canvas: '#f8fafc',
+        // Hijau UNISMA #009000 sebagai langkah 600. Langkah di bawahnya
+        // dibuat lebih pucat dan sedikit dingin supaya pil penanda menu
+        // (#e6f4e6) tetap terbaca bersama ikon hijau pekat di atasnya;
+        // langkah di atasnya menua ke hijau tua pekat untuk teks judul.
         brand: {
-          50: '#ecfdf5', 100: '#d1fae5', 200: '#a7f3d0', 300: '#6ee7b7',
-          400: '#34d399', 500: '#10b981', 600: '#059669', 700: '#047857',
+          50: '#f0f9f0', 100: '#e6f4e6', 200: '#c4e5c4', 300: '#94d194',
+          400: '#4fb54f', 500: '#1a9f1a', 600: '#009000', 700: '#047857',
           800: '#065f46', 900: '#064e3b', 950: '#022c22'
-        }
+        },
+        // Teks judul: hijau tua pekat, bukan hitam — lebih hangat dan
+        // tetap lulus kontras AAA di atas putih.
+        tinta: '#064e3b',
+        // Kuning emas teredam, hanya untuk penanda prioritas/berbintang.
+        emas: '#f59e0b'
       },
       fontFamily: {
         // Plus Jakarta Sans: huruf geometris bertepi lembut, angkanya punya

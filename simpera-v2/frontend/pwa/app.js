@@ -259,9 +259,49 @@
   var IOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-  function bukaSheet(judul, isi) {
+  /* Lembar tindakan cepat di balik tombol mengambang.
+
+     Yang ditawarkan adalah pekerjaan yang benar-benar menunggu pemakai
+     ini — diambil dari data notifikasi yang memang sudah dimuat — bukan
+     salinan menu yang sudah ada di navigasi bawah. */
+  function bukaTindakanCepat() {
+    var n = state.notif || {};
+    var item = (n.items || []).slice(0, 6);
+
+    var baris = item.length
+      ? daftarInbox(item.map(barisNotif).join(''))
+      : kartuKosong('Tidak ada yang menunggu tindakan Anda saat ini.');
+
+    bukaSheet('Tindakan cepat',
+      '<p class="mb-3 px-1 text-[.81rem] text-slate-500">' +
+        (item.length
+          ? 'Ketuk salah satu untuk langsung membuka suratnya.'
+          : 'Semua sudah tertangani.') +
+      '</p>' + baris +
+      '<button type="button" id="m-cepat-cari" ' +
+        'class="mt-4 flex w-full items-center gap-3 rounded-2xl border border-slate-200 ' +
+        'bg-white px-4 py-3.5 text-left transition-all duration-300 active:scale-[.99]">' +
+        '<span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-600">' +
+          garisBesar('m21 21-4.35-4.35M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z') +
+        '</span>' +
+        '<span class="min-w-0"><span class="block text-[.82rem] font-semibold text-tinta">Cari surat</span>' +
+        '<span class="block text-[.69rem] text-slate-500">Nomor, perihal, atau pengirim</span></span>' +
+      '</button>');
+  }
+
+  function garisBesar(d) {
+    return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+      'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      '<path d="' + d + '"/></svg>';
+  }
+
+  function bukaSheet(judul, isi, kaki) {
     el('m-sheet-title').textContent = judul;
     el('m-sheet-body').innerHTML = isi;
+    el('m-sheet-body').scrollTop = 0;
+    var wadahKaki = el('m-sheet-kaki');
+    wadahKaki.innerHTML = kaki || '';
+    wadahKaki.classList.toggle('hidden', !kaki);
     el('m-sheet').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
   }
@@ -269,6 +309,8 @@
   function tutupSheet() {
     el('m-sheet').classList.add('hidden');
     el('m-sheet-body').innerHTML = '';
+    el('m-sheet-kaki').innerHTML = '';
+    el('m-sheet-kaki').classList.add('hidden');
     document.body.style.overflow = '';
   }
 
@@ -329,8 +371,9 @@
 
      opsi: { attr, nama, waktu, judul, cuplikan, tebal, tombol, lencana } */
   function barisInbox(o) {
-    return '<button type="button" class="kartu-surat' + (o.tebal ? ' baru' : '') + '" ' +
-      (o.attr || '') + '>' +
+    return '<button type="button" class="kartu-surat' + (o.tebal ? ' baru' : '') +
+      (o.penting ? ' penting' : '') + '" ' + (o.attr || '') + '>' +
+      '<span class="kartu-titik"></span>' +
       '<span class="grid h-[2.625rem] w-[2.625rem] shrink-0 place-items-center rounded-full ' +
         'text-[.78rem] font-semibold ' + warnaAvatar(o.nama) + '">' +
         esc(inisial(o.nama)) + '</span>' +
@@ -751,15 +794,18 @@
     minta('/surat-masuk/' + idSurat).then(function (d) {
       var jumlahDisposisi = (d.disposisi || []).length;
 
+      // Nomor surat sering panjang, jadi diberi selebar kisi; sisanya
+      // berpasangan dua kolom.
       var rinci = [
-        ['Nomor surat', d.nomor_surat],
+        ['Nomor surat', d.nomor_surat, true],
         ['Nomor agenda', d.nomor_agenda],
+        ['Kode arsip', d.kode_arsip || d.id_kode_arsip],
         ['Tanggal surat', d.tgl_surat ? tanggal(d.tgl_surat) : ''],
-        ['Diterima', d.tgl_surat_terima ? tanggal(d.tgl_surat_terima) : ''],
-        ['Kode arsip', d.kode_arsip || d.id_kode_arsip]
+        ['Diterima', d.tgl_surat_terima ? tanggal(d.tgl_surat_terima) : '']
       ].filter(function (r) { return r[1]; })
        .map(function (r) {
-         return '<dt>' + esc(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd>';
+         return '<div' + (r[2] ? ' class="lebar"' : '') + '>' +
+           '<dt>' + esc(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd></div>';
        }).join('');
 
       var jejak = jumlahDisposisi
@@ -771,21 +817,29 @@
                 (x.pengirim ? ' · oleh ' + esc(x.pengirim) : '') + '</p>' +
               (x.isi_disposisi && x.isi_disposisi !== '-'
                 ? '<p class="j-isi">' + esc(x.isi_disposisi) + '</p>' : '') +
+              '<p class="mt-1.5">' +
+                tanda(x.status_selesai ? 'Selesai' : 'Sedang berjalan',
+                      x.status_selesai ? 'oke' : 'tunggu') + '</p>' +
               '</li>';
           }).join('') + '</ol>'
         : '<p class="d-kotak">Surat ini belum pernah didisposisikan.</p>';
 
-      /* Tindakan diletakkan di bawah, sesudah isinya terbaca. */
+      /* Tindakan menempel di kaki lembar, jadi selalu terjangkau tanpa
+         menggulir sampai ujung.
+
+         Surat yang sudah pernah didisposisikan tetap boleh diteruskan:
+         meneruskan adalah hak peran, dan backend pun hanya memeriksa
+         ROLE_DISPOSISI. Sebelumnya tombol ini hilang begitu ada satu jejak
+         dan pemakai diarahkan ke menu Disposisi, padahal dari sana barisnya
+         juga hanya membuka layar ini — jalan buntu. */
       var aksi = '';
       if (bolehVerifikasi() && d.status_surat === 0) {
         aksi = '<button data-aksi="verifikasi" data-id="' + idSurat +
-          '" class="btn-primary btn-lg w-full justify-center">Verifikasi surat</button>';
+          '" class="btn-primary btn-lg justify-center">Verifikasi surat</button>';
       } else if (bolehDisposisi() && d.status_surat === 1) {
-        aksi = jumlahDisposisi
-          ? '<p class="d-kotak">Surat ini sudah didisposisikan ke ' + jumlahDisposisi +
-            ' jabatan. Penerusan berikutnya dilakukan dari menu <b>Disposisi</b>.</p>'
-          : '<button data-aksi="disposisi" data-id="' + idSurat +
-            '" class="btn-primary btn-lg w-full justify-center">Disposisikan surat</button>';
+        aksi = '<button data-aksi="disposisi" data-id="' + idSurat +
+          '" class="btn-primary btn-lg justify-center">' +
+          (jumlahDisposisi ? 'Teruskan disposisi' : 'Disposisikan surat') + '</button>';
       }
 
       bukaSheet(d.nomor_agenda ? 'Agenda ' + d.nomor_agenda : 'Detail surat',
@@ -810,37 +864,30 @@
           '<span class="d-tgl">' + esc(tanggalRingkas(d.tgl_surat_terima)) + '</span>' +
         '</div>' +
 
-        (rinci
-          ? '<details class="d-lipat"><summary>Rincian surat' +
-              '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
-              'stroke-width="2.4" aria-hidden="true"><path stroke-linecap="round" ' +
-              'stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg></summary>' +
-              '<dl class="d-rinci">' + rinci + '</dl></details>'
-          : '') +
+        (rinci ? '<dl class="d-kisi">' + rinci + '</dl>' : '') +
 
         (d.catatan && d.catatan !== '-'
-          ? '<p class="d-sub">Catatan</p><p class="d-kotak">' + esc(d.catatan) + '</p>' : '') +
+          ? '<p class="d-sub">Catatan</p><p class="d-catatan">' + esc(d.catatan) + '</p>' : '') +
 
         (d.file_upload || d.file_url
           ? '<p class="d-sub">Lampiran</p>' +
             '<button type="button" data-berkas="surat-masuk" data-kunci="' + esc(d.id_surat) +
-              '" class="d-berkas">' +
-              '<span class="lambang">PDF</span>' +
+              '" class="berkas-kaca">' +
+              '<span class="berkas-lambang">PDF</span>' +
               '<span class="min-w-0 flex-1">' +
-                '<p class="m-0 truncate text-[.81rem] font-medium text-slate-800">' +
-                  esc(namaBerkas(d.file_upload) || 'Berkas surat') + '</p>' +
-                '<p class="m-0 mt-0.5 text-[.69rem] text-slate-500">Ketuk untuk membuka</p>' +
+                '<span class="berkas-nama block">' +
+                  esc(namaBerkas(d.file_upload) || 'Berkas surat') + '</span>' +
+                '<span class="berkas-ket block">Dokumen terlampir</span>' +
               '</span>' +
-              '<svg class="h-4 w-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" ' +
-              'stroke-width="1.9" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" ' +
-              'stroke-linejoin="round" d="M13.5 6H5.2A2.2 2.2 0 0 0 3 8.2v10.6A2.2 2.2 0 0 0 5.2 21h10.6' +
-              'a2.2 2.2 0 0 0 2.2-2.2V10.5M21 3h-6m6 0v6m0-6-9 9"/></svg>' +
+              '<span class="berkas-lihat">' +
+                garisBesar('M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z') +
+                'Lihat PDF</span>' +
             '</button>'
           : '') +
 
-        '<p class="d-sub">Jejak disposisi</p>' + jejak +
+        '<p class="d-sub">Jejak disposisi</p>' + jejak,
 
-        (aksi ? '<div class="mt-6 border-t border-slate-100 pt-5">' + aksi + '</div>' : ''));
+        aksi);
 
       // Membuka surat menandainya sudah dibaca bila memang ditujukan ke kita.
       if (d.read_surat === 0 && state.user && String(d.id_jabatan) === String(state.user.jabatan_id)) {
@@ -948,11 +995,14 @@
           '</div>' +
           '<div>' +
             '<label class="mb-2 block text-sm font-medium text-slate-700">Instruksi</label>' +
-            '<div class="grid grid-cols-2 gap-1.5">' +
+            // Lencana yang diketuk: sasaran sentuhnya besar dan seluruh
+            // pilihan terbaca sekaligus, tanpa kotak centang sebesar kuku.
+            '<div class="flex flex-wrap gap-1.5" data-chip-instruksi>' +
             OPSI_DISPOSISI.map(function (o) {
-              return '<label class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs active:bg-slate-50">' +
-                '<input type="checkbox" name="opsi" value="' + esc(o) + '" class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500">' +
-                '<span class="text-slate-700">' + esc(o) + '</span></label>';
+              return '<label class="chip-instruksi">' +
+                '<input type="checkbox" name="opsi" value="' + esc(o) + '">' +
+                garisBesar('M20 6 9 17l-5-5') +
+                '<span>' + esc(o) + '</span></label>';
             }).join('') + '</div>' +
           '</div>' +
           '<div>' +
@@ -962,6 +1012,17 @@
           '<p id="m-disposisi-error" class="hidden rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700"></p>' +
           '<button type="submit" class="btn-primary w-full justify-center py-3.5 text-base">Kirim disposisi</button>' +
         '</form>');
+
+      // :has() menangani tampilan chip di peramban baru; kelas ini menjaga
+      // penandaannya tetap terlihat di peramban yang belum mendukungnya.
+      var wadahChip = document.querySelector('[data-chip-instruksi]');
+      if (wadahChip) {
+        wadahChip.addEventListener('change', function (event) {
+          var kotak = event.target;
+          if (kotak.name !== 'opsi') return;
+          kotak.closest('.chip-instruksi').classList.toggle('dipilih', kotak.checked);
+        });
+      }
 
       var cari = el('m-cari-jabatan');
       var daftar = el('m-daftar-jabatan');
@@ -1138,12 +1199,20 @@
   }
 
   // ---------------------------------------------------------------- navigasi
+  /* Ikon digambar dengan geometri Lucide (garis 2px, ujung dan sudut
+     membulat, kotak 24). Jalurnya disalin ke dalam berkas, bukan diambil
+     dari pustaka lewat CDN: PWA ini harus tetap utuh saat luring. */
   var KATALOG_NAV = {
-    beranda:    { label: 'Beranda', d: 'M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75' },
-    surat:      { label: 'Surat masuk', d: 'M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75' },
-    verifikasi: { label: 'Verifikasi', d: 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z' },
-    disposisi:  { label: 'Disposisi', d: 'M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z' },
-    akun:       { label: 'Akun', d: 'M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z' }
+    beranda:    { label: 'Beranda',
+                  d: 'M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5Z' },
+    surat:      { label: 'Surat masuk',
+                  d: 'M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1ZM3 7l8.4 5.6a1 1 0 0 0 1.2 0L21 7' },
+    verifikasi: { label: 'Verifikasi',
+                  d: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM8.5 12.2l2.4 2.4 4.6-4.9' },
+    disposisi:  { label: 'Disposisi',
+                  d: 'M18 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM6 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM18 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM8.2 10.8l7.6-4.1M8.2 13.2l7.6 4.1' },
+    akun:       { label: 'Akun',
+                  d: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4.5 20.5a7.5 7.5 0 0 1 15 0' }
   };
 
   /* Menu disusun menurut kewenangan, bukan daftar tetap.
@@ -1167,17 +1236,21 @@
     return NAV;
   }
 
+  /* Menu aktif ditandai pil hijau pudar di belakang ikonnya, bukan dengan
+     memindahkan atau membesarkan apa pun: tata letaknya diam, hanya warna
+     yang beralih — sama seperti bilah navigasi Google Workspace. */
   function bangunNav() {
     susunNav();
-    el('m-nav').querySelector('div').className =
-      'grid grid-cols-' + NAV.length;
+    el('m-nav').querySelector('div').className = 'grid grid-cols-' + NAV.length;
     el('m-nav').querySelector('div').innerHTML = NAV.map(function (n) {
-      return '<button type="button" data-rute="' + n.id + '" ' +
-        'class="relative flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium text-slate-400">' +
-        '<svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">' +
-        '<path stroke-linecap="round" stroke-linejoin="round" d="' + n.d + '"/></svg>' +
-        '<span>' + n.label + '</span>' +
-        '<span data-nav-badge="' + n.id + '" class="absolute right-[22%] top-1.5 hidden h-2 w-2 rounded-full bg-rose-500"></span>' +
+      return '<button type="button" data-rute="' + n.id + '" class="nav-btn">' +
+        '<span class="nav-pil">' +
+          '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+          'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+          '<path d="' + n.d + '"/></svg>' +
+        '</span>' +
+        '<span class="nav-label">' + n.label + '</span>' +
+        '<span data-nav-badge="' + n.id + '" class="nav-titik hidden"></span>' +
         '</button>';
     }).join('');
   }
@@ -1194,8 +1267,10 @@
   function tandaiNav() {
     Array.prototype.forEach.call(document.querySelectorAll('[data-rute]'), function (b) {
       var aktif = b.getAttribute('data-rute') === state.rute;
-      b.className = 'relative flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium ' +
-        (aktif ? 'text-brand-700' : 'text-slate-400');
+      // aria-current menyetir tampilannya sekaligus memberi tahu pembaca
+      // layar halaman mana yang sedang terbuka.
+      if (aktif) b.setAttribute('aria-current', 'page');
+      else b.removeAttribute('aria-current');
     });
   }
 
@@ -1252,6 +1327,7 @@
     el('m-boot').classList.add('hidden');
     el('m-app').classList.add('hidden');
     el('m-nav').classList.add('hidden');
+    el('m-fab').classList.add('hidden');
     el('m-login').classList.remove('hidden');
   }
 
@@ -1260,6 +1336,7 @@
     el('m-login').classList.add('hidden');
     el('m-app').classList.remove('hidden');
     el('m-nav').classList.remove('hidden');
+    el('m-fab').classList.remove('hidden');
   }
 
   function keluar(diam) {
@@ -1344,6 +1421,16 @@
     el('m-bell').addEventListener('click', function () { keRute('notifikasi'); });
 
     el('m-avatar').addEventListener('click', function () { keRute('akun'); });
+
+    el('m-fab').addEventListener('click', bukaTindakanCepat);
+
+    el('m-sheet').addEventListener('click', function (event) {
+      if (!event.target.closest('#m-cepat-cari')) return;
+      tutupSheet();
+      var kotak = el('m-cari');
+      kotak.focus();
+      kotak.scrollIntoView({ block: 'nearest' });
+    });
 
     el('m-berkas').addEventListener('click', function (event) {
       if (event.target.closest('[data-berkas-close]')) tutupBerkas();
