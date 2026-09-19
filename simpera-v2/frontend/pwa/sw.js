@@ -11,15 +11,15 @@
  *   Aturan berkas statis di bawah menyimpannya sendiri setelah dipakai.
  * ========================================================================== */
 
-var VERSI = 'simpera-m-bc6f659b29';
+var VERSI = 'simpera-m-4c4b0a2f22';
 var CANGKANG = [
   './',
   './index.html',
   './manifest.webmanifest',
   './icon.svg',
   './icon-maskable.svg',
-  '../assets/app.css?v=4444db88ff',
-  'app.js?v=dbc79265f5'
+  '../assets/app.css?v=cf04b31690',
+  'app.js?v=d493fc9d4d'
 ];
 
 self.addEventListener('install', function (event) {

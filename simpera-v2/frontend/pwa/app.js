@@ -501,7 +501,7 @@
           '<span class="kartu-jam">' + esc(tanggalRingkas(o.waktu)) + '</span>' +
         '</span>' +
         '<p class="kartu-perihal">' + dash(o.judul) + '</p>' +
-        '<p class="kartu-nomor">' + dash(o.cuplikan) + '</p>' +
+        (o.cuplikan ? '<p class="kartu-nomor">' + esc(o.cuplikan) + '</p>' : '') +
         (o.lencana ? '<span class="kartu-kaki">' + o.lencana + '</span>' : '') +
       '</span>' +
       '</button>';
@@ -521,7 +521,7 @@
 
   function tandaStatus(status) {
     var s = Number(status);
-    return s === 1 ? tanda('Diterima', 'oke')
+    return s === 1 ? tanda('Diverifikasi', 'oke')
          : s === 2 ? tanda('Ditolak', 'tolak')
          : tanda('Menunggu verifikasi', 'tunggu');
   }
@@ -556,7 +556,9 @@
       nama: r.dari,
       waktu: r.tgl_surat_terima,
       judul: r.perihal,
-      cuplikan: r.nomor_surat,
+      // Nomor surat tidak ikut ke daftar: deretan kode yang hampir sama di
+      // tiap baris justru menutupi perihal, padahal itu yang dipindai.
+      // Nomornya tetap terbaca di rincian surat.
       tebal: Number(r.read_surat) === 0,
       klip: Boolean(r.file_upload || r.file_url),
       lencana: tandaStatusKartu(r.status_surat)
@@ -634,7 +636,6 @@
               nama: d.tujuan_jabatan,
               waktu: d.tgl_disposisi,
               judul: d.perihal,
-              cuplikan: d.nomor_surat,
               tebal: !d.selesai,
               lencana: tanda(d.status_label, d.selesai ? 'oke' : 'tunggu')
             });
@@ -727,7 +728,6 @@
       nama: x.dari,
       waktu: x.tanggal,
       judul: x.ringkas,
-      cuplikan: x.nomor,
       // Semuanya memang menunggu tindakan, jadi selalu ditandai.
       tebal: true,
       lencana: tanda(label, nada)
@@ -847,7 +847,6 @@
                   nama: d.tujuan_jabatan,
                   waktu: d.tgl_disposisi,
                   judul: d.perihal,
-                  cuplikan: d.nomor_surat,
                   tebal: !d.selesai,
                   lencana: tanda(d.status_label, d.selesai ? 'oke' : 'tunggu') +
                            (d.status_disposisi && d.status_disposisi !== '-'
@@ -926,14 +925,26 @@
     minta('/surat-masuk/' + idSurat).then(function (d) {
       var jumlahDisposisi = (d.disposisi || []).length;
 
+      /* Sekali seseorang mendisposisikan sebuah surat, tombolnya tidak
+         boleh muncul lagi untuk dia — kalau ditekan kedua kalinya yang
+         terjadi cuma disposisi kembar. Yang dicari jejak yang dibuat oleh
+         pemakai ini sendiri (id_usrz), bukan sekadar "surat ini sudah
+         pernah didisposisikan": atasan lain tetap berhak meneruskannya. */
+      var akuId = Number((state.user || {}).id);
+      var milikSaya = null;
+      (d.disposisi || []).forEach(function (x) {
+        if (!milikSaya && akuId && Number(x.id_usrz) === akuId) milikSaya = x;
+      });
+
       // Nomor surat sering panjang, jadi diberi selebar kisi; sisanya
-      // berpasangan dua kolom.
+      // berpasangan dua kolom. Seluruh kisi ini dilipat — lihat d-lipat
+      // di bawah.
       var rinci = [
         ['Nomor surat', d.nomor_surat, true],
         ['Nomor agenda', d.nomor_agenda],
         ['Kode arsip', d.kode_arsip || d.id_kode_arsip],
         ['Tanggal surat', d.tgl_surat ? tanggal(d.tgl_surat) : ''],
-        ['Diterima', d.tgl_surat_terima ? tanggal(d.tgl_surat_terima) : '']
+        ['Tanggal terima', d.tgl_surat_terima ? tanggal(d.tgl_surat_terima) : '']
       ].filter(function (r) { return r[1]; })
        .map(function (r) {
          return '<div' + (r[2] ? ' class="lebar"' : '') + '>' +
@@ -969,9 +980,18 @@
         aksi = '<button data-aksi="verifikasi" data-id="' + idSurat +
           '" class="btn-primary btn-lg justify-center">Verifikasi surat</button>';
       } else if (bolehDisposisi() && d.status_surat === 1) {
-        aksi = '<button data-aksi="disposisi" data-id="' + idSurat +
-          '" class="btn-primary btn-lg justify-center">' +
-          (jumlahDisposisi ? 'Teruskan disposisi' : 'Disposisikan surat') + '</button>';
+        aksi = milikSaya
+          ? '<p class="kaki-sudah">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+                'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" ' +
+                'aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>' +
+              'Sudah Anda disposisikan' +
+              (milikSaya.tgl_disposisi
+                ? ' · ' + tanggalRingkas(milikSaya.tgl_disposisi) : '') +
+            '</p>'
+          : '<button data-aksi="disposisi" data-id="' + idSurat +
+            '" class="btn-primary btn-lg justify-center">' +
+            (jumlahDisposisi ? 'Teruskan disposisi' : 'Disposisikan surat') + '</button>';
       }
 
       bukaSheet(d.nomor_agenda ? 'Agenda ' + d.nomor_agenda : 'Detail surat',
@@ -996,7 +1016,21 @@
           '<span class="d-tgl">' + esc(tanggalRingkas(d.tgl_surat_terima)) + '</span>' +
         '</div>' +
 
-        (rinci ? '<dl class="d-kisi">' + rinci + '</dl>' : '') +
+        /* Rincian administratif dilipat. Nomor surat, nomor agenda dan
+           kode arsip memang perlu ada, tapi jarang dibaca — kalau
+           dibentangkan semua, catatan, lampiran, dan jejak disposisi
+           terdorong jauh ke bawah layar. */
+        (rinci
+          ? '<details class="d-lipat">' +
+              '<summary>' +
+                '<span>Rincian surat</span>' +
+                '<svg class="d-lipat-panah" viewBox="0 0 24 24" fill="none" ' +
+                  'stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
+                  'stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>' +
+              '</summary>' +
+              '<dl class="d-kisi">' + rinci + '</dl>' +
+            '</details>'
+          : '') +
 
         (d.catatan && d.catatan !== '-'
           ? '<p class="d-sub">Catatan</p><p class="d-catatan">' + esc(d.catatan) + '</p>' : '') +
