@@ -614,7 +614,7 @@
       var pilih = pemilihJabatan('tujuan', jabatan, []);
 
       var jejak = (bahan.jejak || []).length
-        ? '<ol class="mt-2 space-y-2">' + bahan.jejak.map(function (x) {
+        ? '<ol class="mt-2 max-h-56 space-y-2 overflow-y-auto pr-1">' + bahan.jejak.map(function (x) {
             return '<li class="flex items-start gap-2 text-xs">' +
               '<span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full ' +
               (x.status_selesai ? 'bg-brand-500' : 'bg-amber-400') + '"></span>' +
@@ -627,7 +627,9 @@
         : '<p class="mt-2 text-xs text-slate-400">Belum pernah didisposisikan.</p>';
 
       S.openModal('Disposisi — ' + (surat.nomor_surat || '#' + idSurat),
-        '<form id="form-disposisi" class="space-y-5" novalidate>' +
+        '<form id="form-disposisi" class="grid gap-5 lg:grid-cols-2" novalidate>' +
+
+          '<div class="space-y-4">' +
           '<div class="rounded-2xl border border-slate-200 bg-white p-4">' +
             '<p class="text-sm font-medium text-slate-900">' + dash(surat.perihal) + '</p>' +
             '<p class="mt-1 text-xs text-slate-500">Dari ' + dash(surat.dari) +
@@ -643,7 +645,9 @@
               '<span class="text-xs leading-relaxed text-amber-900">Tandai disposisi yang masuk ke ' +
               'jabatan Anda sebagai selesai saat meneruskan surat ini.</span></label>'
             : '') +
+          '</div>' +
 
+          '<div class="space-y-5">' +
           '<div>' +
             '<label class="mb-1.5 block text-sm font-medium text-slate-700">Tujuan disposisi *</label>' +
             pilih.html +
@@ -651,7 +655,7 @@
 
           '<div>' +
             '<label class="mb-2 block text-sm font-medium text-slate-700">Instruksi</label>' +
-            '<div class="grid gap-1.5 sm:grid-cols-3">' +
+            '<div class="grid gap-1.5 sm:grid-cols-2">' +
             OPSI_DISPOSISI.map(function (o) {
               return '<label class="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-xs hover:bg-slate-50">' +
                 '<input type="checkbox" name="opsi" value="' + esc(o) + '" ' +
@@ -671,6 +675,7 @@
           '<div class="flex justify-end gap-2 border-t border-slate-100 pt-4">' +
             '<button type="button" class="btn-ghost" data-modal-close>Batal</button>' +
             '<button type="submit" class="btn-primary">Kirim disposisi</button>' +
+          '</div>' +
           '</div>' +
         '</form>', { lebar: 'lebar' });
 

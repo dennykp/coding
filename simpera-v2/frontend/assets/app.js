@@ -207,7 +207,9 @@
     opsi = opsi || {};
     var panel = el('modal-panel');
     if (panel) {
-      panel.className = 'relative mx-auto flex min-h-full items-center p-3 sm:p-5 ' +
+      // h-full, bukan min-h-full: jendela mengisi tinggi layar dan badannya
+      // yang menggulir, jadi halaman di belakangnya tidak ikut menggulir.
+      panel.className = 'relative mx-auto flex h-full items-center p-3 sm:p-5 ' +
         (LEBAR_MODAL[opsi.lebar] || LEBAR_MODAL.besar);
     }
     var alat = el('modal-alat');
@@ -913,6 +915,35 @@
     if (!event.target.closest('.select2')) tutupSemuaSelect(null);
   });
 
+  /* Membuka lampiran surat.
+
+     Nama berkas lampiran berupa hash tanpa akhiran, sehingga nginx
+     menyajikannya sebagai application/octet-stream dan peramban
+     mengunduhnya alih-alih membukanya. Rute /berkas di API mengalirkan
+     berkas yang sama dengan Content-Type yang benar, memakai tiket
+     berumur pendek karena tab baru tidak bisa membawa header Authorization.
+
+     Tab dibuka lebih dulu secara sinkron — kalau menunggu tiket datang,
+     peramban menganggapnya jendela sembul dan memblokirnya. */
+  function bukaBerkas(sumber, kunci) {
+    var tab = window.open('', '_blank');
+    request('/berkas/' + sumber + '/' + kunci + '/tiket').then(function (b) {
+      var url = BASE + b.url;
+      if (tab && !tab.closed) tab.location.href = url;
+      else window.location.href = url;
+    }).catch(function (err) {
+      if (tab && !tab.closed) tab.close();
+      toast(err.message, 'err');
+    });
+  }
+
+  document.addEventListener('click', function (event) {
+    var pemicu = event.target.closest('[data-berkas]');
+    if (!pemicu) return;
+    event.preventDefault();
+    bukaBerkas(pemicu.getAttribute('data-berkas'), pemicu.getAttribute('data-kunci'));
+  });
+
   // ------------------------------------------------------------------ ekspor ke lingkup modul
   window.__simpera = {
     $: $, el: el, esc: esc, dash: dash, tanggal: tanggal, angka: angka,
@@ -920,6 +951,7 @@
     query: query,
     openModal: openModal, closeModal: closeModal, modalLoading: modalLoading,
     tombolCetak: tombolCetak, cetak: cetak, master: master,
+    bukaBerkas: bukaBerkas,
     tingkatkanSelect: tingkatkanSelect, segarkanSelect: segarkanSelect,
     statCard: statCard, badge: badge, toneStatusSurat: toneStatusSurat,
     avatar: avatar, inisial: inisial, tombolAksi: tombolAksi, salinTeks: salinTeks,

@@ -19,6 +19,15 @@
 
 body { -webkit-font-smoothing: antialiased; }
 
+/* Skala teks versi web.
+
+   Plus Jakarta Sans bertinggi-x lebih besar daripada Poppins, jadi pada
+   ukuran piksel yang sama hurufnya terbaca lebih besar. Seluruh ukuran di
+   aplikasi ini dinyatakan dalam rem, sehingga satu angka di elemen akar
+   mengecilkan semuanya sekaligus dengan proporsi yang tetap. PWA tidak
+   memakai kelas ini: di layar ponsel ukuran sekarang sudah pas. */
+.teks-web { font-size: 15px; }
+
 /* --- kolom isian --- */
 .field {
   width: 100%;

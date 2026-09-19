@@ -298,20 +298,23 @@
     orang: '<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>'
   };
 
-  /* Tombol besar untuk membuka lampiran; menggantikan ikon pada baris tabel. */
-  function tombolBerkas(url, label) {
-    if (!url) {
+  /* Tombol besar untuk membuka lampiran; menggantikan ikon pada baris tabel.
+     Menunjuk rute /berkas di API, bukan URL berkas mentah: berkas lampiran
+     tidak punya akhiran nama, jadi kalau diambil langsung peramban
+     mengunduhnya diam-diam alih-alih membukanya. */
+  function tombolBerkas(sumber, kunci, ada, label) {
+    if (!ada) {
       return '<p class="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 ' +
         'text-sm text-slate-400">Tidak ada berkas terlampir.</p>';
     }
-    return '<a href="' + esc(url) + '" target="_blank" rel="noopener" ' +
-      'class="flex items-center gap-3 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 ' +
-      'text-sm font-semibold text-brand-800 transition hover:border-brand-400 hover:bg-brand-100">' +
+    return '<button type="button" data-berkas="' + esc(sumber) + '" data-kunci="' + esc(kunci) + '" ' +
+      'class="flex w-full items-center gap-3 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 ' +
+      'text-left text-sm font-semibold text-brand-800 transition hover:border-brand-400 hover:bg-brand-100">' +
       '<span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-600 text-white">' +
       '<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">' +
       '<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg></span>' +
       '<span class="min-w-0"><span class="block">' + esc(label || 'Buka berkas') + '</span>' +
-      '<span class="block text-xs font-normal text-brand-700/80">Terbuka di tab baru</span></span></a>';
+      '<span class="block text-xs font-normal text-brand-700/80">Terbuka di tab baru</span></span></button>';
   }
 
   // ------------------------------------------------------------- lembar cetak
@@ -343,14 +346,12 @@
       '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; )</div></div></div>';
   }
 
-  /* Keterangan pengganti tombol kirim pada baris disposisi yang bukan milik
-     jabatan kita: menyebut siapa yang sedang menanganinya. */
-  function judulInfoDisposisi(r) {
+  /* Judul tombol teruskan, menyesuaikan peran kita atas baris itu. */
+  function judulTeruskan(r) {
     if (r.status_disposisi === 'Mendisposisikan') {
-      return 'Anda yang mengirim disposisi ini — lihat jejaknya';
+      return 'Teruskan surat ini ke jabatan lain';
     }
-    return 'Disposisi ini untuk ' + (r.tujuan_jabatan || 'jabatan lain') +
-           ' — lihat jejaknya';
+    return 'Teruskan disposisi ini';
   }
 
   /* Penuntasan disposisi adalah hak jabatan penerimanya. */
@@ -630,7 +631,8 @@
           baris('Catatan', dash(d.catatan), 'lebar') +
         '</div>');
 
-      var kiriBerkas = kartu('Lampiran', 'berkas', tombolBerkas(d.file_url, 'Buka lampiran surat'));
+      var kiriBerkas = kartu('Lampiran', 'berkas',
+        tombolBerkas('surat-masuk', id, d.file_upload || d.file_url, 'Buka lampiran surat'));
 
       var kanan = kartu('Jejak disposisi', 'bagi',
         '<p class="mb-3.5 text-xs text-slate-500">' +
@@ -830,8 +832,8 @@
 
       var kananBerkas = kartu('Berkas', 'berkas',
         '<div class="space-y-3">' +
-        tombolBerkas(d.file_url, 'Buka berkas surat') +
-        tombolBerkas(d.file_arsip_url, 'Buka berkas arsip') + '</div>');
+        tombolBerkas('surat-keluar', id, d.file_upload || d.file_url, 'Buka berkas surat') +
+        tombolBerkas('arsip', id, d.file_upload_arsip || d.file_arsip_url, 'Buka berkas arsip') + '</div>');
 
       S.openModal('Surat Keluar — ' + (d.nomor || '#' + id),
         ringkas +
@@ -939,12 +941,14 @@
               // Disposisi yang kita kirim sendiri tidak perlu tombol kirim
               // lagi — cukup keterangan. Penerusan adalah hak jabatan
               // penerimanya.
+              // Meneruskan surat adalah hak peran, bukan hak jabatan penerima
+              // disposisi: backend pun hanya memeriksa ROLE_DISPOSISI. Dulu
+              // tombol ini dibatasi ke jabatan penerima, sehingga jabatan yang
+              // lebih sering mengirim daripada menerima — Rektor, WR2, WR4 —
+              // tidak punya satu pun baris yang bisa didisposisikan dari sini.
               S.boleh('disposisi')
-                ? (bolehMenuntaskan(r)
-                    ? { ikon: 'kirim', warna: 'ungu', judul: 'Teruskan disposisi',
-                        aksi: 'teruskan', nonaktif: !r.id_surat }
-                    : { ikon: 'info', warna: 'biru', judul: judulInfoDisposisi(r),
-                        aksi: 'jejak', nonaktif: !r.id_surat })
+                ? { ikon: 'kirim', warna: 'ungu', judul: judulTeruskan(r),
+                    aksi: 'teruskan', nonaktif: !r.id_surat }
                 : null,
               // Hanya jabatan penerima yang boleh menuntaskan, seperti
               // aplikasi lama; yang lain melihat tombolnya tetapi mati.

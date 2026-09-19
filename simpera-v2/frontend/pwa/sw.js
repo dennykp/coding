@@ -8,14 +8,14 @@
  *   dilindungi token, dan hasil basi bisa menyesatkan.
  * ========================================================================== */
 
-var VERSI = 'simpera-m-4e42b3b95b';
+var VERSI = 'simpera-m-854eeb08a0';
 var CANGKANG = [
   './',
   './index.html',
   './manifest.webmanifest',
   './icon.svg',
   './icon-maskable.svg',
-  '../assets/app.css?v=366c0caf8f',
+  '../assets/app.css?v=5d875d2e14',
   'app.js?v=abca6acde6'
 ];
 
