@@ -647,7 +647,7 @@ table.data tbody tr:hover { background: #f0f9f0; }
 /* Kepala bagian daftar di Beranda. */
 .bagian-kepala {
   display: flex; align-items: baseline; justify-content: space-between;
-  margin: 1.5rem .25rem .7rem;
+  margin: 1.5rem .35rem .7rem;
 }
 .bagian-kepala h2 { margin: 0; font-size: .875rem; font-weight: 700; letter-spacing: -.01em; color: #064e3b; }
 .bagian-kepala button { font-size: .72rem; font-weight: 600; color: #009000; }
@@ -664,7 +664,7 @@ table.data tbody tr:hover { background: #f0f9f0; }
 .strip-n { font-size: 1.05rem; font-weight: 700; letter-spacing: -.02em; color: #064e3b; font-variant-numeric: tabular-nums; }
 .strip-l { margin-top: .1rem; font-size: .655rem; color: #64748b; }
 
-.kepala-konteks { display: flex; align-items: baseline; gap: .5rem; padding: .15rem .25rem 0; }
+.kepala-konteks { display: flex; align-items: baseline; gap: .5rem; padding: .15rem .35rem 0; }
 .kepala-konteks h1 { margin: 0; font-size: 1.19rem; font-weight: 600; letter-spacing: -.01em; color: #064e3b; }
 .tanda-peran {
   margin-left: auto; font-size: .69rem; font-weight: 600; letter-spacing: .03em;
@@ -672,45 +672,57 @@ table.data tbody tr:hover { background: #f0f9f0; }
 }
 
 /* --- kartu surat --- */
+/* Kartu dibuat selebar mungkin dan jaraknya rapat, meniru kotak masuk
+   surel: yang dibaca adalah perihalnya, jadi setiap milimeter lebar
+   berarti satu kata lagi yang muat sebelum terpotong. Bayangannya
+   ditipiskan karena kartu yang berdempetan dengan bayangan tebal
+   terlihat seperti tumpukan, bukan daftar. */
 .kartu-surat {
   position: relative; width: 100%; text-align: left;
   display: grid; grid-template-columns: .44rem 2.625rem 1fr; gap: .55rem;
   align-items: start;
-  background: #fff; border: 1px solid #e8edf2; border-radius: 1.125rem;
-  padding: .875rem .94rem;
-  box-shadow: 0 1px 1px rgba(16,27,23,.04), 0 4px 10px -6px rgba(16,27,23,.16);
-  transition: transform .12s ease, box-shadow .12s ease;
+  background: #fff; border: 1px solid #edf1f5; border-radius: .95rem;
+  padding: .8rem .8rem .8rem .7rem;
+  box-shadow: 0 1px 2px rgba(16,27,23,.045);
+  transition: transform .3s ease-in-out, box-shadow .3s ease-in-out;
 }
 .kartu-surat:active {
-  transform: scale(.985);
-  box-shadow: 0 2px 4px rgba(16,27,23,.07), 0 10px 22px -12px rgba(16,27,23,.28);
+  transform: scale(.99);
+  box-shadow: 0 2px 6px rgba(16,27,23,.1);
 }
 /* Pita tepi kiri menandai yang belum dibaca. */
 /* Titik kecil hijau UNISMA menandai surat yang belum dibaca. Kolomnya
    selalu ada — juga saat kosong — supaya avatar dan teks tetap lurus
    antara baris yang sudah dan belum dibaca. */
-.kartu-titik { width: .44rem; height: .44rem; margin-top: 1.05rem; border-radius: 999px; }
+.kartu-titik { width: .44rem; height: .44rem; margin-top: .98rem; border-radius: 999px; }
 .kartu-surat.baru .kartu-titik { background: #009000; }
 /* Prioritas tinggi memakai kuning emas, dan menang atas titik hijau. */
 .kartu-surat.penting .kartu-titik { background: #f59e0b; }
 
+/* Pengirim selalu tebal — itu yang dicari mata lebih dulu saat memindai
+   daftar. Yang membedakan surat belum dibaca bukan tebalnya nama, tapi
+   warnanya, titik hijau di tepi, dan perihal yang ikut menebal. */
 .kartu-dari {
-  flex: 1; min-width: 0; font-size: .845rem; font-weight: 500; color: #475569;
+  flex: 1; min-width: 0; font-size: .86rem; font-weight: 700; color: #334155;
+  letter-spacing: -.005em;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.kartu-surat.baru .kartu-dari { font-weight: 600; color: #064e3b; }
+.kartu-surat.baru .kartu-dari { color: #064e3b; }
 .kartu-jam { flex: none; font-size: .655rem; color: #64748b; font-variant-numeric: tabular-nums; }
+.kartu-klip { flex: none; display: inline-flex; color: #94a3b8; align-self: center; }
+.kartu-klip svg { width: .72rem; height: .72rem; }
+.kartu-surat.baru .kartu-klip { color: #64748b; }
 .kartu-perihal {
-  margin: .25rem 0 0; font-size: .875rem; line-height: 1.38; color: #064e3b;
+  margin: .2rem 0 0; font-size: .875rem; line-height: 1.38; color: #1e3a32;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.kartu-surat.baru .kartu-perihal { font-weight: 600; }
+.kartu-surat.baru .kartu-perihal { font-weight: 600; color: #064e3b; }
 .kartu-nomor {
-  margin: .375rem 0 0; font-size: .69rem; color: #64748b;
+  margin: .28rem 0 0; font-size: .69rem; color: #64748b;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.kartu-kaki { display: flex; align-items: center; gap: .44rem; margin-top: .69rem; flex-wrap: wrap; }
+.kartu-kaki { display: flex; align-items: center; gap: .4rem; margin-top: .5rem; flex-wrap: wrap; }
 
 .tanda {
   display: inline-flex; align-items: center; gap: .3rem;

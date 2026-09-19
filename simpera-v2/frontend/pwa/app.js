@@ -497,6 +497,7 @@
       '<span class="min-w-0">' +
         '<span class="flex items-baseline gap-2">' +
           '<span class="kartu-dari">' + dash(o.nama) + '</span>' +
+          (o.klip ? KLIP : '') +
           '<span class="kartu-jam">' + esc(tanggalRingkas(o.waktu)) + '</span>' +
         '</span>' +
         '<p class="kartu-perihal">' + dash(o.judul) + '</p>' +
@@ -506,9 +507,11 @@
       '</button>';
   }
 
-  /* Pembungkus daftar kartu: jarak antarkartu, bukan garis pemisah. */
+  /* Pembungkus daftar kartu. Jaraknya rapat seperti kotak masuk surel:
+     kartu yang berjauhan memaksa mata melompat, padahal daftar ini dibaca
+     dengan cara dipindai cepat dari atas ke bawah. */
   function daftarInbox(isi) {
-    return '<div class="flex flex-col gap-2.5">' + isi + '</div>';
+    return '<div class="flex flex-col gap-1">' + isi + '</div>';
   }
 
   /* Penanda kecil di kaki kartu. */
@@ -523,13 +526,26 @@
          : tanda('Menunggu verifikasi', 'tunggu');
   }
 
-  function tandaBerkas(jumlah) {
-    if (!jumlah) return '';
-    return '<span class="tanda tanda-netral">' +
-      '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
-      'stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" ' +
-      'd="m18.4 12.1-6.9 6.9a4.2 4.2 0 0 1-6-6l7-6.9a2.8 2.8 0 0 1 4 4l-7 6.9a1.4 1.4 0 1 1-2-2l6.4-6.4"/>' +
-      '</svg> berkas</span>';
+  /* Penjepit kertas kecil di samping tanggal, bukan lencana "berkas" di
+     baris sendiri. Lampiran hampir selalu ada, jadi satu baris penuh untuk
+     mengatakannya membuat setiap kartu lebih tinggi tanpa alasan — persis
+     yang dihindari kotak masuk surel. */
+  var KLIP = '<span class="kartu-klip" title="Ada lampiran" aria-label="Ada lampiran">' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M13.234 20.252 21 12.3"/>' +
+    '<path d="m16 6-8.414 8.586a2 2 0 0 0 0 2.828 2 2 0 0 0 2.828 0l8.414-8.586' +
+    'a4 4 0 0 0 0-5.656 4 4 0 0 0-5.656 0l-8.415 8.585a6 6 0 1 0 8.486 8.486L20.5 13"/>' +
+    '</svg></span>';
+
+  /* Di kartu, status hanya ditampilkan kalau memang ada yang perlu
+     diketahui. "Diterima" muncul di hampir semua baris — daftar penyaring
+     untuk jabatan memang cuma memuat surat yang sudah diterima — jadi
+     penanda itu tidak memberi informasi apa pun, hanya menambah baris.
+     Yang tersisa: ditolak dan menunggu verifikasi. Status lengkapnya tetap
+     terbaca di rincian surat. */
+  function tandaStatusKartu(status) {
+    return Number(status) === 1 ? '' : tandaStatus(status);
   }
 
   /* Kartu tidak lagi membawa tombol tindakan: seluruh kartu membuka detail,
@@ -542,7 +558,8 @@
       judul: r.perihal,
       cuplikan: r.nomor_surat,
       tebal: Number(r.read_surat) === 0,
-      lencana: tandaStatus(r.status_surat) + tandaBerkas(r.file_upload || r.file_url)
+      klip: Boolean(r.file_upload || r.file_url),
+      lencana: tandaStatusKartu(r.status_surat)
     });
   }
 
