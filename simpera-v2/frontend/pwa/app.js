@@ -201,16 +201,14 @@
 
   /* Penampil lampiran.
 
-     Berkas dibuka lewat <iframe>, dan iframe tidak bisa membawa header
-     Authorization. Karena itu backend memberi "tiket": tautan berumur
-     lima menit yang hanya berlaku untuk satu surat, diminta lewat
-     permintaan biasa yang sudah terautentikasi. Token sesi tidak pernah
-     ikut tertulis di URL.
+     Berkas diambil lewat tautan biasa — <img>, kanvas PDF, atau tab baru —
+     dan tautan semacam itu tidak bisa membawa header Authorization. Karena
+     itu backend memberi "tiket": tautan berumur lima menit yang hanya
+     berlaku untuk satu berkas, diminta lewat permintaan yang sudah
+     terautentikasi. Token sesi tidak pernah ikut tertulis di URL.
 
-     Peramban iOS tidak menampilkan PDF di dalam iframe — hanya halaman
-     pertama, kadang kosong sama sekali. Di sana tombol "Buka di tab baru"
-     yang dipakai, dan tombol itu tetap disediakan di semua peramban
-     sebagai jalan keluar kalau penampil bawaannya bermasalah. */
+     Tombol "Buka di tab baru" dan "Unduh" tetap disediakan sebagai jalan
+     keluar kalau penampil di dalam aplikasi bermasalah. */
   function bukaBerkas(sumber, kunci) {
     var lapis = el('m-berkas');
     var isi = el('m-berkas-isi');
@@ -236,16 +234,124 @@
       if (/^image\//.test(b.jenis)) {
         isi.innerHTML = '<img src="' + esc(url) + '" alt="' + esc(namaBerkas(b.nama)) +
           '" class="mx-auto max-h-full max-w-full object-contain">';
-      } else if (IOS) {
-        isi.innerHTML = kartuKosong('Peramban iPhone tidak bisa menampilkan PDF ' +
-          'di dalam aplikasi. Ketuk "Buka di tab baru" di bawah.');
-      } else {
-        isi.innerHTML = '<iframe src="' + esc(url) + '" title="Lampiran surat" ' +
-          'class="h-full w-full border-0 bg-white"></iframe>';
+        return;
       }
+
+      if (b.jenis !== 'application/pdf') {
+        isi.innerHTML = kartuKosong('Jenis berkas ini tidak bisa ditampilkan di ' +
+          'dalam aplikasi. Pakai tombol di bawah untuk membukanya.');
+        return;
+      }
+
+      gambarPdf(isi, url).catch(function (err) {
+        // Kalau penggambaran gagal, iframe masih berguna di peramban meja;
+        // di ponsel tombol di kaki tetap jadi jalan keluarnya.
+        isi.innerHTML = '<p class="px-4 pt-4 text-center text-[.78rem] text-slate-500">' +
+          esc(err.message) + '</p>' +
+          '<iframe src="' + esc(url) + '" title="Lampiran surat" ' +
+          'class="mt-3 h-full w-full border-0 bg-white"></iframe>';
+      });
     }).catch(function (err) {
       el('m-berkas-nama').textContent = 'Lampiran';
       isi.innerHTML = kartuKosong(err.message);
+    });
+  }
+
+  /* PDF digambar sendiri ke kanvas memakai PDF.js.
+
+     Alasannya bukan selera: Chrome di Android tidak pernah menampilkan PDF
+     di dalam <iframe> — bingkainya kosong, dan berkasnya malah diunduh.
+     Safari di iOS juga hanya menampilkan halaman pertama. Menggambar ke
+     kanvas memberi hasil yang sama di semua peramban.
+
+     Pustakanya dilayani dari folder aplikasi sendiri, bukan CDN, supaya
+     PWA ini tetap utuh saat luring. Dimuat hanya saat sebuah PDF pertama
+     kali dibuka, jadi tidak membebani waktu mulai aplikasi. */
+  var pdfSiap = null;
+
+  function muatPdfJs() {
+    if (pdfSiap) return pdfSiap;
+    pdfSiap = new Promise(function (terima, tolak) {
+      var s = document.createElement('script');
+      s.src = FOLDER + 'vendor/pdf.min.js';
+      s.onload = function () {
+        if (!window.pdfjsLib) { pdfSiap = null; return tolak(gagalPustaka()); }
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = FOLDER + 'vendor/pdf.worker.min.js';
+        terima(window.pdfjsLib);
+      };
+      s.onerror = function () { pdfSiap = null; tolak(gagalPustaka()); };
+      document.head.appendChild(s);
+    });
+    return pdfSiap;
+  }
+
+  function gagalPustaka() {
+    return new Error('Penampil PDF gagal dimuat.');
+  }
+
+  function gambarPdf(wadah, url) {
+    return muatPdfJs().then(function (pdfjs) {
+      return pdfjs.getDocument({ url: url }).promise;
+    }).then(function (dok) {
+      wadah.innerHTML = '<div class="pdf-gulung" id="m-pdf"></div>';
+      var gulung = el('m-pdf');
+      var lebar = Math.max(240, gulung.clientWidth - 20);
+      // Layar ber-DPI tinggi digambar lebih rapat, tetapi dibatasi 2x
+      // supaya berkas besar tidak menghabiskan memori ponsel.
+      var rapat = Math.min(window.devicePixelRatio || 1, 2);
+
+      el('m-berkas-ukuran').textContent =
+        el('m-berkas-ukuran').textContent + ' · ' + dok.numPages + ' halaman';
+
+      return dok.getPage(1).then(function (hal1) {
+        var ukur = hal1.getViewport({ scale: 1 });
+        var rasio = ukur.height / ukur.width;
+        var petak = [];
+
+        for (var i = 1; i <= dok.numPages; i++) {
+          var kotak = document.createElement('div');
+          kotak.className = 'pdf-hal';
+          kotak.style.height = Math.round(lebar * rasio) + 'px';
+          kotak.setAttribute('data-hal', i);
+          gulung.appendChild(kotak);
+          petak.push(kotak);
+        }
+
+        function gambarSatu(kotak) {
+          if (kotak.getAttribute('data-jadi')) return;
+          kotak.setAttribute('data-jadi', '1');
+          var no = parseInt(kotak.getAttribute('data-hal'), 10);
+          dok.getPage(no).then(function (hal) {
+            // Kanvas digambar pada kerapatan piksel layar, lalu dikecilkan
+            // lewat CSS ke lebar wadah — teksnya jadi tajam, bukan kabur.
+            var dasar = hal.getViewport({ scale: 1 });
+            var vp = hal.getViewport({ scale: (lebar / dasar.width) * rapat });
+            var kanvas = document.createElement('canvas');
+            kanvas.width = Math.floor(vp.width);
+            kanvas.height = Math.floor(vp.height);
+            kanvas.style.width = '100%';
+            kotak.style.height = 'auto';
+            kotak.innerHTML = '';
+            kotak.appendChild(kanvas);
+            return hal.render({ canvasContext: kanvas.getContext('2d'), viewport: vp }).promise;
+          }).catch(function () {
+            kotak.innerHTML = '<p class="pdf-gagal">Halaman ' + no + ' gagal digambar.</p>';
+          });
+        }
+
+        // Halaman digambar saat mendekati layar, bukan sekaligus: surat
+        // berisi puluhan halaman tidak boleh membekukan ponsel.
+        if (window.IntersectionObserver) {
+          var pengamat = new IntersectionObserver(function (masuk) {
+            masuk.forEach(function (x) {
+              if (x.isIntersecting) { gambarSatu(x.target); pengamat.unobserve(x.target); }
+            });
+          }, { root: gulung, rootMargin: '600px 0px' });
+          petak.forEach(function (k) { pengamat.observe(k); });
+        } else {
+          petak.forEach(gambarSatu);
+        }
+      });
     });
   }
 
@@ -255,9 +361,6 @@
     el('m-berkas-kaki').classList.add('hidden');
     document.body.style.overflow = el('m-sheet').classList.contains('hidden') ? '' : 'hidden';
   }
-
-  var IOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
   /* Lembar tindakan cepat di balik tombol mengambang.
 

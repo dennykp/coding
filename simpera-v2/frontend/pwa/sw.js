@@ -6,17 +6,20 @@
  *   hilang.
  * - Permintaan ke /api/ TIDAK PERNAH disimpan: isinya data pribadi yang
  *   dilindungi token, dan hasil basi bisa menyesatkan.
+ * - Pustaka penampil PDF (vendor/) sengaja TIDAK ikut dipasang di muka:
+ *   ukurannya ±1,4 MB dan hanya perlu saat lampiran pertama kali dibuka.
+ *   Aturan berkas statis di bawah menyimpannya sendiri setelah dipakai.
  * ========================================================================== */
 
-var VERSI = 'simpera-m-cc44037989';
+var VERSI = 'simpera-m-d22e2ec5e7';
 var CANGKANG = [
   './',
   './index.html',
   './manifest.webmanifest',
   './icon.svg',
   './icon-maskable.svg',
-  '../assets/app.css?v=7a68e55c3c',
-  'app.js?v=b89689efd5'
+  '../assets/app.css?v=432db48657',
+  'app.js?v=5f0efa8d8c'
 ];
 
 self.addEventListener('install', function (event) {
