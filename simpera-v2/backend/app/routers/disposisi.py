@@ -41,7 +41,16 @@ def daftar_disposisi(
         where.append("(s.nomor_surat LIKE %s OR s.perihal LIKE %s OR d.isi_disposisi LIKE %s)")
         params.extend([term, term, term])
     if tahun:
-        where.append("YEAR(COALESCE(d.tgl_disposisi, d.created_at)) = %s")
+        # Tahunnya diambil dari SURATNYA, bukan dari tanggal disposisinya.
+        # e-surat menyaring halaman ini dengan YEAR(tt_suratmasuk.created_at),
+        # dan dua dasar itu memberi isi yang berbeda: disposisi yang dibuat
+        # tahun ini atas surat tahun lalu ikut terbawa kalau memakai tanggal
+        # disposisi, sementara surat tahun ini yang disposisinya dibuat tahun
+        # lalu justru hilang. Tanggal disposisi dipakai hanya kalau suratnya
+        # sudah tidak ada.
+        where.append(
+            "YEAR(COALESCE(s.created_at, d.tgl_disposisi, d.created_at)) = %s"
+        )
         params.append(tahun)
     if selesai is True:
         where.append("d.status_selesai IS NOT NULL AND d.status_selesai <> ''")
