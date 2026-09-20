@@ -614,7 +614,12 @@
       S.master('/master/jabatan-disposisi')
     ]).then(function (res) {
       var bahan = res[0], tujuanBoleh = res[1] || {};
-      var jabatan = tujuanBoleh.items || [];
+      /* Dua hal berbeda bisa menutup formulir ini, dan keduanya diputuskan
+         server: tidak punya hak lagi atas surat ini (sudah didisposisikan
+         sendiri, atau disposisi untuk jabatannya sudah ditandai selesai),
+         dan tidak punya jabatan tujuan yang boleh dipilih. */
+      var boleh = bahan.boleh_disposisi !== false;
+      var jabatan = boleh ? (tujuanBoleh.items || []) : [];
       var surat = bahan.surat;
       var induk = (bahan.disposisi_untuk_saya || [])[0];
       var pilih = pemilihJabatan('tujuan', jabatan, []);
@@ -661,12 +666,14 @@
               /* Kotak kosong tanpa keterangan membingungkan: orang mengira
                  daftarnya gagal dimuat. Sebutkan sebabnya. */
               : '<p class="rounded-xl bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-900">' +
-                (tujuanBoleh.diatur === false
-                  ? 'Jabatan Anda' +
-                    (tujuanBoleh.nama_jabatan ? ' (' + esc(tujuanBoleh.nama_jabatan) + ')' : '') +
-                    ' tidak punya daftar tujuan disposisi menurut aturan e-surat, ' +
-                    'jadi surat ini tidak bisa diteruskan dari sini.'
-                  : 'Tidak ada jabatan tujuan yang tersedia untuk jabatan Anda.') +
+                (!boleh
+                  ? esc(bahan.alasan_tolak || 'Surat ini tidak bisa Anda disposisikan.')
+                  : tujuanBoleh.diatur === false
+                    ? 'Jabatan Anda' +
+                      (tujuanBoleh.nama_jabatan ? ' (' + esc(tujuanBoleh.nama_jabatan) + ')' : '') +
+                      ' tidak punya daftar tujuan disposisi menurut aturan e-surat, ' +
+                      'jadi surat ini tidak bisa diteruskan dari sini.'
+                    : 'Tidak ada jabatan tujuan yang tersedia untuk jabatan Anda.') +
                 '</p>') +
           '</div>' +
 

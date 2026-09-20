@@ -155,7 +155,14 @@ def surat_masuk(
                j.nama AS jenis_surat, kt.kategori AS kategori_surat,
                jb.nama_jabatan AS tujuan_jabatan,
                (SELECT COUNT(*) FROM tt_disposisi d WHERE d.id_surat = s.id_surat)
-                   AS jumlah_disposisi
+                   AS jumlah_disposisi,
+               -- Berapa kali PEMAKAI INI sendiri mendisposisikan surat ini.
+               -- jumlah_disposisi saja tidak cukup untuk memutuskan tombol
+               -- kirim: disposisi orang lain tidak menghalangi haknya ikut
+               -- meneruskan, tetapi disposisinya sendiri menghalangi.
+               (SELECT COUNT(*) FROM tt_disposisi d2
+                 WHERE d2.id_surat = s.id_surat AND d2.id_usrz = %s)
+                   AS disposisi_saya
         FROM tt_suratmasuk s
         LEFT JOIN tm_jenis_surat j ON j.id_jenis = s.id_jenis
         LEFT JOIN tm_kategori kt ON kt.id_kategori = s.id_kategori
@@ -164,7 +171,7 @@ def surat_masuk(
         ORDER BY {order}
         LIMIT %s OFFSET %s
         """,
-        [*params, per_page, offset],
+        [user.get("id") or 0, *params, per_page, offset],
     )
 
     items = clean_all(rows)

@@ -286,6 +286,64 @@ def tandai_dibaca(
 
 # ---------------------------------------------------------------- disposisi
 
+def _hak_disposisi(id_surat: int, user: dict[str, Any]) -> dict[str, Any]:
+    """Boleh tidaknya pemakai ini mendisposisikan sebuah surat.
+
+    Aturannya disalin dari e-surat (DisposisiSuratController::view_disposisi
+    dan view_disposisi.blade.php), yang menampilkan tombol "Tambah Disposisi"
+    hanya ketika:
+
+        count_disposisi == 0  -> pemakai ini belum pernah mendisposisikan
+                                 surat tersebut (dihitung dari id_usrz), dan
+        check_selesai == null -> disposisi yang masuk ke jabatannya belum
+                                 ditandai selesai.
+
+    Sebelumnya aplikasi ini hanya memeriksa peran, sehingga surat yang sudah
+    diteruskan sendiri masih menawarkan tombol kirim — menekannya kedua kali
+    hanya melahirkan disposisi kembar.
+    """
+    jabatan = user.get("jabatan_id")
+    baris = db.fetch_all(
+        "SELECT id_usrz, id_jabatan, status_selesai FROM tt_disposisi WHERE id_surat = %s",
+        (id_surat,),
+    )
+
+    saya = int(user.get("id") or 0)
+    sudah_saya = any(int(b.get("id_usrz") or 0) == saya for b in baris) if saya else False
+    selesai_saya = bool(
+        jabatan
+        and any(
+            int(b.get("id_jabatan") or 0) == int(jabatan)
+            and str(b.get("status_selesai") or "").strip()
+            for b in baris
+        )
+    )
+    peran = int(user.get("role_id") or 0) in ROLE_DISPOSISI
+
+    if not peran:
+        alasan = "peran"
+    elif sudah_saya:
+        alasan = "sudah_disposisi"
+    elif selesai_saya:
+        alasan = "sudah_selesai"
+    else:
+        alasan = ""
+
+    return {
+        "boleh": peran and not sudah_saya and not selesai_saya,
+        "alasan": alasan,
+        "sudah_saya_disposisikan": sudah_saya,
+        "selesai_untuk_jabatan_saya": selesai_saya,
+    }
+
+
+ALASAN_TOLAK_DISPOSISI = {
+    "peran": "Peran Anda tidak berwenang mendisposisikan surat.",
+    "sudah_disposisi": "Anda sudah mendisposisikan surat ini.",
+    "sudah_selesai": "Disposisi surat ini untuk jabatan Anda sudah ditandai selesai.",
+}
+
+
 @router.get("/surat-masuk/{id_surat}/opsi-disposisi")
 def opsi_disposisi(
     id_surat: int, user: dict[str, Any] = Depends(security.current_user)
@@ -326,13 +384,17 @@ def opsi_disposisi(
         and not (d.get("status_selesai") or "").strip()
     ]
 
+    hak = _hak_disposisi(id_surat, user)
     detail = clean(surat)
     detail["file_url"] = file_url("FILEUPLOAD", detail.get("file_upload"))
     return {
         "surat": detail,
         "jejak": clean_all(jejak),
         "disposisi_untuk_saya": milik_saya,
-        "boleh_disposisi": int(user.get("role_id") or 0) in ROLE_DISPOSISI,
+        "boleh_disposisi": hak["boleh"],
+        "alasan_tolak": ALASAN_TOLAK_DISPOSISI.get(hak["alasan"], ""),
+        "sudah_saya_disposisikan": hak["sudah_saya_disposisikan"],
+        "selesai_untuk_jabatan_saya": hak["selesai_untuk_jabatan_saya"],
     }
 
 
@@ -349,6 +411,17 @@ def kirim_disposisi(
     """
     _wajib_role(user, ROLE_DISPOSISI, "mendisposisikan surat")
     _surat_masuk(id_surat)
+
+    # Aturan yang sama dipakai untuk menyembunyikan tombol, tetapi menyembunyikan
+    # tombol hanya merapikan tampilan. Yang benar-benar menolak harus di sini:
+    # tanpa ini, satu ketukan ganda atau satu tab yang tertinggal terbuka sudah
+    # cukup untuk melahirkan disposisi kembar.
+    hak = _hak_disposisi(id_surat, user)
+    if not hak["boleh"]:
+        raise HTTPException(
+            status_code=409,
+            detail=ALASAN_TOLAK_DISPOSISI.get(hak["alasan"], "Surat ini tidak bisa Anda disposisikan."),
+        )
 
     tujuan = list(dict.fromkeys(payload.id_jabatan))  # buang duplikat, jaga urutan
     ada = db.fetch_all(

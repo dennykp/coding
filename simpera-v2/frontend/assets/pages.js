@@ -546,17 +546,19 @@
                   ? { ikon: 'verifikasi', warna: 'hijau',
                       judul: 'Verifikasi surat', aksi: 'verifikasi' }
                   : null,
-                // Surat yang sudah pernah didisposisikan tidak lagi menawarkan
-                // tombol kirim; yang tampil hanya keterangan, dan penerusan
-                // dilakukan dari halaman Disposisi seperti aplikasi lama.
+                /* Yang mematikan tombol kirim adalah disposisi PEMAKAI INI
+                   sendiri (disposisi_saya), bukan disposisi siapa pun
+                   (jumlah_disposisi). Surat yang sudah diteruskan orang lain
+                   tetap boleh ia teruskan — itu aturan e-surat, dan memakai
+                   jumlah_disposisi dulu membuat Rektor/WR kehilangan hampir
+                   semua barisnya. */
                 S.boleh('disposisi')
                   ? (r.status_surat !== 1
                       ? { ikon: 'kirim', warna: 'ungu', judul: 'Surat belum diverifikasi',
                           aksi: 'kirim-disposisi', nonaktif: true }
-                      : (r.jumlah_disposisi
+                      : (r.disposisi_saya
                           ? { ikon: 'info', warna: 'biru', aksi: 'jejak',
-                              judul: 'Sudah didisposisikan ke ' + r.jumlah_disposisi +
-                                     ' jabatan — lihat jejaknya' }
+                              judul: 'Anda sudah mendisposisikan surat ini — lihat jejaknya' }
                           : { ikon: 'kirim', warna: 'ungu', judul: 'Disposisikan surat',
                               aksi: 'kirim-disposisi' }))
                   : null,
