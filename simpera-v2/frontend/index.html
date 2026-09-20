@@ -9,29 +9,41 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="assets/app.css?v=316fab5d36">
+<link rel="stylesheet" href="assets/app.css?v=bd80cdbff9">
 
 <!-- Pemilih tampilan.
 
      Alamat ini melayani dua wajah aplikasi yang sama: versi web di sini dan
      versi ponsel (PWA) di /m/. Pemeriksaannya ditaruh di <head> dan berjalan
-     sebelum apa pun digambar — kalau pemakai sudah pernah memilih "ponsel",
+     sebelum apa pun digambar — kalau pemakai sudah memilih "ponsel",
      pengalihannya terjadi tanpa layar web sempat berkedip lebih dulu.
+
+     Hanya "ponsel" yang pernah disimpan. "Versi web" sengaja TIDAK diingat:
+     itu pilihan sekali jalan, dan kunjungan berikutnya menanyakannya lagi.
+     Alasannya, versi ponsel yang memang dirancang untuk layar sekecil itu;
+     membiarkan seseorang terkunci di versi meja hanya karena sekali menekan
+     tombol yang salah bukan hasil yang baik.
 
      location.replace dipakai, bukan href, supaya tombol kembali tidak
      memantul bolak-balik antara dua versi. -->
 <script>
 (function () {
   var KUNCI = 'simpera_v2_tampilan';
-  var simpan = function (nilai) { try { localStorage.setItem(KUNCI, nilai); } catch (e) {} };
   var ambil = function () { try { return localStorage.getItem(KUNCI); } catch (e) { return null; } };
+  var simpan = function (v) { try { localStorage.setItem(KUNCI, v); } catch (e) {} };
+  var hapus = function () { try { localStorage.removeItem(KUNCI); } catch (e) {} };
 
-  // ?tampilan=web dipakai tautan "Buka versi web" dari dalam PWA, dan
-  // sekaligus jadi jalan keluar kalau pilihannya ingin diubah.
-  var minta = /[?&]tampilan=(web|ponsel)/.exec(location.search);
-  if (minta) simpan(minta[1]);
-
-  var pilih = minta ? minta[1] : ambil();
+  /* ?tampilan=web dipakai tautan "Buka versi web" dari dalam PWA. Ia
+     membatalkan pilihan "ponsel" lalu melewati dialog untuk kunjungan ini
+     saja — pemakainya baru saja menyatakan maunya, tidak perlu ditanya
+     ulang di detik yang sama. Jejaknya dibersihkan dari bilah alamat supaya
+     memuat ulang halaman kembali menanyakan pilihan. */
+  var lewati = false;
+  if (/[?&]tampilan=web/.test(location.search)) {
+    hapus();
+    lewati = true;
+    if (history.replaceState) history.replaceState({}, '', location.pathname);
+  }
 
   /* "Ponsel" ditentukan dari layar sempit DENGAN penunjuk kasar, atau dari
      userAgent ponsel. Lebar saja tidak cukup: jendela peramban meja yang
@@ -41,9 +53,9 @@
                matchMedia('(pointer: coarse)').matches) ||
               /Android|iPhone|iPod|Windows Phone/i.test(ua);
 
-  if (pilih === 'ponsel' && kecil) { location.replace('m/?pasang=1'); return; }
+  if (!lewati && kecil && ambil() === 'ponsel') { location.replace('m/?pasang=1'); return; }
 
-  window.__TAMPILAN__ = { kunci: KUNCI, pilih: pilih, ponsel: kecil, simpan: simpan };
+  window.__TAMPILAN__ = { ponsel: kecil, tanya: kecil && !lewati, simpan: simpan };
 }());
 </script>
 </head>
@@ -303,32 +315,29 @@
       </span>
     </button>
 
-    <label class="pilih-ingat">
-      <input type="checkbox" id="pilih-ingat" checked>
-      <span>Ingat pilihan ini</span>
-    </label>
+    <p class="pilih-catatan">"Versi ponsel" akan diingat. "Versi web" hanya untuk kali ini.</p>
   </div>
 </div>
 
 <script>
 (function () {
   var t = window.__TAMPILAN__;
-  if (!t || !t.ponsel || t.pilih) return;
+  if (!t || !t.tanya) return;
 
   var latar = document.getElementById('pilih-tampilan');
-  var ingat = document.getElementById('pilih-ingat');
   latar.classList.remove('hidden');
   document.documentElement.style.overflow = 'hidden';
 
-  function putuskan(nilai) {
-    if (ingat.checked) t.simpan(nilai);
-    if (nilai === 'ponsel') { location.replace('m/?pasang=1'); return; }
+  document.getElementById('pilih-ponsel').addEventListener('click', function () {
+    t.simpan('ponsel');
+    location.replace('m/?pasang=1');
+  });
+
+  // Pilihan "web" tidak disimpan: kunjungan berikutnya menanyakannya lagi.
+  document.getElementById('pilih-web').addEventListener('click', function () {
     latar.classList.add('hidden');
     document.documentElement.style.overflow = '';
-  }
-
-  document.getElementById('pilih-ponsel').addEventListener('click', function () { putuskan('ponsel'); });
-  document.getElementById('pilih-web').addEventListener('click', function () { putuskan('web'); });
+  });
 }());
 </script>
 

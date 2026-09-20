@@ -589,11 +589,10 @@ table.data tbody tr:hover { background: #f0f9f0; }
 .pilih-t-teks small {
   display: block; margin-top: .1rem; font-size: .7rem; color: #64748b;
 }
-.pilih-ingat {
-  display: flex; align-items: center; justify-content: center; gap: .45rem;
-  margin-top: 1.05rem; font-size: .72rem; color: #64748b;
+.pilih-catatan {
+  margin: 1.05rem 0 0; text-align: center; font-size: .69rem; line-height: 1.45;
+  color: #94a3b8;
 }
-.pilih-ingat input { width: .95rem; height: .95rem; accent-color: #009000; }
 
 /* Ajakan memasang, duduk tepat di atas navigasi bawah. */
 .pasang {
