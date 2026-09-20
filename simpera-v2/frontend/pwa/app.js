@@ -524,7 +524,7 @@
      Dipakai bersama oleh seluruh daftar (surat, disposisi, notifikasi)
      supaya mengubah tampilan di satu tempat ikut mengubah semuanya.
 
-     opsi: { attr, nama, waktu, judul, cuplikan, tebal, klip, lencana } */
+     opsi: { attr, nama, waktu, judul, cuplikan, jejak, tebal, klip, lencana } */
   function barisInbox(o) {
     return '<button type="button" class="baris' + (o.tebal ? ' baru' : '') +
       (o.penting ? ' penting' : '') + '" ' + (o.attr || '') + '>' +
@@ -542,9 +542,36 @@
         '</span>' +
         '<span class="baris-hal">' + dash(o.judul) + '</span>' +
         (o.cuplikan ? '<span class="baris-cuplik">' + esc(o.cuplikan) + '</span>' : '') +
+        (o.jejak || '') +
         (o.lencana ? '<span class="baris-kaki">' + o.lencana + '</span>' : '') +
       '</span>' +
       '</button>';
+  }
+
+  /* Satu baris ringkas "Anda teruskan ke ..." untuk surat yang sudah
+     didisposisikan oleh pemakai ini. Nama jabatan dipenggal di dua nama
+     pertama — sisanya jadi "+n lagi" — supaya barisnya tetap satu larik
+     dan daftarnya tetap enak dipindai. */
+  function jejakSaya(d) {
+    var nama = String(d.tujuan_saya || '').split(', ').filter(Boolean)
+      .map(rapikanKapital);
+    if (!nama.length) return '';
+    /* Dua nama kalau muat, selain itu satu nama saja — jumlah sisanya
+       lebih berguna daripada nama kedua yang toh terpotong di tengah. */
+    var tampil = nama.slice(0, 2).join(', ');
+    if (nama.length > 2 || tampil.length > 38) {
+      tampil = nama[0] + (nama.length > 1 ? ' +' + (nama.length - 1) + ' lagi' : '');
+    }
+    var instruksi = String(d.instruksi_saya || '').trim();
+    return '<span class="baris-jejak">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+        'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<polyline points="15 17 20 12 15 7"/>' +
+        '<path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg>' +
+      '<span class="baris-jejak-teks">' +
+        '<b>' + esc(tampil) + '</b>' +
+        (instruksi ? '<i>' + esc(instruksi) + '</i>' : '') +
+      '</span></span>';
   }
 
   /* Pembungkus daftar: garis rambut antarbaris, tanpa jarak. */
@@ -874,10 +901,14 @@
             waktu: d.tgl_disposisi,
             judul: d.perihal,
             cuplikan: d.isi_disposisi && d.isi_disposisi !== '-' ? d.isi_disposisi : '',
+            jejak: jejakSaya(d),
             tebal: !d.selesai,
             lencana: tanda(d.status_label, d.selesai ? 'oke' : 'tunggu') +
                      (d.status_disposisi && d.status_disposisi !== '-'
-                       ? tanda(d.status_disposisi, 'netral') : '')
+                       ? tanda(d.status_disposisi,
+                               d.status_disposisi === 'Mendisposisikan'
+                                 ? 'biru' : 'netral')
+                       : '')
           });
         },
         hitung: function (total) { return angka(total) + ' disposisi'; },

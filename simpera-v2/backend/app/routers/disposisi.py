@@ -78,6 +78,7 @@ def daftar_disposisi(
         params.append(tgl_akhir)
 
     clause = " AND ".join(where)
+    aku = user.get("id") or 0
     total = db.fetch_value(
         f"""
         SELECT COUNT(*)
@@ -102,7 +103,23 @@ def daftar_disposisi(
                -- diteruskannya.
                (SELECT COUNT(*) FROM tt_disposisi d2
                  WHERE d2.id_surat = d.id_surat AND d2.id_usrz = %s)
-                   AS disposisi_saya
+                   AS disposisi_saya,
+               -- Ke jabatan mana surat ini ia teruskan, dan instruksi apa
+               -- yang ia tulis. Dipakai layar daftar untuk menampilkan satu
+               -- baris "Anda teruskan ke ..." tanpa membuka rinciannya.
+               (SELECT GROUP_CONCAT(DISTINCT jb2.nama_jabatan
+                         ORDER BY jb2.nama_jabatan SEPARATOR ', ')
+                  FROM tt_disposisi d3
+                  LEFT JOIN tm_jabatan jb2 ON jb2.id_jabatan = d3.id_jabatan
+                 WHERE d3.id_surat = d.id_surat AND d3.id_usrz = %s)
+                   AS tujuan_saya,
+               (SELECT CONCAT_WS(' · ',
+                         NULLIF(TRIM(d4.opsi), ''),
+                         NULLIF(TRIM(NULLIF(d4.isi_disposisi, '-')), ''))
+                  FROM tt_disposisi d4
+                 WHERE d4.id_surat = d.id_surat AND d4.id_usrz = %s
+                 ORDER BY d4.id_disposisi DESC LIMIT 1)
+                   AS instruksi_saya
         FROM tt_disposisi d
         LEFT JOIN tt_suratmasuk s ON s.id_surat = d.id_surat
         LEFT JOIN tm_jabatan jb ON jb.id_jabatan = d.id_jabatan
@@ -115,7 +132,7 @@ def daftar_disposisi(
                  d.id_disposisi DESC
         LIMIT %s OFFSET %s
         """,
-        [user.get("id") or 0, *params, per_page, offset],
+        [aku, aku, aku, *params, per_page, offset],
     )
 
     items = clean_all(rows)
