@@ -1256,69 +1256,90 @@
       var induk = (bahan.disposisi_untuk_saya || [])[0];
       var terpilih = [];
 
-      bukaSheet('Disposisi — ' + (bahan.surat.nomor_surat || '#' + idSurat),
-        '<form id="m-form-disposisi" class="space-y-5" novalidate>' +
-          '<div class="rounded-2xl bg-slate-50 p-4">' +
-            '<p class="text-sm text-slate-800">' + dash(bahan.surat.perihal) + '</p>' +
-            '<p class="mt-1 text-xs text-slate-500">Dari ' + dash(bahan.surat.dari) + '</p>' +
-          '</div>' +
-          (induk
-            ? '<label class="flex items-start gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 p-3">' +
-              '<input type="checkbox" name="tutup" checked class="mt-0.5 h-4 w-4 rounded border-amber-300 text-brand-600 focus:ring-brand-500">' +
-              '<span class="text-xs leading-relaxed text-amber-900">Tandai disposisi yang masuk ke jabatan Anda sebagai selesai.</span></label>'
-            : '') +
-          '<div>' +
-            '<label class="mb-1.5 block text-sm font-medium text-slate-700">Tujuan disposisi *</label>' +
-            (jabatan.length
-              ? '<input id="m-cari-jabatan" type="search" class="field field-search h-11" placeholder="Cari jabatan…">' +
-                '<div id="m-daftar-jabatan" class="mt-2 max-h-52 overflow-y-auto rounded-2xl border border-slate-200"></div>' +
-                '<div id="m-jabatan-terpilih" class="mt-2 flex flex-wrap gap-1.5"></div>'
-              /* Kotak kosong tanpa keterangan membingungkan: orang mengira
-                 daftarnya gagal dimuat. Sebutkan sebabnya. */
-              : '<p class="rounded-2xl bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-900">' +
-                (!boleh
-                  ? esc(bahan.alasan_tolak || 'Surat ini tidak bisa Anda disposisikan.')
-                  : tujuanBoleh.diatur === false
-                    ? 'Jabatan Anda' +
-                      (tujuanBoleh.nama_jabatan ? ' (' + esc(tujuanBoleh.nama_jabatan) + ')' : '') +
-                      ' tidak punya daftar tujuan disposisi menurut aturan e-surat, ' +
-                      'jadi surat ini tidak bisa diteruskan dari sini.'
-                    : 'Tidak ada jabatan tujuan yang tersedia untuk jabatan Anda.') +
-                '</p>') +
-          '</div>' +
-          '<div>' +
-            '<label class="mb-2 block text-sm font-medium text-slate-700">Instruksi</label>' +
-            // Lencana yang diketuk: sasaran sentuhnya besar dan seluruh
-            // pilihan terbaca sekaligus, tanpa kotak centang sebesar kuku.
-            '<div class="flex flex-wrap gap-1.5" data-chip-instruksi>' +
-            OPSI_DISPOSISI.map(function (o) {
-              return '<label class="chip-instruksi">' +
-                '<input type="checkbox" name="opsi" value="' + esc(o) + '">' +
-                garisBesar('M20 6 9 17l-5-5') +
-                '<span>' + esc(o) + '</span></label>';
-            }).join('') + '</div>' +
-          '</div>' +
-          '<div>' +
-            '<label class="mb-1.5 block text-sm font-medium text-slate-700">Catatan</label>' +
-            '<textarea name="isi" rows="2" maxlength="150" class="field"></textarea>' +
-          '</div>' +
-          '<p id="m-disposisi-error" class="hidden rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700"></p>' +
-          '<button type="submit" class="btn-primary w-full justify-center py-3.5 text-base">Kirim disposisi</button>' +
-          /* Meneruskan bukan satu-satunya jalan. Kalau surat ini memang
-             berhenti di jabatan kita, tandai selesai — tanpa itu orang
-             merasa wajib meneruskan ke jabatan lain hanya untuk menutup
-             disposisinya. Hanya muncul kalau ada disposisi masuk yang bisa
-             ditutup. */
-          (induk
-            ? '<button type="button" id="m-disposisi-selesai" ' +
-              'class="mt-2 w-full rounded-2xl border border-brand-200 bg-white py-3.5 ' +
-              'text-sm font-semibold text-brand-700 active:scale-[.99]">' +
-              'Tandai selesai saja</button>'
-            : '') +
-        '</form>');
+      var tujuanHtml = jabatan.length
+        ? '<div class="tj-kotak">' +
+            '<div class="tj-cari">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+                'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+                '<path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>' +
+              '<input id="m-cari-jabatan" type="search" autocomplete="off" ' +
+                'placeholder="Cari jabatan atau unit…" aria-label="Cari jabatan">' +
+            '</div>' +
+            '<div id="m-jabatan-terpilih" class="tj-terpilih"></div>' +
+            '<div id="m-daftar-jabatan" class="tj-daftar"></div>' +
+          '</div>'
+        : '<p class="rounded-2xl bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-900">' +
+          (!boleh
+            ? esc(bahan.alasan_tolak || 'Surat ini tidak bisa Anda disposisikan.')
+            : tujuanBoleh.diatur === false
+              ? 'Jabatan Anda' +
+                (tujuanBoleh.nama_jabatan ? ' (' + esc(tujuanBoleh.nama_jabatan) + ')' : '') +
+                ' tidak punya daftar tujuan disposisi menurut aturan e-surat, ' +
+                'jadi surat ini tidak bisa diteruskan dari sini.'
+              : 'Tidak ada jabatan tujuan yang tersedia untuk jabatan Anda.') +
+          '</p>';
 
-      // :has() menangani tampilan chip di peramban baru; kelas ini menjaga
-      // penandaannya tetap terlihat di peramban yang belum mendukungnya.
+      /* Tombol keputusan menempel di kaki lembar, bukan di ujung formulir:
+         daftar jabatan bisa panjang, dan tanpa ini orang harus menggulir
+         sampai dasar dulu hanya untuk menekan kirim. */
+      var kaki = jabatan.length
+        ? '<div class="d-aksi">' +
+            '<button type="submit" form="m-form-disposisi" id="m-kirim-disposisi" ' +
+              'class="btn-primary btn-lg justify-center">Kirim disposisi</button>' +
+            (induk
+              ? '<button type="button" id="m-disposisi-selesai" class="btn-kedua">' +
+                'Selesai saja</button>'
+              : '') +
+          '</div>'
+        : '';
+
+      bukaSheet('Disposisi — ' + (bahan.surat.nomor_surat || '#' + idSurat),
+        '<form id="m-form-disposisi" class="space-y-4" novalidate>' +
+
+          '<div class="d-surat">' +
+            '<p class="d-surat-hal">' + dash(bahan.surat.perihal) + '</p>' +
+            '<p class="d-surat-dari">Dari ' + dash(bahan.surat.dari) + '</p>' +
+          '</div>' +
+
+          (induk
+            ? '<label class="d-tutup">' +
+                '<input type="checkbox" name="tutup" checked>' +
+                '<span>' +
+                  '<b>Tandai selesai saat meneruskan</b>' +
+                  '<small>Disposisi yang masuk ke jabatan Anda ditutup begitu surat ini diteruskan.</small>' +
+                '</span>' +
+              '</label>'
+            : '') +
+
+          '<div>' +
+            '<div class="d-label">' +
+              '<label for="m-cari-jabatan">Tujuan disposisi *</label>' +
+              '<span id="m-jumlah-tujuan" class="d-hitung"></span>' +
+            '</div>' +
+            tujuanHtml +
+          '</div>' +
+
+          (jabatan.length
+            ? '<div>' +
+                '<p class="d-label"><label>Instruksi</label></p>' +
+                '<div class="flex flex-wrap gap-1.5" data-chip-instruksi>' +
+                OPSI_DISPOSISI.map(function (o) {
+                  return '<label class="chip-instruksi">' +
+                    '<input type="checkbox" name="opsi" value="' + esc(o) + '">' +
+                    garisBesar('M20 6 9 17l-5-5') +
+                    '<span>' + esc(o) + '</span></label>';
+                }).join('') + '</div>' +
+              '</div>' +
+              '<div>' +
+                '<p class="d-label"><label for="m-catatan-disposisi">Catatan</label></p>' +
+                '<textarea id="m-catatan-disposisi" name="isi" rows="2" maxlength="150" ' +
+                  'class="field" placeholder="Mis. Mohon ditindaklanjuti sebelum akhir bulan"></textarea>' +
+              '</div>'
+            : '') +
+
+          '<p id="m-disposisi-error" class="hidden rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700"></p>' +
+        '</form>', kaki);
+
       var wadahChip = document.querySelector('[data-chip-instruksi]');
       if (wadahChip) {
         wadahChip.addEventListener('change', function (event) {
@@ -1334,7 +1355,7 @@
       if (!cari || !daftar) {
         // Tidak ada tujuan yang boleh dipilih; formulirnya tetap tampil agar
         // keterangannya terbaca, tetapi tombol kirim dimatikan.
-        var kirim = document.querySelector('#m-form-disposisi button[type=submit]');
+        var kirim = el('m-kirim-disposisi');
         if (kirim) kirim.disabled = true;
         return;
       }
@@ -1348,25 +1369,41 @@
         }).slice(0, 40);
         daftar.innerHTML = cocok.length
           ? cocok.map(function (j) {
-              return '<label class="flex items-center gap-2.5 border-b border-slate-100 px-3 py-2.5 last:border-0 active:bg-slate-50">' +
+              var dipilih = terpilih.indexOf(j.id_jabatan) !== -1;
+              return '<label class="tj-opsi' + (dipilih ? ' dipilih' : '') + '">' +
                 '<input type="checkbox" value="' + esc(j.id_jabatan) + '"' +
-                (terpilih.indexOf(j.id_jabatan) !== -1 ? ' checked' : '') +
-                ' class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500">' +
-                '<span class="min-w-0 flex-1 truncate text-sm text-slate-700">' + esc(j.nama_jabatan) + '</span></label>';
+                (dipilih ? ' checked' : '') + '>' +
+                '<span class="tj-cek">' + garisBesar('M20 6 9 17l-5-5') + '</span>' +
+                '<span class="tj-nama">' + esc(j.nama_jabatan) + '</span></label>';
             }).join('')
-          : '<p class="px-3 py-3 text-sm text-slate-400">Tidak ada yang cocok.</p>';
+          : '<p class="tj-kosong">Tidak ada jabatan yang cocok dengan “' +
+            esc(cari.value.trim()) + '”.</p>';
       }
 
+      /* Ringkasan pilihan ada di atas daftar supaya pilihan yang sudah
+         diambil tetap terlihat walau daftarnya sedang disaring. */
       function gambarRingkas() {
         ringkas.innerHTML = terpilih.length
           ? terpilih.map(function (id) {
-              return '<span class="inline-flex items-center gap-1.5 rounded-full bg-brand-50 py-1 pl-3 pr-1.5 text-xs font-medium text-brand-800">' +
-                esc(peta[id] || id) +
-                '<button type="button" data-buang="' + esc(id) + '" class="grid h-4 w-4 place-items-center rounded-full text-brand-700">' +
-                '<svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>' +
+              return '<span class="tj-tag">' + esc(peta[id] || id) +
+                '<button type="button" data-buang="' + esc(id) + '" ' +
+                'aria-label="Batalkan ' + esc(peta[id] || id) + '">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" ' +
+                'stroke-linecap="round" aria-hidden="true"><path d="M6 18 18 6M6 6l12 12"/></svg>' +
                 '</button></span>';
             }).join('')
-          : '<span class="text-xs text-slate-400">Belum ada yang dipilih.</span>';
+          : '<span class="tj-belum">Belum ada jabatan dipilih.</span>';
+        var hitung = el('m-jumlah-tujuan');
+        if (hitung) {
+          hitung.textContent = terpilih.length ? terpilih.length + ' dipilih' : '';
+          hitung.classList.toggle('ada', terpilih.length > 0);
+        }
+        var kirim = el('m-kirim-disposisi');
+        if (kirim) {
+          kirim.textContent = terpilih.length > 1
+            ? 'Kirim ke ' + terpilih.length + ' jabatan'
+            : 'Kirim disposisi';
+        }
       }
 
       cari.addEventListener('input', debounce(gambarDaftar, 200));
@@ -1376,6 +1413,8 @@
         var posisi = terpilih.indexOf(id);
         if (event.target.checked && posisi === -1) terpilih.push(id);
         if (!event.target.checked && posisi !== -1) terpilih.splice(posisi, 1);
+        var baris = event.target.closest('.tj-opsi');
+        if (baris) baris.classList.toggle('dipilih', event.target.checked);
         gambarRingkas();
       });
       ringkas.addEventListener('click', function (event) {
@@ -1410,7 +1449,7 @@
           .call(form.querySelectorAll('input[name="opsi"]:checked'))
           .map(function (x) { return x.value; });
         var tutup = form.querySelector('input[name="tutup"]');
-        var tombol = form.querySelector('button[type=submit]');
+        var tombol = el('m-kirim-disposisi');
         tombol.disabled = true;
         tombol.textContent = 'Mengirim…';
 
@@ -1432,7 +1471,7 @@
           pesan.textContent = err.message;
           pesan.classList.remove('hidden');
           tombol.disabled = false;
-          tombol.textContent = 'Kirim disposisi';
+          gambarRingkas();
         });
       });
     }).catch(function (err) {
