@@ -87,7 +87,12 @@
   }
 
   function inisial(nama) {
-    var bagian = kataNama(nama);
+    /* Hanya kata yang diawali huruf atau angka yang dihitung. Nama pengirim
+       di e-surat kerap memuat pemisah ("LPBA - BIPA"), dan tanpa saringan
+       ini inisialnya keluar jadi "L-". */
+    var bagian = kataNama(nama).filter(function (k) {
+      return /^[0-9a-z\u00c0-\u024f]/i.test(k);
+    });
     if (!bagian.length) bagian = ['?'];
     return (bagian[0].charAt(0) +
             (bagian.length > 1 ? bagian[1].charAt(0) : '')).toUpperCase();
@@ -528,9 +533,9 @@
   function barisInbox(o) {
     return '<button type="button" class="baris' + (o.tebal ? ' baru' : '') +
       (o.penting ? ' penting' : '') + '" ' + (o.attr || '') + '>' +
+      '<span class="baris-tanda2" aria-hidden="true"></span>' +
       '<span class="baris-ava ' + warnaAvatar(o.nama) + '">' +
         esc(inisial(o.nama)) +
-        (o.tebal ? '<i class="baris-titik"></i>' : '') +
       '</span>' +
       '<span class="baris-isi">' +
         '<span class="baris-atas">' +
@@ -627,6 +632,23 @@
     return Number(status) === 1 ? '' : tandaStatus(status);
   }
 
+  /* Penanda tertulis untuk surat yang belum dibaca.
+
+     Tebal, pita, dan titik semuanya isyarat yang harus ditafsirkan; satu
+     kata jelas tidak. Ini juga yang membuat keadaannya tidak bergantung
+     pada warna saja — penting bagi yang sulit membedakan warna.
+
+     Hanya untuk penerima surat. Bagi pemeriksa, baris yang ditebalkan
+     adalah surat yang menunggu verifikasi, dan itu sudah punya lencananya
+     sendiri ("Menunggu verifikasi") — dua lencana dengan arti sama cuma
+     menambah tinggi baris. */
+  function tandaBelumDibaca(r) {
+    if (bolehVerifikasi()) return '';
+    return Number(r.status_surat) === 1 && Number(r.read_surat) === 0
+      ? '<span class="tanda tanda-baru">Belum dibaca</span>'
+      : '';
+  }
+
   /* Kartu tidak lagi membawa tombol tindakan: seluruh kartu membuka detail,
      dan keputusan diambil di sana setelah isi suratnya terbaca. */
   function kartuSurat(r) {
@@ -641,7 +663,7 @@
       cuplikan: r.catatan && r.catatan !== '-' ? r.catatan : '',
       tebal: perluPerhatian(r),
       klip: Boolean(r.file_upload || r.file_url),
-      lencana: tandaStatusKartu(r.status_surat)
+      lencana: tandaBelumDibaca(r) + tandaStatusKartu(r.status_surat)
     });
   }
 
@@ -841,13 +863,18 @@
     kunci: 'surat', awal: '', chip: CHIP_STATUS, kosong: KOSONG_STATUS
   });
 
+  /* "Semua" yang aktif saat dibuka, seperti di layar disposisi. Membuka
+     layar dengan penyaring "Perlu verifikasi" sudah menyembunyikan
+     sebagian besar isinya sejak baris pertama — yang sudah diverifikasi
+     pun masih perlu dicari dan dilihat. Urutannya mengikuti bawaan
+     backend, yaitu yang paling baru dulu. */
   halaman.verifikasi = halamanDaftarSurat({
-    kunci: 'verifikasi', awal: '0',
+    kunci: 'verifikasi', awal: '',
     chip: [
+      { nilai: '', label: 'Semua' },
       { nilai: '0', label: 'Perlu verifikasi' },
       { nilai: '1', label: 'Diverifikasi' },
-      { nilai: '2', label: 'Ditolak' },
-      { nilai: '', label: 'Semua' }
+      { nilai: '2', label: 'Ditolak' }
     ],
     kosong: KOSONG_STATUS,
     wajib: bolehVerifikasi,

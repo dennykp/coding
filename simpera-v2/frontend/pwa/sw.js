@@ -11,15 +11,15 @@
  *   Aturan berkas statis di bawah menyimpannya sendiri setelah dipakai.
  * ========================================================================== */
 
-var VERSI = 'simpera-m-9005acdf94';
+var VERSI = 'simpera-m-794bff073f';
 var CANGKANG = [
   './',
   './index.html',
   './manifest.webmanifest',
   './icon.svg',
   './icon-maskable.svg',
-  '../assets/app.css?v=9c23e29f4c',
-  'app.js?v=d52652fcc5'
+  '../assets/app.css?v=19a67edc16',
+  'app.js?v=b565e0c03b'
 ];
 
 /* Berkas pelengkap: enak ada, tapi bukan syarat aplikasi jalan. Lambang
