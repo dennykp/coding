@@ -202,6 +202,82 @@
     return (bita / 1048576).toFixed(bita < 10485760 ? 1 : 0) + ' MB';
   }
 
+  /* Pemasangan ke layar utama.
+
+     Tidak ada peramban yang mengizinkan pemasangan berjalan sendiri tanpa
+     ketukan pemakai, jadi yang bisa diusahakan adalah membuat ketukannya
+     tinggal satu. Chrome memberi tahu lewat beforeinstallprompt; kejadian
+     itu disimpan, lalu dipanggil kembali saat tombol "Pasang" ditekan.
+
+     iOS tidak punya API itu sama sekali — di sana yang ditampilkan petunjuk
+     langkahnya. Kalau aplikasi sudah terpasang dan dibuka sebagai aplikasi,
+     ajakannya tidak pernah muncul. */
+  var KUNCI_PASANG = 'simpera_v2_tolak_pasang';
+  var aturPasang = null;
+
+  function sudahTerpasang() {
+    return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) ||
+           navigator.standalone === true;
+  }
+
+  function iOS() {
+    return /iP(hone|ad|od)/.test(navigator.userAgent) ||
+           (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
+
+  function ditolakSebelumnya() {
+    try { return localStorage.getItem(KUNCI_PASANG) === '1'; } catch (e) { return false; }
+  }
+
+  function tampilkanPasang(ket, adaTombol) {
+    var kotak = el('m-pasang');
+    if (!kotak) return;
+    el('m-pasang-ket').textContent = ket;
+    el('m-pasang-ya').classList.toggle('hidden', !adaTombol);
+    kotak.classList.remove('hidden');
+  }
+
+  function siapkanPasang() {
+    if (sudahTerpasang()) return;
+
+    // Datang dari pemilih tampilan di versi web: ajakannya ditampilkan
+    // walau pernah ditolak, karena pemakai baru saja memintanya.
+    var diminta = /[?&]pasang=1/.test(window.location.search);
+
+    window.addEventListener('beforeinstallprompt', function (ev) {
+      ev.preventDefault();
+      aturPasang = ev;
+      if (diminta || !ditolakSebelumnya()) {
+        tampilkanPasang('Terbuka seperti aplikasi biasa, tanpa bilah peramban.', true);
+      }
+    });
+
+    if (iOS() && (diminta || !ditolakSebelumnya())) {
+      tampilkanPasang('Ketuk tombol Bagikan di Safari, lalu pilih ' +
+        '"Tambahkan ke Layar Utama".', false);
+    }
+
+    el('m-pasang-ya').addEventListener('click', function () {
+      if (!aturPasang) return;
+      aturPasang.prompt();
+      aturPasang.userChoice.then(function (hasil) {
+        aturPasang = null;
+        el('m-pasang').classList.add('hidden');
+        if (hasil && hasil.outcome === 'accepted') toast('Aplikasi sedang dipasang.', 'ok');
+      });
+    });
+
+    el('m-pasang-tutup').addEventListener('click', function () {
+      el('m-pasang').classList.add('hidden');
+      try { localStorage.setItem(KUNCI_PASANG, '1'); } catch (e) {}
+    });
+
+    window.addEventListener('appinstalled', function () {
+      el('m-pasang').classList.add('hidden');
+      toast('SIMPERA sudah terpasang di layar utama.', 'ok');
+    });
+  }
+
   /* Penampil lampiran.
 
      Berkas diambil lewat tautan biasa — <img>, kanvas PDF, atau tab baru —
@@ -848,7 +924,17 @@
           barisInfo('Surel', u.email) +
         '</div>' +
       '</div>' +
-      '<button id="m-keluar" class="mt-4 w-full rounded-2xl border border-rose-200 bg-white py-3.5 text-sm font-semibold text-rose-600">Keluar</button>' +
+      /* Pilihan tampilan disimpan di versi web, jadi jalan keluarnya juga
+         lewat sana: ?tampilan=web menulis ulang pilihan itu lalu berhenti
+         di halaman web. Tanpa tautan ini, orang yang pernah memilih
+         "ponsel" tidak punya cara kembali. */
+      '<a href="../?tampilan=web" class="mt-4 flex w-full items-center justify-center gap-2 ' +
+        'rounded-2xl border border-slate-200 bg-white py-3.5 text-sm font-semibold text-slate-700">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+          'stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4" aria-hidden="true">' +
+          '<rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8M12 17v4"/></svg>' +
+        'Buka versi web</a>' +
+      '<button id="m-keluar" class="mt-3 w-full rounded-2xl border border-rose-200 bg-white py-3.5 text-sm font-semibold text-rose-600">Keluar</button>' +
       '<p class="mt-6 text-center text-[11px] text-slate-400">SIMPERA v2 Mobile · terhubung ke e-surat UNISMA</p>';
     return Promise.resolve();
   };
@@ -1527,6 +1613,7 @@
   function mulai() {
     tampilApp();
     bangunNav();
+    siapkanPasang();
     // Ringkasan tahun dipakai sebagai angka cadangan di puncak; kalau
     // gagal diambil, petaknya cukup diisi yang lain — bukan galat.
     minta('/dashboard/summary').then(function (r) {

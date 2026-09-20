@@ -535,6 +535,102 @@ table.data tbody tr:hover { background: #f0f9f0; }
    =========================================================================== */
 
 /* ===========================================================================
+   Pemilih tampilan (versi web) & ajakan memasang (PWA).
+   =========================================================================== */
+
+/* Dialog pemilih tampilan: muncul di atas segalanya, sebelum aplikasi web
+   sempat dibaca, karena keputusannya menentukan halaman mana yang dipakai. */
+.pilih-latar {
+  position: fixed; inset: 0; z-index: 90;
+  display: grid; place-items: end center;
+  padding: 1rem; background: rgba(4, 53, 31, .55);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+}
+.pilih-latar.hidden { display: none; }
+.pilih-kartu {
+  width: 100%; max-width: 27rem;
+  padding: 1.5rem 1.25rem calc(env(safe-area-inset-bottom, 0px) + 1.25rem);
+  background: #fff; border-radius: 1.75rem;
+  box-shadow: 0 -12px 48px -20px rgba(4, 53, 31, .55);
+  animation: pilih-naik .28s cubic-bezier(.2, .8, .3, 1);
+}
+@keyframes pilih-naik { from { transform: translateY(1.5rem); opacity: 0; } }
+.pilih-ikon {
+  display: grid; place-items: center; width: 3.25rem; height: 3.25rem; margin: 0 auto;
+  border-radius: 1.1rem; background: #e6f4e6; color: #05643f;
+}
+.pilih-ikon svg { width: 1.6rem; height: 1.6rem; }
+.pilih-judul {
+  margin: .9rem 0 0; text-align: center; font-size: 1.15rem; font-weight: 600;
+  letter-spacing: -.02em; color: #05402c;
+}
+.pilih-ket {
+  margin: .45rem 0 1.15rem; text-align: center; font-size: .78rem; line-height: 1.5;
+  color: #64748b;
+}
+.pilih-tombol {
+  display: flex; width: 100%; align-items: center; gap: .8rem; text-align: left;
+  padding: .85rem .9rem; margin-top: .55rem;
+  border: 1.5px solid #e2e8e5; border-radius: 1.1rem; background: #fff;
+  transition: all .3s ease-in-out;
+}
+.pilih-tombol:active { transform: scale(.985); }
+.pilih-utama { border-color: #009000; background: #f2faf2; }
+.pilih-t-ikon {
+  flex: none; display: grid; place-items: center; width: 2.4rem; height: 2.4rem;
+  border-radius: .85rem; background: #f1f5f4; color: #64748b;
+}
+.pilih-utama .pilih-t-ikon { background: #009000; color: #fff; }
+.pilih-t-ikon svg { width: 1.2rem; height: 1.2rem; }
+.pilih-t-teks { min-width: 0; }
+.pilih-t-teks b {
+  display: block; font-size: .86rem; font-weight: 600; color: #05402c;
+}
+.pilih-t-teks small {
+  display: block; margin-top: .1rem; font-size: .7rem; color: #64748b;
+}
+.pilih-ingat {
+  display: flex; align-items: center; justify-content: center; gap: .45rem;
+  margin-top: 1.05rem; font-size: .72rem; color: #64748b;
+}
+.pilih-ingat input { width: .95rem; height: .95rem; accent-color: #009000; }
+
+/* Ajakan memasang, duduk tepat di atas navigasi bawah. */
+.pasang {
+  position: fixed; z-index: 35; left: .65rem; right: .65rem;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 4.6rem);
+  display: flex; align-items: center; gap: .7rem;
+  padding: .7rem .75rem .7rem .8rem; border-radius: 1.15rem;
+  background: #05402c; color: #fff;
+  box-shadow: 0 14px 30px -14px rgba(4, 53, 31, .75);
+  animation: pilih-naik .28s cubic-bezier(.2, .8, .3, 1);
+}
+.pasang.hidden { display: none; }
+.pasang-ikon {
+  flex: none; display: grid; place-items: center; width: 2.2rem; height: 2.2rem;
+  border-radius: .75rem; background: rgba(255, 255, 255, .14); color: #8fe6a3;
+}
+.pasang-ikon svg { width: 1.1rem; height: 1.1rem; }
+.pasang-teks { min-width: 0; flex: 1; }
+.pasang-judul { margin: 0; font-size: .8rem; font-weight: 600; line-height: 1.25; }
+.pasang-ket {
+  margin: .1rem 0 0; font-size: .67rem; line-height: 1.35;
+  color: rgba(214, 245, 226, .78);
+}
+.pasang-ya {
+  flex: none; padding: .48rem .85rem; border: 0; border-radius: 999px;
+  background: #fff; color: #05402c; font-size: .74rem; font-weight: 600;
+  transition: transform .3s ease-in-out;
+}
+.pasang-ya:active { transform: scale(.95); }
+.pasang-ya.hidden { display: none; }
+.pasang-tutup {
+  flex: none; display: grid; place-items: center; width: 1.8rem; height: 1.8rem;
+  border: 0; border-radius: 50%; background: none; color: rgba(214, 245, 226, .7);
+}
+.pasang-tutup svg { width: .95rem; height: .95rem; }
+
+/* ===========================================================================
    Layar masuk (PWA).
 
    Kepala hijau tua memperkenalkan aplikasi; kartu putih di bawahnya tempat

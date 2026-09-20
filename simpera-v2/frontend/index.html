@@ -9,7 +9,43 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="assets/app.css?v=464a19496e">
+<link rel="stylesheet" href="assets/app.css?v=316fab5d36">
+
+<!-- Pemilih tampilan.
+
+     Alamat ini melayani dua wajah aplikasi yang sama: versi web di sini dan
+     versi ponsel (PWA) di /m/. Pemeriksaannya ditaruh di <head> dan berjalan
+     sebelum apa pun digambar — kalau pemakai sudah pernah memilih "ponsel",
+     pengalihannya terjadi tanpa layar web sempat berkedip lebih dulu.
+
+     location.replace dipakai, bukan href, supaya tombol kembali tidak
+     memantul bolak-balik antara dua versi. -->
+<script>
+(function () {
+  var KUNCI = 'simpera_v2_tampilan';
+  var simpan = function (nilai) { try { localStorage.setItem(KUNCI, nilai); } catch (e) {} };
+  var ambil = function () { try { return localStorage.getItem(KUNCI); } catch (e) { return null; } };
+
+  // ?tampilan=web dipakai tautan "Buka versi web" dari dalam PWA, dan
+  // sekaligus jadi jalan keluar kalau pilihannya ingin diubah.
+  var minta = /[?&]tampilan=(web|ponsel)/.exec(location.search);
+  if (minta) simpan(minta[1]);
+
+  var pilih = minta ? minta[1] : ambil();
+
+  /* "Ponsel" ditentukan dari layar sempit DENGAN penunjuk kasar, atau dari
+     userAgent ponsel. Lebar saja tidak cukup: jendela peramban meja yang
+     dikecilkan bukan ponsel, dan mengalihkannya ke PWA akan menyebalkan. */
+  var ua = navigator.userAgent || '';
+  var kecil = (matchMedia('(max-width: 860px)').matches &&
+               matchMedia('(pointer: coarse)').matches) ||
+              /Android|iPhone|iPod|Windows Phone/i.test(ua);
+
+  if (pilih === 'ponsel' && kecil) { location.replace('m/?pasang=1'); return; }
+
+  window.__TAMPILAN__ = { kunci: KUNCI, pilih: pilih, ponsel: kecil, simpan: simpan };
+}());
+</script>
 </head>
 <body class="h-full bg-canvas text-slate-700 antialiased">
 
@@ -230,6 +266,71 @@
     <span class="text-sm">Memuat SIMPERA v2…</span>
   </div>
 </div>
+
+<!-- Dialog pemilih tampilan. Hanya muncul di ponsel, dan hanya sekali:
+     setelah dipilih, jawabannya diingat. -->
+<div id="pilih-tampilan" class="pilih-latar hidden" role="dialog" aria-modal="true" aria-labelledby="pilih-judul">
+  <div class="pilih-kartu">
+    <div class="pilih-ikon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect width="10" height="16" x="7" y="4" rx="2"/><path d="M11 20h2"/>
+      </svg>
+    </div>
+    <h2 id="pilih-judul" class="pilih-judul">Buka pakai apa?</h2>
+    <p class="pilih-ket">Anda membuka SIMPERA dari ponsel. Versi ponsel lebih ringan, bisa dipasang di layar utama, dan tetap terbuka saat sinyal hilang.</p>
+
+    <button type="button" id="pilih-ponsel" class="pilih-tombol pilih-utama">
+      <span class="pilih-t-ikon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/>
+        </svg>
+      </span>
+      <span class="pilih-t-teks">
+        <b>Versi ponsel</b>
+        <small>Disarankan — bisa dipasang seperti aplikasi</small>
+      </span>
+    </button>
+
+    <button type="button" id="pilih-web" class="pilih-tombol">
+      <span class="pilih-t-ikon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8M12 17v4"/>
+        </svg>
+      </span>
+      <span class="pilih-t-teks">
+        <b>Versi web</b>
+        <small>Tampilan penuh seperti di komputer</small>
+      </span>
+    </button>
+
+    <label class="pilih-ingat">
+      <input type="checkbox" id="pilih-ingat" checked>
+      <span>Ingat pilihan ini</span>
+    </label>
+  </div>
+</div>
+
+<script>
+(function () {
+  var t = window.__TAMPILAN__;
+  if (!t || !t.ponsel || t.pilih) return;
+
+  var latar = document.getElementById('pilih-tampilan');
+  var ingat = document.getElementById('pilih-ingat');
+  latar.classList.remove('hidden');
+  document.documentElement.style.overflow = 'hidden';
+
+  function putuskan(nilai) {
+    if (ingat.checked) t.simpan(nilai);
+    if (nilai === 'ponsel') { location.replace('m/?pasang=1'); return; }
+    latar.classList.add('hidden');
+    document.documentElement.style.overflow = '';
+  }
+
+  document.getElementById('pilih-ponsel').addEventListener('click', function () { putuskan('ponsel'); });
+  document.getElementById('pilih-web').addEventListener('click', function () { putuskan('web'); });
+}());
+</script>
 
 <script src="assets/app.js?v=0d2c5e8be6"></script>
 <script src="assets/pages.js?v=ac164856b3"></script>

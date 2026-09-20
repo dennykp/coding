@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="../assets/app.css?v=464a19496e">
+<link rel="stylesheet" href="../assets/app.css?v=316fab5d36">
 </head>
 <body class="h-full bg-canvas text-slate-700 antialiased">
 
@@ -127,6 +127,26 @@
   </div>
 </section>
 
+<!-- Ajakan memasang aplikasi. Tidak bisa dipasang tanpa satu ketukan —
+     peramban mensyaratkan itu — jadi yang bisa dilakukan adalah membuat
+     ketukannya tinggal satu dan jelas. Di iOS tidak ada API pemasangan
+     sama sekali, jadi di sana yang tampil petunjuk langkahnya. -->
+<div id="m-pasang" class="pasang hidden">
+  <span class="pasang-ikon">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
+    </svg>
+  </span>
+  <div class="pasang-teks">
+    <p class="pasang-judul">Pasang di layar utama</p>
+    <p id="m-pasang-ket" class="pasang-ket">Terbuka seperti aplikasi biasa, tanpa bilah peramban.</p>
+  </div>
+  <button type="button" id="m-pasang-ya" class="pasang-ya">Pasang</button>
+  <button type="button" id="m-pasang-tutup" class="pasang-tutup" aria-label="Nanti saja">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+  </button>
+</div>
+
 <!-- Navigasi bawah -->
 <nav id="m-nav" class="fixed inset-x-0 bottom-0 z-30 hidden border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
   <div class="grid grid-cols-4"></div>
@@ -190,6 +210,6 @@
   </div>
 </div>
 
-<script src="app.js?v=ec8d4b8b86"></script>
+<script src="app.js?v=9df08ade68"></script>
 </body>
 </html>
