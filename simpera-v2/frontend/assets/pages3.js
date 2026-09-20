@@ -25,14 +25,21 @@
   }
 
   /* Pemilih jabatan: kotak cari + daftar centang + ringkasan terpilih. */
-  function pemilihJabatan(nama, daftar, terpilihAwal) {
+  /* opsi.lentur: daftar jabatan ikut memanjang mengisi ruang yang tersisa,
+     bukan dipatok 12rem. Di jendela yang tingginya sudah ditentukan, patokan
+     tetap membuat daftar pendek sementara ruang di bawahnya menganggur. */
+  function pemilihJabatan(nama, daftar, terpilihAwal, opsi) {
     var terpilih = (terpilihAwal || []).slice();
+    var lentur = opsi && opsi.lentur;
     return {
       html:
-        '<div data-pilih="' + nama + '">' +
+        '<div data-pilih="' + nama + '"' +
+          (lentur ? ' class="flex flex-col lg:min-h-0 lg:flex-1"' : '') + '>' +
           '<input type="search" data-cari class="field field-search h-10 mb-2" ' +
             'placeholder="Cari jabatan atau unit…">' +
-          '<div data-daftar class="max-h-48 overflow-y-auto rounded-xl border border-slate-200"></div>' +
+          '<div data-daftar class="' +
+            (lentur ? 'max-h-60 lg:max-h-none lg:min-h-0 lg:flex-1' : 'max-h-48') +
+            ' overflow-y-auto rounded-xl border border-slate-200 bg-white"></div>' +
           '<div data-terpilih class="mt-2 flex flex-wrap gap-1.5"></div>' +
         '</div>',
       pasang: function (akar) {
@@ -622,90 +629,129 @@
       var jabatan = boleh ? (tujuanBoleh.items || []) : [];
       var surat = bahan.surat;
       var induk = (bahan.disposisi_untuk_saya || [])[0];
-      var pilih = pemilihJabatan('tujuan', jabatan, []);
+      var pilih = pemilihJabatan('tujuan', jabatan, [], { lentur: true });
 
+      /* Jejak: satu baris per disposisi, dengan peran kita atas baris itu.
+         Dulu tingginya dipatok 14rem sehingga jejak berisi tiga baris pun
+         sudah terpotong; sekarang ia mengisi ruang yang tersisa dan hanya
+         menggulir kalau memang tidak muat. */
       var jejak = (bahan.jejak || []).length
-        ? '<ol class="mt-2 max-h-56 space-y-2 overflow-y-auto pr-1">' + bahan.jejak.map(function (x) {
-            return '<li class="flex items-start gap-2 text-xs">' +
-              '<span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full ' +
-              (x.status_selesai ? 'bg-brand-500' : 'bg-amber-400') + '"></span>' +
-              '<span class="min-w-0 flex-1"><b class="text-slate-700">' + dash(x.tujuan_jabatan) +
-              '</b> <span class="text-slate-400">' + tanggal(x.tgl_disposisi) + '</span>' +
+        ? '<ol class="max-h-72 space-y-2 overflow-y-auto pr-1 lg:max-h-none lg:min-h-0 lg:flex-1">' +
+          bahan.jejak.map(function (x) {
+            return '<li class="rounded-xl border border-slate-200 bg-white p-2.5">' +
+              '<div class="flex items-start gap-2">' +
+                '<span class="mt-1 h-2 w-2 shrink-0 rounded-full ' +
+                  (x.status_selesai ? 'bg-brand-500' : 'bg-amber-400') + '"></span>' +
+                '<div class="min-w-0 flex-1">' +
+                  '<p class="truncate text-xs font-semibold text-slate-800">' +
+                    dash(x.tujuan_jabatan) + '</p>' +
+                  '<p class="mt-0.5 text-[11px] text-slate-500">' + tanggal(x.tgl_disposisi) +
+                    (x.pengirim ? ' · oleh ' + esc(x.pengirim) : '') +
+                    ' · <span class="' + (x.status_selesai ? 'text-brand-600' : 'text-amber-600') +
+                    ' font-medium">' + (x.status_selesai ? 'Selesai' : 'Berjalan') + '</span></p>' +
+                '</div>' +
+                /* Satu lencana saja: peran kita atas baris itu —
+                   "Mendisposisikan" bila kita yang mengirim. Selesai atau
+                   belum sudah terbaca dari titik warna dan baris waktunya,
+                   dan dua lencana bertumpuk membuat barisnya ramai. */
+                (x.status_disposisi && x.status_disposisi !== '-'
+                  ? '<div class="shrink-0">' +
+                    badge(x.status_disposisi, toneStatusSurat(x.status_disposisi)) +
+                    '</div>'
+                  : '') +
+              '</div>' +
               (x.isi_disposisi && x.isi_disposisi !== '-'
-                ? '<span class="block text-slate-500">' + esc(x.isi_disposisi) + '</span>' : '') +
-              '</span></li>';
+                ? '<p class="mt-1.5 rounded-lg bg-slate-50 px-2.5 py-1.5 text-[11px] leading-relaxed text-slate-600">' +
+                  esc(x.isi_disposisi) + '</p>' : '') +
+              '</li>';
           }).join('') + '</ol>'
-        : '<p class="mt-2 text-xs text-slate-400">Belum pernah didisposisikan.</p>';
+        : '<div class="grid place-items-center rounded-xl border border-dashed py-6 lg:min-h-0 lg:flex-1 lg:py-0 ' +
+          'border-slate-200 bg-white"><p class="text-xs text-slate-400">Belum pernah didisposisikan.</p></div>';
 
+      var keterangan = '<p class="rounded-xl bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-900">' +
+        (!boleh
+          ? esc(bahan.alasan_tolak || 'Surat ini tidak bisa Anda disposisikan.')
+          : tujuanBoleh.diatur === false
+            ? 'Jabatan Anda' +
+              (tujuanBoleh.nama_jabatan ? ' (' + esc(tujuanBoleh.nama_jabatan) + ')' : '') +
+              ' tidak punya daftar tujuan disposisi menurut aturan e-surat, ' +
+              'jadi surat ini tidak bisa diteruskan dari sini.'
+            : 'Tidak ada jabatan tujuan yang tersedia untuk jabatan Anda.') +
+        '</p>';
+
+      /* Dua kolom yang masing-masing mengatur guliran sendiri, dan badan
+         jendela yang tidak ikut menggulir (opsi padat). Di layar sempit
+         susunannya kembali menumpuk dan menggulir seperti biasa — memaksa
+         dua kolom di ponsel hanya membuat keduanya terlalu pendek. */
       S.openModal('Disposisi — ' + (surat.nomor_surat || '#' + idSurat),
-        '<form id="form-disposisi" class="grid gap-5 lg:grid-cols-2" novalidate>' +
+        '<form id="form-disposisi" class="flex flex-col gap-4 ' +
+          'lg:grid lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:gap-5" novalidate>' +
 
-          '<div class="space-y-4">' +
-          '<div class="rounded-2xl border border-slate-200 bg-white p-4">' +
-            '<p class="text-sm font-medium text-slate-900">' + dash(surat.perihal) + '</p>' +
-            '<p class="mt-1 text-xs text-slate-500">Dari ' + dash(surat.dari) +
-            ' · diterima ' + tanggal(surat.tgl_surat_terima) + '</p>' +
-            '<p class="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Jejak disposisi</p>' +
+          // ---------- kolom kiri: surat & jejak ----------
+          '<div class="flex flex-col gap-3 lg:min-h-0">' +
+            '<div class="rounded-xl border border-slate-200 bg-white p-3">' +
+              '<p class="text-sm font-semibold leading-snug text-slate-900">' + dash(surat.perihal) + '</p>' +
+              '<p class="mt-1 text-xs text-slate-500">Dari ' + dash(surat.dari) +
+              ' · diterima ' + tanggal(surat.tgl_surat_terima) + '</p>' +
+            '</div>' +
+            '<p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Jejak disposisi</p>' +
             jejak +
+            (induk
+              ? '<label class="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3">' +
+                '<input type="checkbox" name="tutup_induk" checked ' +
+                'class="mt-0.5 h-4 w-4 shrink-0 rounded border-amber-300 text-brand-600 focus:ring-brand-500">' +
+                '<span class="text-xs leading-relaxed text-amber-900">Tandai disposisi yang masuk ke ' +
+                'jabatan Anda sebagai selesai saat meneruskan surat ini.</span></label>'
+              : '') +
           '</div>' +
 
-          (induk
-            ? '<label class="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3">' +
-              '<input type="checkbox" name="tutup_induk" checked ' +
-              'class="mt-0.5 h-4 w-4 rounded border-amber-300 text-brand-600 focus:ring-brand-500">' +
-              '<span class="text-xs leading-relaxed text-amber-900">Tandai disposisi yang masuk ke ' +
-              'jabatan Anda sebagai selesai saat meneruskan surat ini.</span></label>'
-            : '') +
-          '</div>' +
+          // ---------- kolom kanan: formulir ----------
+          '<div class="flex flex-col gap-3 lg:min-h-0">' +
+            '<div class="flex flex-col lg:min-h-0 lg:flex-1">' +
+              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Tujuan disposisi *</label>' +
+              (jabatan.length ? pilih.html : keterangan) +
+            '</div>' +
 
-          '<div class="space-y-5">' +
-          '<div>' +
-            '<label class="mb-1.5 block text-sm font-medium text-slate-700">Tujuan disposisi *</label>' +
-            (jabatan.length
-              ? pilih.html
-              /* Kotak kosong tanpa keterangan membingungkan: orang mengira
-                 daftarnya gagal dimuat. Sebutkan sebabnya. */
-              : '<p class="rounded-xl bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-900">' +
-                (!boleh
-                  ? esc(bahan.alasan_tolak || 'Surat ini tidak bisa Anda disposisikan.')
-                  : tujuanBoleh.diatur === false
-                    ? 'Jabatan Anda' +
-                      (tujuanBoleh.nama_jabatan ? ' (' + esc(tujuanBoleh.nama_jabatan) + ')' : '') +
-                      ' tidak punya daftar tujuan disposisi menurut aturan e-surat, ' +
-                      'jadi surat ini tidak bisa diteruskan dari sini.'
-                    : 'Tidak ada jabatan tujuan yang tersedia untuk jabatan Anda.') +
-                '</p>') +
-          '</div>' +
+            '<div>' +
+              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Instruksi</label>' +
+              '<div class="flex flex-wrap gap-1.5" data-chip-instruksi>' +
+              OPSI_DISPOSISI.map(function (o) {
+                return '<label class="chip-instruksi">' +
+                  '<input type="checkbox" name="opsi" value="' + esc(o) + '">' +
+                  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" ' +
+                    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+                    '<path d="M20 6 9 17l-5-5"/></svg>' +
+                  '<span>' + esc(o) + '</span></label>';
+              }).join('') + '</div>' +
+            '</div>' +
 
-          '<div>' +
-            '<label class="mb-2 block text-sm font-medium text-slate-700">Instruksi</label>' +
-            '<div class="grid gap-1.5 sm:grid-cols-2">' +
-            OPSI_DISPOSISI.map(function (o) {
-              return '<label class="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-xs hover:bg-slate-50">' +
-                '<input type="checkbox" name="opsi" value="' + esc(o) + '" ' +
-                'class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500">' +
-                '<span class="text-slate-700">' + esc(o) + '</span></label>';
-            }).join('') +
+            '<div>' +
+              '<label class="mb-1.5 block text-sm font-medium text-slate-700">Catatan disposisi</label>' +
+              '<textarea name="isi_disposisi" rows="2" maxlength="150" class="field" ' +
+              'placeholder="Mis. Mohon ditindaklanjuti sebelum akhir bulan"></textarea>' +
+            '</div>' +
+
+            '<p id="disposisi-error" class="hidden rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700"></p>' +
+            '<div class="flex justify-end gap-2 border-t border-slate-200 pt-3">' +
+              '<button type="button" class="btn-ghost" data-modal-close>Batal</button>' +
+              '<button type="submit" class="btn-primary">Kirim disposisi</button>' +
             '</div>' +
           '</div>' +
-
-          '<div>' +
-            '<label class="mb-1.5 block text-sm font-medium text-slate-700">Catatan disposisi</label>' +
-            '<textarea name="isi_disposisi" rows="2" maxlength="150" class="field" ' +
-            'placeholder="Mis. Mohon ditindaklanjuti sebelum akhir bulan"></textarea>' +
-          '</div>' +
-
-          '<p id="disposisi-error" class="hidden rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700"></p>' +
-          '<div class="flex justify-end gap-2 border-t border-slate-100 pt-4">' +
-            '<button type="button" class="btn-ghost" data-modal-close>Batal</button>' +
-            '<button type="submit" class="btn-primary">Kirim disposisi</button>' +
-          '</div>' +
-          '</div>' +
-        '</form>', { lebar: 'lebar' });
+        '</form>', { lebar: 'lebar', padat: true });
 
       var form = document.getElementById('form-disposisi');
       if (jabatan.length) pilih.pasang(form);
       else form.querySelector('button[type=submit]').disabled = true;
+
+      // :has() menangani tampilan chip di peramban baru; kelas ini menjaga
+      // penandaannya tetap terlihat di peramban yang belum mendukungnya.
+      var wadahChip = form.querySelector('[data-chip-instruksi]');
+      if (wadahChip) {
+        wadahChip.addEventListener('change', function (event) {
+          if (event.target.name !== 'opsi') return;
+          event.target.closest('.chip-instruksi').classList.toggle('dipilih', event.target.checked);
+        });
+      }
 
       form.addEventListener('submit', function (event) {
         event.preventDefault();

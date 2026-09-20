@@ -212,6 +212,22 @@
       panel.className = 'relative mx-auto flex h-full items-center p-3 sm:p-5 ' +
         (LEBAR_MODAL[opsi.lebar] || LEBAR_MODAL.besar);
     }
+    /* opsi.padat: badan jendela TIDAK menggulir; isinya sendiri yang
+       mengatur daerah gulirnya. Dipakai layar seperti disposisi yang punya
+       dua daftar panjang — kalau badannya ikut menggulir, dua batang gulir
+       bertumpuk dan bagian bawah formulir seperti tertutup. */
+    var badan = el('modal-body');
+    if (badan) {
+      /* Tanpa guliran hanya berlaku sejak layar lebar, karena di sanalah
+         susunan dua kolomnya muat. Di layar sempit kolomnya menumpuk dan
+         badannya harus tetap bisa digulir — kalau tidak, bagian bawah
+         formulir terpotong tanpa cara apa pun melihatnya. Tinggi minimum
+         menjaga kedua kolom tetap punya ruang walau jejaknya masih kosong. */
+      badan.className = 'min-h-0 flex-1 bg-slate-50/70 px-5 py-4 sm:px-6 sm:py-5 ' +
+        (opsi.padat
+          ? 'overflow-y-auto lg:flex lg:min-h-[28rem] lg:flex-col lg:overflow-hidden'
+          : 'overflow-y-auto');
+    }
     var alat = el('modal-alat');
     if (alat) alat.innerHTML = opsi.alat || '';
     cetakSekarang = typeof opsi.cetak === 'function' ? opsi.cetak : null;

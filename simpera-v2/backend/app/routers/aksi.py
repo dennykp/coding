@@ -22,7 +22,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 
 from .. import berkas, db, security
-from ..common import clean, clean_all, file_url
+from ..common import clean, clean_all, file_url, status_disposisi
 from ..schemas import DisposisiIn, SelesaiDisposisiIn, SuratKeluarIn, VerifikasiIn
 
 router = APIRouter(tags=["alur-surat"])
@@ -365,7 +365,7 @@ def opsi_disposisi(
     jejak = db.fetch_all(
         """
         SELECT d.id_disposisi, d.tgl_disposisi, d.jam_disposisi, d.isi_disposisi,
-               d.opsi, d.status_selesai, d.catatan_selesai, d.id_jabatan,
+               d.opsi, d.status_selesai, d.catatan_selesai, d.id_jabatan, d.id_usrz,
                jb.nama_jabatan AS tujuan_jabatan, u.name AS pengirim
         FROM tt_disposisi d
         LEFT JOIN tm_jabatan jb ON jb.id_jabatan = d.id_jabatan
@@ -385,11 +385,20 @@ def opsi_disposisi(
     ]
 
     hak = _hak_disposisi(id_surat, user)
+
+    # Peran pemakai atas tiap baris jejak — "Mendisposisikan" bila ia yang
+    # mengirimnya, "Disposisi" bila jabatannya yang dituju. Perhitungan yang
+    # sama dipakai daftar disposisi; tanpa ini layar disposisi tidak bisa
+    # menunjukkan mana yang dikirim sendiri.
+    baris_jejak = clean_all(jejak)
+    for b in baris_jejak:
+        b["status_disposisi"] = status_disposisi(b, user)
+
     detail = clean(surat)
     detail["file_url"] = file_url("FILEUPLOAD", detail.get("file_upload"))
     return {
         "surat": detail,
-        "jejak": clean_all(jejak),
+        "jejak": baris_jejak,
         "disposisi_untuk_saya": milik_saya,
         "boleh_disposisi": hak["boleh"],
         "alasan_tolak": ALASAN_TOLAK_DISPOSISI.get(hak["alasan"], ""),

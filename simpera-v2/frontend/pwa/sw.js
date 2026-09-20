@@ -11,14 +11,14 @@
  *   Aturan berkas statis di bawah menyimpannya sendiri setelah dipakai.
  * ========================================================================== */
 
-var VERSI = 'simpera-m-126fdbc995';
+var VERSI = 'simpera-m-1f12218a61';
 var CANGKANG = [
   './',
   './index.html',
   './manifest.webmanifest',
   './icon.svg',
   './icon-maskable.svg',
-  '../assets/app.css?v=bd80cdbff9',
+  '../assets/app.css?v=6267a1cd6e',
   'app.js?v=30d39db0f7'
 ];
 
