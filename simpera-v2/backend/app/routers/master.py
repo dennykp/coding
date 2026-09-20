@@ -34,6 +34,104 @@ def jabatan(
     return clean_all(rows)
 
 
+# Peta tujuan disposisi menurut jenjang jabatan pengirim.
+#
+# Disalin apa adanya dari SelectController::loadjabatanwithauth milik e-surat
+# (rantai if/else-if di sana), supaya daftar "Kepada" di aplikasi ini persis
+# sama dengan yang biasa dilihat pemakai. Kuncinya kolom tm_jabatan.level
+# milik jabatan PENGIRIM; nilainya daftar level yang boleh jadi TUJUAN.
+#
+# Jenjang yang tidak tercantum di sini memang tidak punya tujuan disposisi di
+# aplikasi lama — dropdown-nya kosong. Perilaku itu dipertahankan, tetapi
+# endpoint ini menyatakannya lewat flag "diatur" supaya antarmuka bisa
+# menjelaskannya, bukan menampilkan kotak kosong tanpa keterangan.
+TUJUAN_DISPOSISI: dict[str, list[str]] = {
+    # rektor
+    "1": ["2.1", "2.2", "2.3", "2.4", "4.4", "5", "20", "10"],
+    # wakil rektor 1..4
+    "2.1": ["2.2", "2.3", "2.4", "4.1.1", "4.1.2", "4.1.3", "4.1.4", "1",
+            "4.4", "5", "5.1", "4.5.5", "10"],
+    "2.2": ["2.1", "2.3", "2.4", "4.1.1", "4.1.2", "4.1.3", "4.1.4", "1",
+            "4.4", "5", "5.1", "10"],
+    "2.3": ["2.1", "2.2", "2.4", "4.1.1", "4.1.2", "4.1.3", "4.1.4", "1",
+            "4.4", "5", "5.1", "10"],
+    "2.4": ["2.1", "2.2", "2.3", "4.1.1", "4.1.2", "4.1.3", "4.1.4", "1",
+            "4.4", "5", "5.1", "10", "4.5.5", "4.5"],
+    # biro: baak, baupk, bakak, bakpti
+    "4.1.1": ["4.5", "4.4", "5", "5.1", "4.3.1"],
+    "4.1.2": ["4.5", "4.4", "5", "5.1", "4.3.2"],
+    "4.1.3": ["4.5", "4.4", "5", "5.1", "4.3.3"],
+    "4.1.4": ["4.5", "4.4", "5", "5.1", "4.3.4"],
+    # kepala bagian
+    "4.3": ["5", "5.1"],
+    # fakultas dan pascasarjana
+    "4.4": ["4.3", "4.4", "4.5", "5", "5.1"],
+    "4.5": ["4.3", "4.4", "4.5", "5", "5.1"],
+    "5": ["5.1"],
+}
+
+
+@router.get("/jabatan-disposisi")
+def jabatan_disposisi(
+    q: str | None = None,
+    user: dict[str, Any] = Depends(security.current_user),
+) -> Any:
+    """Daftar jabatan yang boleh jadi tujuan disposisi bagi pemakai ini.
+
+    /master/jabatan mengembalikan seluruh 878 jabatan tanpa saringan — dipakai
+    untuk penyaring laporan dan pengelolaan data. Untuk mengirim disposisi,
+    aturannya jauh lebih sempit dan sudah lama berlaku di e-surat: hanya
+    jenjang tertentu yang boleh dituju, dan jabatan sendiri tidak pernah ikut.
+    """
+    jabatan_id = user.get("jabatan_id")
+    baris_jabatan = (
+        db.fetch_one(
+            "SELECT id_jabatan, nama_jabatan, level FROM tm_jabatan WHERE id_jabatan = %s",
+            (jabatan_id,),
+        )
+        if jabatan_id
+        else None
+    )
+
+    level = (baris_jabatan or {}).get("level")
+    level = str(level).strip() if level is not None else ""
+    tujuan = TUJUAN_DISPOSISI.get(level)
+
+    if not tujuan:
+        return {
+            "items": [],
+            "level": level or None,
+            "nama_jabatan": (baris_jabatan or {}).get("nama_jabatan"),
+            "diatur": False,
+        }
+
+    term = like(q)
+    where = ["j.id_jabatan <> %s", "j.level IN (%s)" % ",".join(["%s"] * len(tujuan))]
+    params: list[Any] = [jabatan_id, *tujuan]
+    if term:
+        where.append("j.nama_jabatan LIKE %s")
+        params.append(term)
+
+    # Urutan mengikuti aplikasi lama (bagian menaik); nama dipakai sebagai
+    # pemecah seri karena sebagian besar baris tidak punya bagian, dan tanpa
+    # itu urutannya berubah-ubah antar permintaan.
+    rows = db.fetch_all(
+        f"""
+        SELECT j.id_jabatan, j.nama_jabatan, j.bagian, j.level
+        FROM tm_jabatan j
+        WHERE {" AND ".join(where)}
+        ORDER BY j.bagian IS NULL, j.bagian ASC, j.nama_jabatan ASC
+        """,
+        params,
+    )
+    return {
+        "items": clean_all(rows),
+        "level": level,
+        "nama_jabatan": (baris_jabatan or {}).get("nama_jabatan"),
+        "diatur": True,
+    }
+
+
 @router.get("/kode-arsip")
 def kode_arsip(
     q: str | None = None,

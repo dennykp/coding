@@ -606,9 +606,15 @@
     S.modalLoading('Disposisi Surat', { lebar: 'lebar' });
     Promise.all([
       request('/surat-masuk/' + idSurat + '/opsi-disposisi'),
-      S.master('/master/jabatan' + query({ limit: 2000 }))
+      /* Bukan /master/jabatan. Daftar itu memuat seluruh 878 jabatan dan
+         dipakai untuk penyaring laporan; untuk mengirim disposisi aturannya
+         jauh lebih sempit dan sudah lama berlaku di e-surat — hanya jenjang
+         tertentu yang boleh dituju, sesuai jenjang pengirimnya, dan jabatan
+         sendiri tidak pernah ikut. */
+      S.master('/master/jabatan-disposisi')
     ]).then(function (res) {
-      var bahan = res[0], jabatan = res[1];
+      var bahan = res[0], tujuanBoleh = res[1] || {};
+      var jabatan = tujuanBoleh.items || [];
       var surat = bahan.surat;
       var induk = (bahan.disposisi_untuk_saya || [])[0];
       var pilih = pemilihJabatan('tujuan', jabatan, []);
@@ -650,7 +656,18 @@
           '<div class="space-y-5">' +
           '<div>' +
             '<label class="mb-1.5 block text-sm font-medium text-slate-700">Tujuan disposisi *</label>' +
-            pilih.html +
+            (jabatan.length
+              ? pilih.html
+              /* Kotak kosong tanpa keterangan membingungkan: orang mengira
+                 daftarnya gagal dimuat. Sebutkan sebabnya. */
+              : '<p class="rounded-xl bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-900">' +
+                (tujuanBoleh.diatur === false
+                  ? 'Jabatan Anda' +
+                    (tujuanBoleh.nama_jabatan ? ' (' + esc(tujuanBoleh.nama_jabatan) + ')' : '') +
+                    ' tidak punya daftar tujuan disposisi menurut aturan e-surat, ' +
+                    'jadi surat ini tidak bisa diteruskan dari sini.'
+                  : 'Tidak ada jabatan tujuan yang tersedia untuk jabatan Anda.') +
+                '</p>') +
           '</div>' +
 
           '<div>' +
@@ -680,7 +697,8 @@
         '</form>', { lebar: 'lebar' });
 
       var form = document.getElementById('form-disposisi');
-      pilih.pasang(form);
+      if (jabatan.length) pilih.pasang(form);
+      else form.querySelector('button[type=submit]').disabled = true;
 
       form.addEventListener('submit', function (event) {
         event.preventDefault();

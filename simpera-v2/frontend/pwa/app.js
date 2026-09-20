@@ -933,7 +933,7 @@
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
           'stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4" aria-hidden="true">' +
           '<rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8M12 17v4"/></svg>' +
-        'Buka versi web</a>' +
+        'Buka mode Web</a>' +
       '<button id="m-keluar" class="mt-3 w-full rounded-2xl border border-rose-200 bg-white py-3.5 text-sm font-semibold text-rose-600">Keluar</button>' +
       '<p class="mt-6 text-center text-[11px] text-slate-400">SIMPERA v2 Mobile · terhubung ke e-surat UNISMA</p>';
     return Promise.resolve();
@@ -1178,9 +1178,15 @@
     sheetMemuat('Disposisi Surat');
     Promise.all([
       minta('/surat-masuk/' + idSurat + '/opsi-disposisi'),
-      minta('/master/jabatan' + kueri({ limit: 2000 }))
+      /* Bukan /master/jabatan. Daftar itu memuat seluruh 878 jabatan dan
+         dipakai untuk penyaring laporan; untuk mengirim disposisi aturannya
+         jauh lebih sempit dan sudah lama berlaku di e-surat — hanya jenjang
+         tertentu yang boleh dituju, sesuai jenjang pengirimnya, dan jabatan
+         sendiri tidak pernah ikut. */
+      minta('/master/jabatan-disposisi')
     ]).then(function (res) {
-      var bahan = res[0], jabatan = res[1];
+      var bahan = res[0], tujuanBoleh = res[1] || {};
+      var jabatan = tujuanBoleh.items || [];
       var induk = (bahan.disposisi_untuk_saya || [])[0];
       var terpilih = [];
 
@@ -1197,9 +1203,20 @@
             : '') +
           '<div>' +
             '<label class="mb-1.5 block text-sm font-medium text-slate-700">Tujuan disposisi *</label>' +
-            '<input id="m-cari-jabatan" type="search" class="field field-search h-11" placeholder="Cari jabatan…">' +
-            '<div id="m-daftar-jabatan" class="mt-2 max-h-52 overflow-y-auto rounded-2xl border border-slate-200"></div>' +
-            '<div id="m-jabatan-terpilih" class="mt-2 flex flex-wrap gap-1.5"></div>' +
+            (jabatan.length
+              ? '<input id="m-cari-jabatan" type="search" class="field field-search h-11" placeholder="Cari jabatan…">' +
+                '<div id="m-daftar-jabatan" class="mt-2 max-h-52 overflow-y-auto rounded-2xl border border-slate-200"></div>' +
+                '<div id="m-jabatan-terpilih" class="mt-2 flex flex-wrap gap-1.5"></div>'
+              /* Kotak kosong tanpa keterangan membingungkan: orang mengira
+                 daftarnya gagal dimuat. Sebutkan sebabnya. */
+              : '<p class="rounded-2xl bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-900">' +
+                (tujuanBoleh.diatur === false
+                  ? 'Jabatan Anda' +
+                    (tujuanBoleh.nama_jabatan ? ' (' + esc(tujuanBoleh.nama_jabatan) + ')' : '') +
+                    ' tidak punya daftar tujuan disposisi menurut aturan e-surat, ' +
+                    'jadi surat ini tidak bisa diteruskan dari sini.'
+                  : 'Tidak ada jabatan tujuan yang tersedia untuk jabatan Anda.') +
+                '</p>') +
           '</div>' +
           '<div>' +
             '<label class="mb-2 block text-sm font-medium text-slate-700">Instruksi</label>' +
@@ -1235,6 +1252,13 @@
       var cari = el('m-cari-jabatan');
       var daftar = el('m-daftar-jabatan');
       var ringkas = el('m-jabatan-terpilih');
+      if (!cari || !daftar) {
+        // Tidak ada tujuan yang boleh dipilih; formulirnya tetap tampil agar
+        // keterangannya terbaca, tetapi tombol kirim dimatikan.
+        var kirim = document.querySelector('#m-form-disposisi button[type=submit]');
+        if (kirim) kirim.disabled = true;
+        return;
+      }
       var peta = {};
       jabatan.forEach(function (j) { peta[j.id_jabatan] = j.nama_jabatan; });
 
