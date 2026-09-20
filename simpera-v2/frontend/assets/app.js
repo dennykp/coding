@@ -570,6 +570,126 @@
       '</div>';
   }
 
+  /* Palet seri grafik.
+
+     Urutannya bukan selera: dijalankan lewat pemeriksa palet dan lulus
+     enam ceknya pada pasangan bersebelahan di atas permukaan kartu putih
+     (pita terang, lantai kroma, pemisahan buta warna, lantai penglihatan
+     normal, kontras >= 3:1). Hijau UNISMA duduk di slot pertama.
+
+     Warna lama #6ee7b7 dibuang karena kontrasnya cuma 1,52:1 di atas
+     putih — batangnya praktis tidak terlihat. */
+  var SERI = ['#008300', '#2a78d6', '#eb6834', '#4a3aa7'];
+
+  /* Grafik mini tanpa sumbu: bentuk deretnya saja, bukan nilainya. Karena
+     itu tidak ada label angka di sini — kartunya yang menyebut angkanya. */
+  function sparkline(nilai, warna) {
+    var n = nilai.length;
+    if (!n) return '';
+    var w = 120, h = 34, atas = Math.max.apply(null, nilai) || 1;
+    var x = function (i) { return n < 2 ? w : (i / (n - 1)) * w; };
+    var y = function (v) { return h - 2 - (v / atas) * (h - 6); };
+    var garis = nilai.map(function (v, i) {
+      return (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1);
+    }).join(' ');
+    var bidang = garis + ' L' + w + ' ' + h + ' L0 ' + h + ' Z';
+    var id = 'sp' + Math.random().toString(36).slice(2, 8);
+    return '<svg viewBox="0 0 ' + w + ' ' + h + '" class="kartu-spark" ' +
+      'preserveAspectRatio="none" aria-hidden="true">' +
+      '<defs><linearGradient id="' + id + '" x1="0" y1="0" x2="0" y2="1">' +
+        '<stop offset="0%" stop-color="' + warna + '" stop-opacity=".18"/>' +
+        '<stop offset="100%" stop-color="' + warna + '" stop-opacity="0"/>' +
+      '</linearGradient></defs>' +
+      '<path d="' + bidang + '" fill="url(#' + id + ')"/>' +
+      '<path d="' + garis + '" fill="none" stroke="' + warna + '" stroke-width="2" ' +
+        'stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>' +
+      '</svg>';
+  }
+
+  /* Kartu angka satu periode.
+
+     Angka nol tanpa pembanding tidak memberi tahu apa-apa — pada Senin pagi
+     "0 minggu ini" terbaca seperti layar rusak. Karena itu tiap kartu selalu
+     menyebut periode sebelumnya.
+
+     Selisihnya sengaja TIDAK diberi warna merah/hijau: surat masuk lebih
+     banyak bukan kabar baik atau buruk, cuma lebih banyak. Warna status di
+     aplikasi ini dipesan untuk keadaan (terverifikasi, ditolak, jatuh tempo). */
+  function kartuPeriode(o) {
+    /* Tidak setiap periode punya pembanding yang masuk akal — "tahun ini"
+       dibanding apa? Kalau tidak ada, kartunya memuat catatan biasa. */
+    if (!o.banding) {
+      return '' +
+        '<div class="kartu-angka">' +
+          '<div class="kartu-kepala2">' +
+            '<span class="kartu-tanda" style="background:' + (o.warna || SERI[0]) + '"></span>' +
+            '<span class="kartu-label">' + esc(o.label) + '</span>' +
+          '</div>' +
+          '<p class="kartu-nilai">' + angka(o.value) + '</p>' +
+          '<p class="kartu-banding kartu-rata">' + esc(o.catatan || '') + '</p>' +
+          (o.deret ? sparkline(o.deret, o.warna || SERI[0]) : '') +
+        '</div>';
+    }
+    var selisih = Number(o.value || 0) - Number(o.pembanding || 0);
+    var arah = selisih > 0 ? 'naik' : selisih < 0 ? 'turun' : 'rata';
+    var panah = {
+      naik: 'M12 19V5M5 12l7-7 7 7',
+      turun: 'M12 5v14M19 12l-7 7-7-7',
+      rata: 'M5 12h14'
+    }[arah];
+    return '' +
+      '<div class="kartu-angka">' +
+        '<div class="kartu-kepala2">' +
+          '<span class="kartu-tanda" style="background:' + (o.warna || SERI[0]) + '"></span>' +
+          '<span class="kartu-label">' + esc(o.label) + '</span>' +
+        '</div>' +
+        '<p class="kartu-nilai">' + angka(o.value) + '</p>' +
+        '<p class="kartu-banding kartu-' + arah + '">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" ' +
+            'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+            '<path d="' + panah + '"/></svg>' +
+          esc(selisih === 0 ? 'sama dengan ' + o.banding
+              : (selisih > 0 ? '+' : '\u2212') + angka(Math.abs(selisih)) + ' dari ' + o.banding) +
+        '</p>' +
+        (o.deret ? sparkline(o.deret, o.warna || SERI[0]) : '') +
+      '</div>';
+  }
+
+  /* Bagian-terhadap-keseluruhan untuk sedikit golongan.
+
+     Dulu ini donat. Dengan dua jenis surat saja, donat dua potong termasuk
+     anti-pola — angkanya sendiri sudah jadi grafiknya. Batang bersusun
+     berlabel langsung membacanya jauh lebih cepat, dan nama golongan yang
+     panjang muat tanpa dipotong. */
+  function meterProporsi(items) {
+    var total = items.reduce(function (n, it) { return n + Number(it.jumlah || 0); }, 0);
+    if (!total) return '<p class="py-10 text-center text-sm text-slate-400">Belum ada data.</p>';
+
+    var batang = '<div class="meter">';
+    items.forEach(function (it, i) {
+      var bagian = Number(it.jumlah || 0) / total;
+      if (!bagian) return;
+      batang += '<span class="meter-isi" style="width:' + (bagian * 100).toFixed(2) + '%;' +
+        'background:' + SERI[i % SERI.length] + '" title="' + esc(it.nama) + ': ' +
+        angka(it.jumlah) + '"></span>';
+    });
+    batang += '</div>';
+
+    var daftar = '<ul class="meter-daftar">';
+    items.forEach(function (it, i) {
+      var persen = Number(it.jumlah || 0) / total * 100;
+      daftar += '<li>' +
+        '<span class="meter-titik" style="background:' + SERI[i % SERI.length] + '"></span>' +
+        '<span class="meter-nama">' + esc(it.nama) + '</span>' +
+        '<b>' + angka(it.jumlah) + '</b>' +
+        '<span class="meter-persen">' + (persen < 10 ? persen.toFixed(1) : Math.round(persen)) + '%</span>' +
+        '</li>';
+    });
+    daftar += '</ul>';
+
+    return '<p class="meter-total">' + angka(total) + '<small>surat</small></p>' + batang + daftar;
+  }
+
   function badge(text, tone) {
     return '<span class="badge badge-' + (tone || 'slate') + '">' + esc(text) + '</span>';
   }
@@ -640,13 +760,19 @@
     var top = Math.ceil(maxValue / (step * 5)) * step * 5 || 5;
     var plotW = width - padL - padR, plotH = height - padT - padB;
     var slot = plotW / labels.length;
-    var barW = Math.max(4, (slot - 8) / series.length);
+    /* Celah 2px antarbatang bersebelahan dibiarkan berwarna permukaan, bukan
+       digaris tepi: garis tepi menambah satu warna lagi ke grafik, celah
+       tidak. */
+    var JARAK = 2;
+    var barW = Math.max(3, (slot - 10 - JARAK * (series.length - 1)) / series.length);
 
-    var svg = '<svg viewBox="0 0 ' + width + ' ' + height + '" class="h-64 w-full" role="img" aria-label="Grafik surat per bulan">';
+    var svg = '<svg viewBox="0 0 ' + width + ' ' + height + '" class="grafik-batang" ' +
+      'style="aspect-ratio:' + width + '/' + height + '" ' +
+      'role="img" aria-label="Grafik surat masuk dan surat keluar per bulan">';
     for (var g = 0; g <= 4; g++) {
       var y = padT + plotH - (plotH * g / 4);
       svg += '<line x1="' + padL + '" y1="' + y.toFixed(1) + '" x2="' + (width - padR) + '" y2="' + y.toFixed(1) +
-             '" stroke="#e2e8f0" stroke-width="1"/>';
+             '" stroke="#eef2f7" stroke-width="1"/>';
       svg += '<text x="' + (padL - 8) + '" y="' + (y + 4).toFixed(1) + '" text-anchor="end" font-size="10" fill="#94a3b8">' +
              Math.round(top * g / 4) + '</text>';
     }
@@ -655,24 +781,39 @@
       series.forEach(function (s, si) {
         var value = s.data[i] || 0;
         var h = top ? (value / top) * plotH : 0;
-        var x = x0 + 4 + si * barW;
+        var x = x0 + 5 + si * (barW + JARAK);
         var y = padT + plotH - h;
-        svg += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW.toFixed(1) +
-               '" height="' + Math.max(0, h).toFixed(1) + '" rx="3" fill="' + s.color + '">' +
-               '<title>' + esc(label) + ' — ' + esc(s.name) + ': ' + value + '</title></rect>';
+        if (h <= 0) return;
+        /* Ujung atas membulat 4px, kaki tetap siku menempel garis dasar:
+           batang yang membulat di kedua ujung melayang lepas dari sumbunya. */
+        var r = Math.min(4, barW / 2, h);
+        svg += '<path d="M' + x.toFixed(1) + ' ' + (y + h).toFixed(1) +
+               ' V' + (y + r).toFixed(1) +
+               ' a' + r.toFixed(1) + ' ' + r.toFixed(1) + ' 0 0 1 ' + r.toFixed(1) + ' -' + r.toFixed(1) +
+               ' h' + (barW - 2 * r).toFixed(1) +
+               ' a' + r.toFixed(1) + ' ' + r.toFixed(1) + ' 0 0 1 ' + r.toFixed(1) + ' ' + r.toFixed(1) +
+               ' V' + (y + h).toFixed(1) + ' Z" fill="' + s.color + '">' +
+               '<title>' + esc(label) + ' — ' + esc(s.name) + ': ' + angka(value) + '</title></path>';
       });
       svg += '<text x="' + (x0 + slot / 2).toFixed(1) + '" y="' + (height - 8) +
              '" text-anchor="middle" font-size="10" fill="#94a3b8">' + esc(label) + '</text>';
     });
     svg += '</svg>';
 
-    var legend = '<div class="mt-1 flex flex-wrap items-center gap-4">';
+    /* Legenda selalu ada untuk dua seri atau lebih — identitas seri tidak
+       boleh bergantung pada warna saja. */
+    var legend = '<div class="grafik-legenda">';
     series.forEach(function (s) {
-      legend += '<span class="flex items-center gap-2 text-xs text-slate-600">' +
-        '<span class="h-2.5 w-2.5 rounded-sm" style="background:' + s.color + '"></span>' + esc(s.name) + '</span>';
+      var jumlah = s.data.reduce(function (n, v) { return n + (Number(v) || 0); }, 0);
+      legend += '<span class="grafik-seri">' +
+        '<span class="grafik-titik" style="background:' + s.color + '"></span>' +
+        esc(s.name) + '<b>' + angka(jumlah) + '</b></span>';
     });
     legend += '</div>';
-    return svg + legend;
+    /* Di layar sempit grafiknya menggulir di dalam wadahnya sendiri, bukan
+       menyusut sampai label bulannya tidak terbaca. Halaman tetap tidak
+       pernah menggulir ke samping. */
+    return '<div class="grafik-bungkus">' + svg + '</div>' + legend;
   }
 
   function donutChart(items) {
@@ -974,6 +1115,8 @@
     boleh: boleh, muatNotif: muatNotif,
     skeletonTable: skeletonTable, emptyRow: emptyRow, pagination: pagination,
     barChart: barChart, donutChart: donutChart, unduh: unduh,
+    kartuPeriode: kartuPeriode, meterProporsi: meterProporsi,
+    sparkline: sparkline, SERI: SERI,
     state: state, BASE: BASE, API: API
   };
 

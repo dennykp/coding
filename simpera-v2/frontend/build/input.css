@@ -197,6 +197,127 @@ input[type="radio"] { accent-color: #009000; }
 
 /* Panel keterangan di kepala halaman: latar muda, teks gelap — beda peran
    dengan kartu angka di atas, jadi warnanya pun tidak dipekatkan. */
+/* ---------------------------------------------------------------------------
+   Dashboard.
+
+   Petak gradien pekat yang lama diganti kartu putih beraksen tipis: bidang
+   warna sepekat itu meneriaki seluruh halaman dan justru menenggelamkan
+   angka yang perlu ditindaklanjuti.
+   --------------------------------------------------------------------------- */
+.bagian-kepala {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: .75rem; margin-bottom: .25rem;
+}
+.bagian-nama { margin: 0; font-size: .9rem; font-weight: 600; color: #0f172a; }
+.bagian-ket { margin: .1rem 0 0; font-size: .75rem; color: #64748b; }
+
+.kisi-angka {
+  margin-top: 1.1rem; display: grid; gap: .85rem;
+  grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
+}
+.kartu-angka {
+  position: relative; overflow: hidden;
+  padding: .9rem 1rem 1rem; border-radius: 1rem;
+  border: 1px solid #e8edf2; background: #fff;
+}
+.kartu-kepala2 { display: flex; align-items: center; gap: .45rem; }
+.kartu-tanda { flex: none; width: .5rem; height: .5rem; border-radius: 2px; }
+.kartu-label {
+  font-size: .69rem; font-weight: 700; letter-spacing: .07em;
+  text-transform: uppercase; color: #64748b;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* Angka utamanya besar dan bertabular supaya kolomnya lurus antarkartu. */
+.kartu-nilai {
+  margin: .45rem 0 0; font-size: 2rem; font-weight: 700; line-height: 1.05;
+  letter-spacing: -.02em; color: #0f172a; font-variant-numeric: tabular-nums;
+}
+/* Selisih periode TIDAK diwarnai merah/hijau: surat masuk lebih banyak bukan
+   kabar baik atau buruk. Warna status dipesan untuk keadaan surat. */
+.kartu-banding {
+  margin: .3rem 0 0; display: flex; align-items: center; gap: .25rem;
+  font-size: .71rem; color: #64748b; min-height: 1.05rem;
+}
+.kartu-banding svg { flex: none; width: .72rem; height: .72rem; }
+.kartu-naik svg  { color: #475569; }
+.kartu-turun svg { color: #94a3b8; }
+.kartu-rata svg  { color: #cbd5e1; }
+.kartu-spark { display: block; width: 100%; height: 2.1rem; margin-top: .6rem; }
+
+/* Bagian-terhadap-keseluruhan: batang bersusun berlabel langsung. */
+.meter-total {
+  margin: 0; font-size: 1.75rem; font-weight: 700; line-height: 1;
+  letter-spacing: -.02em; color: #0f172a; font-variant-numeric: tabular-nums;
+}
+.meter-total small {
+  margin-left: .4rem; font-size: .72rem; font-weight: 500; color: #64748b;
+}
+.meter {
+  display: flex; gap: 2px; margin-top: .75rem;
+  height: .7rem; border-radius: 999px; overflow: hidden; background: #f1f5f9;
+}
+.meter-isi { display: block; height: 100%; }
+.meter-isi:first-child { border-radius: 999px 0 0 999px; }
+.meter-isi:last-child { border-radius: 0 999px 999px 0; }
+.meter-daftar { list-style: none; margin: .9rem 0 0; padding: 0; }
+.meter-daftar li {
+  display: flex; align-items: center; gap: .55rem;
+  padding: .42rem 0; border-bottom: 1px solid #f4f7f5; font-size: .8rem;
+}
+.meter-daftar li:last-child { border-bottom: 0; }
+.meter-titik { flex: none; width: .55rem; height: .55rem; border-radius: 2px; }
+.meter-nama {
+  min-width: 0; flex: 1; color: #475569;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.meter-daftar b { font-weight: 600; color: #0f172a; font-variant-numeric: tabular-nums; }
+.meter-persen {
+  width: 2.6rem; text-align: right; font-size: .72rem; color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Daftar "perlu perhatian": angka yang bisa ditindaklanjuti, tiap baris
+   tautan ke layarnya. */
+.ringkas-kisi { margin-top: .9rem; display: grid; gap: .5rem; }
+.ringkas {
+  display: grid; grid-template-columns: 1fr auto; align-items: baseline;
+  gap: .2rem .75rem; padding: .6rem .75rem; border-radius: .75rem;
+  border: 1px solid #eef2f7; background: #fbfdfc; text-decoration: none;
+  transition: background-color .3s ease-in-out, border-color .3s ease-in-out;
+}
+.ringkas:hover { background: #f2faf2; border-color: #cfe8cf; }
+.ringkas-label { font-size: .78rem; font-weight: 500; color: #334155; }
+.ringkas-nilai {
+  grid-row: span 2; align-self: center;
+  font-size: 1.3rem; font-weight: 700; color: #064e3b;
+  font-variant-numeric: tabular-nums;
+}
+.ringkas-catatan { font-size: .69rem; color: #94a3b8; }
+
+/* Anak grid bawaannya min-width:auto — tanpa ini kartu grafik menolak
+   menyusut di bawah lebar minimum grafiknya dan seluruh halaman ikut
+   bisa digeser ke samping. */
+.kartu-grafik { min-width: 0; }
+.grafik-bungkus { max-width: 100%; overflow-x: auto; scrollbar-width: thin; }
+.grafik-batang { display: block; width: 100%; min-width: 34rem; height: auto; }
+
+/* Satu jalur selebar halaman; di layar sempit menumpuk sendiri. */
+.ringkas-kisi { grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); }
+
+/* Legenda grafik: selalu ada untuk dua seri atau lebih. */
+.grafik-legenda {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .35rem 1.15rem;
+  margin-top: .65rem;
+}
+.grafik-seri {
+  display: inline-flex; align-items: center; gap: .4rem;
+  font-size: .75rem; color: #64748b;
+}
+.grafik-seri b {
+  font-weight: 600; color: #0f172a; font-variant-numeric: tabular-nums;
+}
+.grafik-titik { flex: none; width: .6rem; height: .6rem; border-radius: 2px; }
+
 .panel { border-radius: 1.25rem; padding: 1.25rem; border: 1px solid transparent; }
 .panel-green { background: #f0f9f0; border-color: #6ee7b7; }
 .panel-sky   { background: #eff6ff; border-color: #93c5fd; }

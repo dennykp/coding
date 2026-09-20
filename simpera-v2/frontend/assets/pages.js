@@ -387,55 +387,92 @@
       request('/dashboard/summary' + query({ tahun: tahun })),
       request('/dashboard/chart' + query({ tahun: tahun })),
       request('/dashboard/jenis' + query({ tahun: tahun })),
-      request('/dashboard/terbaru' + query({ limit: 8 }))
+      request('/dashboard/terbaru' + query({ limit: 8 })),
+      request('/dashboard/periode')
     ]).then(function (res) {
-      var sum = res[0], chart = res[1], jenis = res[2], terbaru = res[3];
-      var ICON = {
-        in: '<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H6.911a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661Z"/></svg>',
-        out: '<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"/></svg>',
-        disp: '<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z"/></svg>',
-        arc: '<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z"/></svg>'
-      };
+      var sum = res[0], chart = res[1], jenis = res[2], terbaru = res[3], p = res[4];
+      var deret = (p.harian || []).map(function (d) { return d.jumlah; });
+
+      /* Ringkasan tahun tidak lagi berupa empat petak gradien besar.
+         Bidang warna sepekat itu meneriaki seluruh halaman dan menenggelamkan
+         angka yang sebetulnya perlu ditindaklanjuti; warna pekat disimpan
+         untuk tanda kecil dan aksen saja. */
+      function ringkas(label, nilai, catatan, tautan) {
+        return '<a class="ringkas" href="' + tautan + '">' +
+          '<span class="ringkas-label">' + esc(label) + '</span>' +
+          '<span class="ringkas-nilai">' + angka(nilai) + '</span>' +
+          '<span class="ringkas-catatan">' + esc(catatan) + '</span></a>';
+      }
 
       var html =
         '<div class="space-y-5">' +
-          '<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">' +
-            S.statCard({ label: 'Surat Masuk ' + tahun, value: sum.surat_masuk.total,
-                         hint: angka(sum.surat_masuk.belum) + ' belum diverifikasi',
-                         icon: ICON.in, tile: 'tile-green', tone: 'text-brand-600' }) +
-            S.statCard({ label: 'Surat Keluar ' + tahun, value: sum.surat_keluar.total,
-                         hint: angka(sum.surat_keluar.disetujui) + ' disetujui',
-                         icon: ICON.out, tile: 'tile-sky', tone: 'text-sky-600' }) +
-            S.statCard({ label: 'Disposisi ' + tahun, value: sum.disposisi.total,
-                         hint: angka(sum.disposisi.berjalan) + ' masih berjalan',
-                         icon: ICON.disp, tile: 'tile-amber', tone: 'text-amber-600' }) +
-            S.statCard({ label: 'Berkas Arsip', value: sum.arsip.total,
-                         hint: angka(sum.arsip.dipinjam) + ' sedang dipinjam',
-                         icon: ICON.arc, tile: 'tile-violet', tone: 'text-violet-600' }) +
-          '</div>' +
 
-          '<div class="grid gap-5 xl:grid-cols-3">' +
-            '<div class="card p-5 xl:col-span-2">' +
-              '<div class="flex items-center justify-between gap-3">' +
-                '<div><h2 class="text-sm font-semibold text-slate-900">Surat masuk vs surat keluar</h2>' +
-                '<p class="text-xs text-slate-500">Per bulan, tahun ' + tahun + '</p></div>' +
+          '<section class="card p-5">' +
+            '<div class="bagian-kepala">' +
+              '<div><h2 class="bagian-nama">Surat masuk</h2>' +
+              '<p class="bagian-ket">Dihitung dari tanggal terima surat</p></div>' +
+              '<a href="#/surat-masuk" class="btn-ghost btn-sm">Lihat semua</a>' +
+            '</div>' +
+            '<div class="kisi-angka">' +
+              S.kartuPeriode({ label: 'Hari ini', value: p.hari_ini,
+                               pembanding: p.kemarin, banding: 'kemarin',
+                               warna: S.SERI[0], deret: deret }) +
+              S.kartuPeriode({ label: 'Minggu ini', value: p.minggu_ini,
+                               pembanding: p.minggu_lalu, banding: 'minggu lalu',
+                               warna: S.SERI[1] }) +
+              S.kartuPeriode({ label: 'Bulan ini', value: p.bulan_ini,
+                               pembanding: p.bulan_lalu, banding: 'bulan lalu',
+                               warna: S.SERI[2] }) +
+              S.kartuPeriode({ label: 'Tahun ' + tahun, value: sum.surat_masuk.total,
+                               catatan: angka(sum.surat_masuk.belum_dibaca) + ' belum dibaca',
+                               warna: S.SERI[3] }) +
+            '</div>' +
+          '</section>' +
+
+          '<div class="grid items-start gap-5 xl:grid-cols-3">' +
+            '<div class="card kartu-grafik p-5 xl:col-span-2">' +
+              '<div class="bagian-kepala">' +
+                '<div><h2 class="bagian-nama">Surat masuk dan surat keluar</h2>' +
+                '<p class="bagian-ket">Per bulan, tahun ' + tahun + '</p></div>' +
               '</div>' +
               '<div class="mt-4">' + S.barChart(chart.labels, [
-                  { name: 'Surat masuk', data: chart.surat_masuk, color: '#059669' },
-                  { name: 'Surat keluar', data: chart.surat_keluar, color: '#6ee7b7' }
+                  { name: 'Surat masuk', data: chart.surat_masuk, color: S.SERI[0] },
+                  { name: 'Surat keluar', data: chart.surat_keluar, color: S.SERI[1] }
                 ]) + '</div>' +
             '</div>' +
+
             '<div class="card p-5">' +
-              '<h2 class="text-sm font-semibold text-slate-900">Komposisi jenis surat</h2>' +
-              '<p class="text-xs text-slate-500">Surat masuk tahun ' + tahun + '</p>' +
-              '<div class="mt-5">' + S.donutChart(jenis) + '</div>' +
+              '<h2 class="bagian-nama">Jenis surat masuk</h2>' +
+              '<p class="bagian-ket">Tahun ' + tahun + '</p>' +
+              '<div class="mt-4">' + S.meterProporsi(jenis) + '</div>' +
             '</div>' +
           '</div>' +
+
+          '<section class="card p-5">' +
+            '<div class="bagian-kepala">' +
+              '<div><h2 class="bagian-nama">Perlu perhatian</h2>' +
+              '<p class="bagian-ket">Tahun ' + tahun + '</p></div>' +
+            '</div>' +
+            '<div class="ringkas-kisi">' +
+              ringkas('Belum diverifikasi', sum.surat_masuk.belum,
+                      'dari ' + angka(sum.surat_masuk.total) + ' surat masuk',
+                      '#/surat-masuk') +
+              ringkas('Disposisi berjalan', sum.disposisi.berjalan,
+                      'dari ' + angka(sum.disposisi.total) + ' disposisi',
+                      '#/disposisi') +
+              ringkas('Surat keluar menunggu', sum.surat_keluar.menunggu,
+                      'dari ' + angka(sum.surat_keluar.total) + ' surat keluar',
+                      '#/surat-keluar') +
+              ringkas('Arsip dipinjam', sum.arsip.dipinjam,
+                      'dari ' + angka(sum.arsip.total) + ' berkas arsip',
+                      '#/arsip') +
+            '</div>' +
+          '</section>' +
 
           '<div class="card overflow-hidden">' +
             '<div class="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">' +
-              '<div><h2 class="text-sm font-semibold text-slate-900">Surat masuk terbaru</h2>' +
-              '<p class="text-xs text-slate-500">Delapan entri terakhir</p></div>' +
+              '<div><h2 class="bagian-nama">Surat masuk terbaru</h2>' +
+              '<p class="bagian-ket">Delapan entri terakhir</p></div>' +
               '<a href="#/surat-masuk" class="btn-ghost btn-sm">Lihat semua</a>' +
             '</div>' +
             '<div class="table-wrap"><table class="data"><thead><tr>' +

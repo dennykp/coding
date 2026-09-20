@@ -93,6 +93,80 @@ def summary(
     }
 
 
+# Tanggal acuan sebuah surat masuk. Dipakai sama persis di seluruh berkas ini
+# supaya angka di kartu, grafik, dan komposisi tidak saling berselisih.
+TANGGAL_MASUK = "COALESCE(s.tgl_surat_terima, s.tgl_entry, s.created_at)"
+
+
+@router.get("/periode")
+def periode(user: dict[str, Any] = Depends(security.current_user)) -> Any:
+    """Surat masuk hari ini, minggu ini, dan bulan ini — plus pembandingnya.
+
+    Angka nol tanpa konteks tidak memberi tahu apa-apa: pada Senin pagi
+    "0 minggu ini" sama saja dengan layar rusak. Karena itu tiap periode
+    dikirim bersama periode sebelumnya, supaya layar bisa bilang "minggu
+    lalu 23" alih-alih nol yang menggantung.
+
+    Minggu dihitung Senin–Minggu (YEARWEEK mode 1), bukan Minggu–Sabtu.
+    """
+    where, params = _scope(user)
+    tgl = TANGGAL_MASUK
+
+    baris = db.fetch_one(
+        f"""
+        SELECT
+          SUM(DATE({tgl}) = CURDATE())                                AS hari_ini,
+          SUM(DATE({tgl}) = CURDATE() - INTERVAL 1 DAY)               AS kemarin,
+          SUM(YEARWEEK({tgl}, 1) = YEARWEEK(CURDATE(), 1))            AS minggu_ini,
+          SUM(YEARWEEK({tgl}, 1) = YEARWEEK(CURDATE() - INTERVAL 7 DAY, 1))
+                                                                      AS minggu_lalu,
+          SUM(DATE_FORMAT({tgl}, '%%Y-%%m') = DATE_FORMAT(CURDATE(), '%%Y-%%m'))
+                                                                      AS bulan_ini,
+          SUM(DATE_FORMAT({tgl}, '%%Y-%%m')
+              = DATE_FORMAT(CURDATE() - INTERVAL 1 MONTH, '%%Y-%%m'))  AS bulan_lalu
+        FROM tt_suratmasuk s
+        WHERE {tgl} >= CURDATE() - INTERVAL 2 MONTH{where}
+        """,
+        params,
+    ) or {}
+
+    # Deret 14 hari untuk grafik mini di kartu "Hari ini". Hari tanpa surat
+    # tetap harus muncul sebagai nol, jadi kerangkanya dibuat di sini dan
+    # hasil kueri ditempelkan ke atasnya.
+    hari_ini = dt.date.today()
+    mulai = hari_ini - dt.timedelta(days=13)
+    rows = db.fetch_all(
+        f"""
+        SELECT DATE({tgl}) AS tanggal, COUNT(*) AS jumlah
+        FROM tt_suratmasuk s
+        WHERE DATE({tgl}) BETWEEN %s AND %s{where}
+        GROUP BY tanggal
+        """,
+        [mulai, hari_ini, *params],
+    )
+    per_tanggal = {str(r["tanggal"]): int(r["jumlah"] or 0) for r in rows}
+    harian = [
+        {
+            "tanggal": str(mulai + dt.timedelta(days=i)),
+            "jumlah": per_tanggal.get(str(mulai + dt.timedelta(days=i)), 0),
+        }
+        for i in range(14)
+    ]
+
+    def num(value: Any) -> int:
+        return int(value or 0)
+
+    return {
+        "hari_ini": num(baris.get("hari_ini")),
+        "kemarin": num(baris.get("kemarin")),
+        "minggu_ini": num(baris.get("minggu_ini")),
+        "minggu_lalu": num(baris.get("minggu_lalu")),
+        "bulan_ini": num(baris.get("bulan_ini")),
+        "bulan_lalu": num(baris.get("bulan_lalu")),
+        "harian": harian,
+    }
+
+
 @router.get("/chart")
 def chart(
     tahun: int | None = Query(default=None),
