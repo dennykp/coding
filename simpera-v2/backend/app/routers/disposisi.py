@@ -113,8 +113,11 @@ def daftar_disposisi(
                   LEFT JOIN tm_jabatan jb2 ON jb2.id_jabatan = d3.id_jabatan
                  WHERE d3.id_surat = d.id_surat AND d3.id_usrz = %s)
                    AS tujuan_saya,
+               -- e-surat lama menyimpan opsi dengan koma di ekor
+               -- ("Untuk diproses, "), jadi ekornya dipangkas dulu sebelum
+               -- disambung dengan catatannya.
                (SELECT CONCAT_WS(' · ',
-                         NULLIF(TRIM(d4.opsi), ''),
+                         NULLIF(TRIM(TRAILING ',' FROM TRIM(d4.opsi)), ''),
                          NULLIF(TRIM(NULLIF(d4.isi_disposisi, '-')), ''))
                   FROM tt_disposisi d4
                  WHERE d4.id_surat = d.id_surat AND d4.id_usrz = %s
