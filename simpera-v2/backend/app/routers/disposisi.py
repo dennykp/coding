@@ -85,7 +85,15 @@ def daftar_disposisi(
                d.isi_disposisi, d.opsi, d.status_selesai, d.catatan_selesai,
                d.dilihat, d.created_at, d.id_usrz, d.id_jabatan,
                s.nomor_surat, s.perihal, s.dari, s.tgl_surat_terima,
-               jb.nama_jabatan AS tujuan_jabatan, u.name AS pengirim
+               jb.nama_jabatan AS tujuan_jabatan, u.name AS pengirim,
+               -- Berapa kali PEMAKAI INI sendiri mendisposisikan surat yang
+               -- sama. Baris yang ia kirim sendiri biasanya tidak muncul di
+               -- daftar ini (saringannya jabatan penerima), jadi tanpa angka
+               -- ini layar tidak punya cara tahu bahwa surat itu sudah
+               -- diteruskannya.
+               (SELECT COUNT(*) FROM tt_disposisi d2
+                 WHERE d2.id_surat = d.id_surat AND d2.id_usrz = %s)
+                   AS disposisi_saya
         FROM tt_disposisi d
         LEFT JOIN tt_suratmasuk s ON s.id_surat = d.id_surat
         LEFT JOIN tm_jabatan jb ON jb.id_jabatan = d.id_jabatan
@@ -94,7 +102,7 @@ def daftar_disposisi(
         ORDER BY d.id_disposisi DESC
         LIMIT %s OFFSET %s
         """,
-        [*params, per_page, offset],
+        [user.get("id") or 0, *params, per_page, offset],
     )
 
     items = clean_all(rows)
@@ -102,7 +110,14 @@ def daftar_disposisi(
         status = (item.get("status_selesai") or "").strip()
         item["selesai"] = bool(status)
         item["status_label"] = "Selesai" if status else "Sedang Berjalan"
-        item["status_disposisi"] = status_disposisi(item, user)
+        # Sekali pemakai ini meneruskan suratnya, perannya atas surat itu
+        # adalah "Mendisposisikan" — walau baris yang sedang dilihat adalah
+        # disposisi yang masuk ke jabatannya.
+        item["status_disposisi"] = (
+            "Mendisposisikan"
+            if int(item.get("disposisi_saya") or 0)
+            else status_disposisi(item, user)
+        )
     return page_response(items, int(total or 0), page, per_page)
 
 

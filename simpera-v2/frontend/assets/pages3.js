@@ -732,7 +732,16 @@
             '</div>' +
 
             '<p id="disposisi-error" class="hidden rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700"></p>' +
-            '<div class="flex justify-end gap-2 border-t border-slate-200 pt-3">' +
+            /* Meneruskan bukan satu-satunya jalan. Kalau surat ini memang
+               berhenti di jabatan kita, tandai selesai — tanpa itu orang
+               merasa wajib meneruskan ke jabatan lain hanya untuk menutup
+               disposisinya. Tombolnya hanya muncul kalau memang ada
+               disposisi masuk yang bisa ditutup. */
+            '<div class="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 pt-3">' +
+              (induk
+                ? '<button type="button" id="disposisi-selesai" class="btn-ghost mr-auto ' +
+                  'text-brand-700">Tandai selesai saja</button>'
+                : '') +
               '<button type="button" class="btn-ghost" data-modal-close>Batal</button>' +
               '<button type="submit" class="btn-primary">Kirim disposisi</button>' +
             '</div>' +
@@ -742,6 +751,20 @@
       var form = document.getElementById('form-disposisi');
       if (jabatan.length) pilih.pasang(form);
       else form.querySelector('button[type=submit]').disabled = true;
+
+      var tombolSelesai = form.querySelector('#disposisi-selesai');
+      if (tombolSelesai) {
+        tombolSelesai.addEventListener('click', function () {
+          formSelesaiDisposisi({
+            id_disposisi: induk.id_disposisi,
+            id_surat: surat.id_surat || idSurat,
+            nomor_surat: surat.nomor_surat,
+            perihal: surat.perihal,
+            tujuan_jabatan: induk.tujuan_jabatan,
+            tgl_disposisi: induk.tgl_disposisi
+          }, tabel);
+        });
+      }
 
       // :has() menangani tampilan chip di peramban baru; kelas ini menjaga
       // penandaannya tetap terlihat di peramban yang belum mendukungnya.

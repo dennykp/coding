@@ -181,11 +181,8 @@
         body.innerHTML = baris.map(function (row, index) {
           return '<tr data-index="' + index + '"' + (cfg.onRow ? ' class="cursor-pointer"' : '') + '>' +
             cfg.columns.map(function (c) {
-              // Seluruh baris halaman ikut dikirim: sebagian kolom perlu
-              // melihat baris lain untuk memutuskan (mis. apakah surat yang
-              // sama sudah pernah didisposisikan oleh pemakai ini).
               return '<td' + (c.tdClass ? ' class="' + c.tdClass + '"' : '') + '>' +
-                     c.render(row, baris) + '</td>';
+                     c.render(row) + '</td>';
             }).join('') + '</tr>';
         }).join('');
         pager.appendChild(S.pagination(data, function (next) { page = next; load(); }));
@@ -352,20 +349,13 @@
 
   /* Apakah pemakai ini sudah mendisposisikan surat pada baris itu.
 
-     Yang menentukan bukan baris yang sedang dilihat, melainkan apakah ada
-     baris mana pun untuk surat yang SAMA yang dikirim oleh pemakai ini —
-     satu surat bisa punya beberapa disposisi, dan yang dikirim orang lain
-     tidak menghalangi haknya untuk ikut meneruskan.
-
-     Penandanya status_disposisi "Mendisposisikan", yang dihitung backend
-     tepat ketika id_usrz baris itu miliknya (lihat common.status_disposisi). */
-  function sudahSayaDisposisikan(r, semua) {
-    var daftar = (semua && semua.length) ? semua : [r];
-    for (var i = 0; i < daftar.length; i++) {
-      if (String(daftar[i].id_surat) === String(r.id_surat) &&
-          daftar[i].status_disposisi === 'Mendisposisikan') return true;
-    }
-    return false;
+     Angkanya datang dari server (disposisi_saya): jumlah disposisi untuk
+     surat yang SAMA yang dibuat oleh pemakai ini. Sebelumnya ini ditebak
+     dengan memindai baris lain di halaman, tetapi baris yang ia kirim
+     sendiri justru tidak muncul di daftar Disposisi — saringannya jabatan
+     penerima — sehingga surat yang sudah diteruskan tetap tampak belum. */
+  function sudahSayaDisposisikan(r) {
+    return Number(r.disposisi_saya || 0) > 0;
   }
 
   /* Penuntasan disposisi adalah hak jabatan penerimanya. */
@@ -950,7 +940,7 @@
         { title: 'Selesai', tdClass: 'whitespace-nowrap', render: function (r) {
             return r.selesai ? badge('Selesai', 'green')
                              : '<span class="text-slate-400">-</span>'; } },
-        { title: 'Aksi', thClass: 'text-right kolom-aksi', tdClass: 'whitespace-nowrap kolom-aksi', render: function (r, semua) {
+        { title: 'Aksi', thClass: 'text-right kolom-aksi', tdClass: 'whitespace-nowrap kolom-aksi', render: function (r) {
             return S.tombolAksi([
               { ikon: 'detail', warna: 'hijau', judul: 'Lihat detail surat', aksi: 'detail',
                 nonaktif: !r.id_surat },
@@ -966,12 +956,13 @@
                  hanya melahirkan disposisi kembar. Yang tampil keterangan
                  menuju jejaknya. */
               S.boleh('disposisi')
-                ? (sudahSayaDisposisikan(r, semua)
+                ? (sudahSayaDisposisikan(r)
                     ? { ikon: 'info', warna: 'biru', aksi: 'jejak',
                         judul: 'Anda sudah mendisposisikan surat ini — lihat jejaknya',
                         nonaktif: !r.id_surat }
-                    : { ikon: 'kirim', warna: 'ungu', judul: 'Teruskan disposisi ini',
-                        aksi: 'teruskan', nonaktif: !r.id_surat })
+                    : { ikon: 'kirim', warna: 'ungu', aksi: 'teruskan',
+                        judul: 'Teruskan disposisi ini ke jabatan lain',
+                        nonaktif: !r.id_surat })
                 : null,
               // Hanya jabatan penerima yang boleh menuntaskan, seperti
               // aplikasi lama; yang lain melihat tombolnya tetapi mati.
@@ -979,8 +970,9 @@
                 ? { ikon: 'selesai', warna: 'hijau', judul: 'Sudah selesai',
                     aksi: 'selesai', nonaktif: true }
                 : bolehMenuntaskan(r)
-                  ? { ikon: 'selesai', warna: 'hijau', judul: 'Tandai selesai',
-                      aksi: 'selesai' }
+                  ? { ikon: 'selesai', warna: 'hijau', aksi: 'selesai',
+                      judul: 'Tandai selesai — surat berhenti di jabatan Anda, '
+                             + 'tidak perlu diteruskan' }
                   : { ikon: 'selesai', warna: 'hijau',
                       judul: 'Disposisi ini bukan untuk jabatan Anda',
                       aksi: 'selesai', nonaktif: true }
