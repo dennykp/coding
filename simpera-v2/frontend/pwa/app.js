@@ -30,6 +30,7 @@
      yang sedang tampil menitipkan fungsi muat-ulangnya di sini supaya
      ketikan di kepala langsung menyaring daftar yang terbuka. */
   var pendengarCari = null;
+  var pendengarGulir = null;
 
   // ------------------------------------------------------------------ ringkas
   function el(id) { return document.getElementById(id); }
@@ -583,6 +584,80 @@
      chip penyaring bawaannya dan judul kosongnya. Backend sudah membatasi
      surat menurut jabatan bagi peran non-pengawas, jadi Kotak masuk aman
      dibuka semua peran. */
+  var PER_HALAMAN = 25;
+
+  /* Daftar panjang dimuat bertahap: halaman pertama saat dibuka, sisanya
+     sendiri begitu gulirannya mendekati dasar.
+
+     Sebelumnya setiap daftar berhenti di 25 baris pertama tanpa cara apa
+     pun melihat sisanya — daftar disposisi yang isinya ratusan tampak
+     seperti hanya punya belasan. Jumlah yang sudah tampil dan totalnya
+     ditulis di kaki daftar, jadi jelas kapan benar-benar habis.
+
+     opsi: { wadah, jalur, params(), baris(item), kosong(), hitung(total) } */
+  function daftarBertahap(opsi) {
+    var wadah = opsi.wadah;
+    wadah.innerHTML = '<div class="daftar" data-daftar></div>' +
+                      '<div class="muat-kaki" data-kaki></div>';
+    var daftar = wadah.querySelector('[data-daftar]');
+    var kaki = wadah.querySelector('[data-kaki]');
+    var halaman = 0, terpakai = 0, habis = false, sibuk = false;
+
+    function hidup() { return document.body.contains(wadah); }
+
+    function muat() {
+      if (sibuk || habis || !hidup()) return Promise.resolve();
+      sibuk = true;
+      halaman += 1;
+      if (halaman === 1) daftar.innerHTML = kerangkaDaftar(4);
+      else kaki.innerHTML = '<span class="muat-putar" aria-label="Memuat"></span>';
+
+      var params = opsi.params();
+      params.page = halaman;
+      params.per_page = PER_HALAMAN;
+
+      return minta(opsi.jalur + kueri(params)).then(function (data) {
+        if (!hidup()) return;
+        var items = data.items || [];
+        var total = Number(data.total) || 0;
+        if (halaman === 1) { daftar.innerHTML = ''; terpakai = 0; }
+        daftar.insertAdjacentHTML('beforeend', items.map(opsi.baris).join(''));
+        terpakai += items.length;
+        habis = !items.length || terpakai >= total ||
+                halaman >= (Number(data.total_pages) || 1);
+        el('m-subjudul').textContent = opsi.hitung(total);
+
+        if (!terpakai) {
+          daftar.innerHTML = opsi.kosong();
+          kaki.innerHTML = '';
+        } else {
+          kaki.innerHTML = habis
+            ? '<span class="muat-habis">Semua ' + angka(terpakai) + ' sudah tampil</span>'
+            : '<span class="muat-sisa">' + angka(terpakai) + ' dari ' + angka(total) + '</span>';
+        }
+        sibuk = false;
+        // Layar tinggi bisa memuat lebih dari satu halaman sekaligus; kalau
+        // dasarnya masih terlihat, ambil halaman berikutnya sekarang juga.
+        if (!habis && document.documentElement.scrollHeight <= window.innerHeight + 80) muat();
+      }).catch(function (err) {
+        if (!hidup()) return;
+        sibuk = false;
+        halaman -= 1;
+        if (!terpakai) daftar.innerHTML = kartuKosong(err.message);
+        else kaki.innerHTML = '<button type="button" class="muat-ulang">Gagal memuat. Coba lagi</button>';
+      });
+    }
+
+    kaki.addEventListener('click', function (event) {
+      if (!event.target.closest('.muat-ulang')) return;
+      kaki.innerHTML = '';
+      muat();
+    });
+
+    pendengarGulir = muat;
+    return muat();
+  }
+
   function halamanDaftarSurat(opsi) {
     return function (wadah) {
       if (opsi.wajib && !opsi.wajib()) {
@@ -611,28 +686,23 @@
 
       function muat() {
         kepala();
-        isi.innerHTML = kerangkaDaftar(3);
         pasangChip();
-
-        var params = { per_page: 25, q: state.cari };
-        if (saring !== '') params.status = Number(saring);
-
-        return minta('/surat-masuk' + kueri(params))
-          .then(function (data) {
-            var items = data.items || [];
-            kepala();
-            isi.innerHTML = items.length
-              ? daftarInbox(items.map(function (r) { return kartuSurat(r); }).join(''))
-              : kartuKosong(state.cari
-                  ? 'Tidak ada surat yang cocok dengan "' + esc(state.cari) + '".'
-                  : (opsi.kosong[saring] || 'Belum ada surat.'));
-            el('m-subjudul').textContent = angka(data.total) + ' surat';
-            pasangChip();
-          }).catch(function (err) {
-            kepala();
-            isi.innerHTML = kartuKosong(err.message);
-            pasangChip();
-          });
+        return daftarBertahap({
+          wadah: isi,
+          jalur: '/surat-masuk',
+          params: function () {
+            var p = { q: state.cari };
+            if (saring !== '') p.status = Number(saring);
+            return p;
+          },
+          baris: kartuSurat,
+          hitung: function (total) { return angka(total) + ' surat'; },
+          kosong: function () {
+            return kartuKosong(state.cari
+              ? 'Tidak ada surat yang cocok dengan "' + esc(state.cari) + '".'
+              : (opsi.kosong[saring] || 'Belum ada surat.'));
+          }
+        });
       }
 
       function pasangChip() {
@@ -681,32 +751,68 @@
     tolak: 'Peran Anda tidak berwenang memverifikasi surat.'
   });
 
+  var CHIP_DISPOSISI = [
+    { nilai: 'jalan', label: 'Berjalan' },
+    { nilai: 'selesai', label: 'Selesai' },
+    { nilai: '', label: 'Semua' }
+  ];
+
+  /* Daftar disposisi dulu hanya mengambil yang sedang berjalan, 25 baris,
+     tanpa halaman berikutnya — jadi tampak jauh lebih sedikit daripada
+     yang sebenarnya ada. Sekarang bisa disaring dan digulir sampai habis. */
   halaman.disposisi = function (wadah) {
-    wadah.innerHTML = kerangkaDaftar(4);
-    return minta('/disposisi' + kueri({ per_page: 25, selesai: false }))
-      .then(function (data) {
-        var items = data.items || [];
-        el('m-subjudul').textContent = angka(data.total) + ' berjalan';
-        wadah.innerHTML =
-          (items.length
-            ? daftarInbox(items.map(function (d) {
-                return barisInbox({
-                  attr: 'data-disposisi="' + esc(d.id_disposisi) + '" ' +
-                        'data-surat="' + esc(d.id_surat) + '"',
-                  nama: d.tujuan_jabatan,
-                  waktu: d.tgl_disposisi,
-                  judul: d.perihal,
-                  cuplikan: d.isi_disposisi && d.isi_disposisi !== '-' ? d.isi_disposisi : '',
-                  tebal: !d.selesai,
-                  lencana: tanda(d.status_label, d.selesai ? 'oke' : 'tunggu') +
-                           (d.status_disposisi && d.status_disposisi !== '-'
-                             ? tanda(d.status_disposisi, 'netral') : '')
-                });
-              }).join(''))
-            : kartuKosong('Tidak ada disposisi yang sedang berjalan.'));
-      }).catch(function (err) {
-        wadah.innerHTML = kartuKosong(err.message);
+    var saring = 'jalan';
+
+    function kepala() {
+      el('m-chip').innerHTML = chipPenyaring(CHIP_DISPOSISI, saring);
+      Array.prototype.forEach.call(el('m-chip').querySelectorAll('[data-chip]'), function (b) {
+        b.addEventListener('click', function () {
+          if (saring === b.getAttribute('data-chip')) return;
+          saring = b.getAttribute('data-chip');
+          window.scrollTo({ top: 0 });
+          muat();
+        });
       });
+    }
+
+    function muat() {
+      kepala();
+      return daftarBertahap({
+        wadah: wadah,
+        jalur: '/disposisi',
+        params: function () {
+          var p = { q: state.cari };
+          if (saring === 'jalan') p.selesai = false;
+          else if (saring === 'selesai') p.selesai = true;
+          return p;
+        },
+        baris: function (d) {
+          return barisInbox({
+            attr: 'data-disposisi="' + esc(d.id_disposisi) + '" ' +
+                  'data-surat="' + esc(d.id_surat) + '"',
+            nama: d.tujuan_jabatan,
+            waktu: d.tgl_disposisi,
+            judul: d.perihal,
+            cuplikan: d.isi_disposisi && d.isi_disposisi !== '-' ? d.isi_disposisi : '',
+            tebal: !d.selesai,
+            lencana: tanda(d.status_label, d.selesai ? 'oke' : 'tunggu') +
+                     (d.status_disposisi && d.status_disposisi !== '-'
+                       ? tanda(d.status_disposisi, 'netral') : '')
+          });
+        },
+        hitung: function (total) { return angka(total) + ' disposisi'; },
+        kosong: function () {
+          return kartuKosong(state.cari
+            ? 'Tidak ada disposisi yang cocok dengan "' + esc(state.cari) + '".'
+            : saring === 'selesai' ? 'Belum ada disposisi yang selesai.'
+            : saring === 'jalan' ? 'Tidak ada disposisi yang sedang berjalan.'
+            : 'Belum ada disposisi untuk jabatan Anda.');
+        }
+      });
+    }
+
+    pendengarCari = muat;
+    return muat();
   };
 
   halaman.notifikasi = function (wadah) {
@@ -1220,7 +1326,7 @@
      membulat, kotak 24). Jalurnya disalin ke dalam berkas, bukan diambil
      dari pustaka lewat CDN: PWA ini harus tetap utuh saat luring. */
   var KATALOG_NAV = {
-    surat:      { label: 'Surat',
+    surat:      { label: 'Surat masuk',
                   d: 'M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1ZM3 7l8.4 5.6a1 1 0 0 0 1.2 0L21 7' },
     verifikasi: { label: 'Verifikasi',
                   d: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM8.5 12.2l2.4 2.4 4.6-4.9' },
@@ -1302,6 +1408,21 @@
      pekerjaan peran ini — angka yang tidak bisa ditindaklanjuti cuma
      memenuhi layar. Kalau kewenangannya sedikit, ringkasan tahun dipakai
      sebagai pengisi supaya petaknya tetap tiga dan tidak melompat. */
+  /* Baris angka di bilah aplikasi. Kecil dan sebaris, masing-masing dengan
+     ikonnya sendiri — bukan tiga petak besar. Yang ditampilkan hanya yang
+     benar-benar jadi pekerjaan peran ini; angka yang tidak bisa
+     ditindaklanjuti cuma memakan tempat. */
+  var IKON_INFO = {
+    belum: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16' +
+           'a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+    periksa: '<path d="M21.8 10A10 10 0 1 1 17 3.34"/><path d="m9 11 3 3L22 4"/>',
+    teruskan: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/>' +
+              '<circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.83 3.98"/>' +
+              '<path d="m15.41 6.51-6.82 3.98"/>',
+    arsip: '<rect width="20" height="5" x="2" y="3" rx="1"/>' +
+           '<path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>'
+  };
+
   function gambarAngka() {
     var kotak = el('m-angka');
     if (!kotak) return;
@@ -1309,27 +1430,24 @@
     var r = state.ringkas || {};
 
     var calon = [
-      { label: 'Belum dibaca', nilai: j.surat_masuk || 0, rute: 'surat', tampil: true },
-      { label: 'Perlu verifikasi', nilai: j.verifikasi || 0, rute: 'verifikasi',
-        tampil: bolehVerifikasi() },
-      { label: 'Disposisi berjalan', nilai: j.disposisi || 0, rute: 'disposisi',
-        tampil: bolehDisposisi() },
-      { label: 'Surat tahun ini', nilai: (r.surat_masuk || {}).total || 0,
-        rute: 'surat', tampil: Boolean(r.tahun) }
-    ].filter(function (x) { return x.tampil; }).slice(0, 3);
+      { ikon: 'belum', label: 'belum dibaca', nilai: j.surat_masuk || 0, rute: 'surat',
+        tampil: true },
+      { ikon: 'periksa', label: 'perlu verifikasi', nilai: j.verifikasi || 0,
+        rute: 'verifikasi', tampil: bolehVerifikasi() },
+      { ikon: 'teruskan', label: 'disposisi berjalan', nilai: j.disposisi || 0,
+        rute: 'disposisi', tampil: bolehDisposisi() },
+      { ikon: 'arsip', label: 'surat tahun ' + (r.tahun || ''),
+        nilai: (r.surat_masuk || {}).total || 0, rute: 'surat', tampil: Boolean(r.tahun) }
+    ].filter(function (x) { return x.tampil; });
 
-    kotak.style.gridTemplateColumns = 'repeat(' + (calon.length || 1) + ',minmax(0,1fr))';
     kotak.innerHTML = calon.map(function (x) {
-      return '<button type="button" data-rute="' + x.rute + '" class="petak">' +
-        '<span class="petak-n">' + angka(x.nilai) + '</span>' +
-        '<span class="petak-l">' + esc(x.label) + '</span></button>';
+      return '<button type="button" data-rute="' + x.rute + '" class="info">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+          'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+          IKON_INFO[x.ikon] + '</svg>' +
+        '<b>' + angka(x.nilai) + '</b>' +
+        '<span>' + esc(x.label) + '</span></button>';
     }).join('');
-  }
-
-  function salamJam() {
-    var jam = new Date().getHours();
-    return jam < 11 ? 'Selamat pagi' : jam < 15 ? 'Selamat siang' :
-           jam < 18 ? 'Selamat sore' : 'Selamat malam';
   }
 
   function gambarJudul() {
@@ -1345,7 +1463,11 @@
     var wadah = el('m-page');
     var render = halaman[state.rute] || halaman.surat;
     pendengarCari = null;
-    // Deret penyaring milik halaman sebelumnya tidak boleh tertinggal.
+    // Pemuat bertahap milik halaman sebelumnya harus dilepas, kalau tidak
+    // guliran di halaman baru ikut menambah baris ke daftar yang sudah
+    // tidak ada di layar.
+    pendengarGulir = null;
+    // Deret penyaring milik halaman sebelumnya juga tidak boleh tertinggal.
     el('m-chip').innerHTML = '';
     tandaiNav();
     gambarJudul();
@@ -1461,6 +1583,16 @@
       kolom.type = kolom.type === 'password' ? 'text' : 'password';
       kolom.focus();
     });
+
+    /* Satu pendengar guliran untuk seluruh aplikasi; halaman yang sedang
+       terbuka menitipkan pemuatnya di pendengarGulir. Dipasang sekali saja
+       supaya berpindah halaman tidak menumpuk pendengar. */
+    window.addEventListener('scroll', function () {
+      if (!pendengarGulir) return;
+      var sisa = document.documentElement.scrollHeight -
+                 window.scrollY - window.innerHeight;
+      if (sisa < 700) pendengarGulir();
+    }, { passive: true });
 
     el('m-bell').addEventListener('click', function () { keRute('notifikasi'); });
 

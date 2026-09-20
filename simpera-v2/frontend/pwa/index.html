@@ -15,84 +15,96 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="../assets/app.css?v=923bea9da3">
+<link rel="stylesheet" href="../assets/app.css?v=464a19496e">
 </head>
 <body class="h-full bg-canvas text-slate-700 antialiased">
 
 <!-- ===================== MASUK ===================== -->
+<!-- Dua bidang: kepala hijau tua yang memperkenalkan aplikasi, lalu kartu
+     putih tempat orang benar-benar bekerja. Kolom isian dibuat terang di
+     atas kertas putih — kolom tembus pandang di atas warna gelap sulit
+     dibaca di bawah matahari, dan aplikasi ini dipakai sambil jalan. -->
 <section id="m-login" class="hidden min-h-full">
-  <div class="relative min-h-screen overflow-hidden bg-brand-700 px-6 pb-10 pt-16 text-white">
-    <div class="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full border-[32px] border-white/10"></div>
-    <div class="pointer-events-none absolute -left-16 top-56 h-56 w-56 rounded-full border-[24px] border-white/5"></div>
-
-    <div class="relative">
-      <div class="grid h-14 w-14 place-items-center rounded-2xl bg-white/15 ring-1 ring-white/25 backdrop-blur">
-        <svg class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"/></svg>
+  <div class="masuk">
+    <div class="masuk-puncak">
+      <div class="masuk-lambang">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M22 12h-6l-2 3h-4l-2-3H2"/>
+          <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+        </svg>
       </div>
-      <h1 class="mt-6 text-3xl font-semibold leading-tight tracking-tight">SIMPERA v2</h1>
-      <p class="mt-2 max-w-xs text-emerald-50/90">
-        Verifikasi dan disposisi surat langsung dari ponsel, memakai akun e-surat Anda.
-      </p>
+      <h1 class="masuk-judul">SIMPERA</h1>
+      <p class="masuk-sub">Sistem Informasi Persuratan UNISMA</p>
     </div>
 
-    <form id="m-form-login" class="relative mt-10 space-y-4" novalidate>
-      <div>
-        <label for="m-username" class="mb-1.5 block text-sm font-medium text-emerald-50">Username</label>
-        <input id="m-username" name="username" type="text" autocomplete="username" required
-               class="w-full rounded-2xl border border-white/25 bg-white/15 px-4 py-3.5 text-white placeholder-emerald-100/60 backdrop-blur focus:border-white/60 focus:outline-none focus:ring-2 focus:ring-white/30"
-               placeholder="username e-surat">
-      </div>
-      <div>
-        <label for="m-password" class="mb-1.5 block text-sm font-medium text-emerald-50">Kata sandi</label>
-        <div class="relative">
-          <input id="m-password" name="password" type="password" autocomplete="current-password" required
-                 class="w-full rounded-2xl border border-white/25 bg-white/15 px-4 py-3.5 pr-12 text-white placeholder-emerald-100/60 backdrop-blur focus:border-white/60 focus:outline-none focus:ring-2 focus:ring-white/30"
-                 placeholder="••••••••">
-          <button type="button" id="m-lihat-sandi" aria-label="Tampilkan kata sandi"
-                  class="absolute inset-y-0 right-0 grid w-12 place-items-center text-emerald-100/80">
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
+    <div class="masuk-kartu">
+      <h2 class="masuk-sapa">Masuk</h2>
+      <p class="masuk-ket">Pakai akun e-surat yang sudah Anda punya.</p>
+
+      <form id="m-form-login" class="masuk-form" novalidate>
+        <div class="kolom">
+          <svg class="kolom-ikon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+          <input id="m-username" name="username" type="text" autocomplete="username" required placeholder=" ">
+          <label for="m-username">Username</label>
+        </div>
+
+        <div class="kolom">
+          <svg class="kolom-ikon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          <input id="m-password" name="password" type="password" autocomplete="current-password" required placeholder=" ">
+          <label for="m-password">Kata sandi</label>
+          <button type="button" id="m-lihat-sandi" class="kolom-mata" aria-label="Tampilkan kata sandi">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
           </button>
         </div>
-      </div>
 
-      <p id="m-login-error" class="hidden rounded-2xl bg-rose-500/20 px-4 py-3 text-sm text-rose-50 ring-1 ring-rose-200/40"></p>
+        <p id="m-login-error" class="masuk-galat hidden"></p>
 
-      <button type="submit" id="m-login-submit"
-              class="flex w-full items-center justify-center gap-2 rounded-2xl bg-white py-3.5 text-base font-semibold text-brand-700 shadow-lg shadow-brand-900/20 active:scale-[.99]">
-        <span class="m-label">Masuk</span>
-        <svg class="m-spin hidden h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"/></svg>
-      </button>
-    </form>
+        <button type="submit" id="m-login-submit" class="masuk-tombol">
+          <span class="m-label">Masuk</span>
+          <svg class="m-spin hidden h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"/></svg>
+        </button>
+      </form>
 
-    <p class="relative mt-8 text-center text-xs text-emerald-100/70">
-      Tambahkan ke layar utama untuk membukanya seperti aplikasi biasa.
-    </p>
+      <p class="masuk-kaki">Tambahkan ke layar utama untuk membukanya seperti aplikasi biasa.</p>
+    </div>
   </div>
 </section>
 
 <!-- ===================== APLIKASI ===================== -->
 <section id="m-app" class="hidden min-h-full pb-24">
-  <!-- Puncak hijau: identitas pemakai, satu tombol tindakan, lalu tiga
-       angka yang benar-benar jadi pekerjaannya hari ini. Lembar putih di
-       bawahnya naik menutupi sebagian puncak, jadi daftar surat terbaca
-       sebagai bidang tenang yang terpisah dari panel berwarna. -->
-  <header class="puncak">
-    <div class="puncak-baris">
-      <button type="button" id="m-avatar" class="puncak-avatar" aria-label="Akun">?</button>
-      <div class="puncak-id">
-        <p id="m-nama" class="puncak-nama">—</p>
-        <p id="m-jabatan" class="puncak-peran">—</p>
+  <!-- Bilah aplikasi: judul di kiri, dua tombol ikon di kanan, lalu satu
+       baris angka surat berikonkan kecil. Angkanya dibuat kecil dan sebaris
+       — bukan tiga petak besar — supaya bilah tetap ramping dan daftar surat
+       naik lebih tinggi ke layar. -->
+  <header class="bilah">
+    <div class="bilah-atas">
+      <span class="bilah-lambang">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M22 12h-6l-2 3h-4l-2-3H2"/>
+          <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+        </svg>
+      </span>
+      <div class="bilah-judul">
+        <p class="bilah-nama">SIMPERA</p>
+        <p id="m-jabatan" class="bilah-peran">—</p>
       </div>
-      <button type="button" id="m-bell" class="puncak-tombol" aria-label="Notifikasi">
+      <button type="button" id="m-bell" class="bilah-ikon" aria-label="Notifikasi">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M10.27 21a2 2 0 0 0 3.46 0"/>
           <path d="M3.26 15.33A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.67C19.41 13.96 18 12.5 18 8A6 6 0 0 0 6 8c0 4.5-1.41 5.96-2.74 7.33"/>
         </svg>
-        <span>Notifikasi</span>
-        <span id="m-bell-badge" class="puncak-angka-kecil hidden"></span>
+        <span id="m-bell-badge" class="bilah-angka hidden"></span>
       </button>
+      <button type="button" id="m-avatar" class="bilah-avatar" aria-label="Akun">?</button>
+      <p id="m-nama" class="sr-only">—</p>
     </div>
-    <div id="m-angka" class="puncak-petak"></div>
+    <div id="m-angka" class="bilah-info"></div>
   </header>
 
   <!-- Lembar isi -->
@@ -178,6 +190,6 @@
   </div>
 </div>
 
-<script src="app.js?v=1351fa6dcc"></script>
+<script src="app.js?v=ec8d4b8b86"></script>
 </body>
 </html>

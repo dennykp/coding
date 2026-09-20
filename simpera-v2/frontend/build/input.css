@@ -19,11 +19,12 @@
 
 body { -webkit-font-smoothing: antialiased; }
 
-/* Tidak ada satu pun halaman di sini yang boleh digeser ke samping. Satu
-   hiasan yang melewati tepi kanan sudah cukup membuat seluruh layar
-   mengecil dan menyisakan pita kosong — itu yang terlihat sebagai
-   "tidak responsif". */
-html, body { overflow-x: hidden; max-width: 100%; }
+/* Luberan mendatar ditahan di komponennya sendiri (.bilah, .masuk), bukan
+   di sini. Sempat dipasang overflow-x:hidden pada html/body, tetapi html
+   dan body tingginya 100% — memberi mereka overflow berarti keduanya jadi
+   kotak guliran setinggi layar, dan halaman berhenti bertambah panjang.
+   Akibatnya daftar panjang tidak bisa digulir sama sekali. */
+html, body { max-width: 100%; }
 
 /* Skala teks versi web.
 
@@ -533,6 +534,111 @@ table.data tbody tr:hover { background: #f0f9f0; }
    setelah isinya terbaca.
    =========================================================================== */
 
+/* ===========================================================================
+   Layar masuk (PWA).
+
+   Kepala hijau tua memperkenalkan aplikasi; kartu putih di bawahnya tempat
+   orang bekerja. Kolom isian sengaja terang di atas kertas putih — kolom
+   tembus pandang di atas warna gelap sulit dibaca di bawah matahari, dan
+   aplikasi ini dipakai sambil berjalan.
+   =========================================================================== */
+.masuk {
+  position: relative; min-height: 100vh; overflow: hidden;
+  padding: calc(env(safe-area-inset-top, 0px) + 3.25rem) 1.25rem
+           calc(env(safe-area-inset-bottom, 0px) + 2rem);
+  background:
+    radial-gradient(130% 90% at 90% 0%, rgba(255, 255, 255, .12) 0%, rgba(255, 255, 255, 0) 55%),
+    linear-gradient(165deg, #04351f 0%, #05402c 45%, #06563a 100%);
+}
+.masuk::before {
+  content: ''; position: absolute; border-radius: 50%; pointer-events: none;
+  width: 22rem; height: 22rem; right: -9rem; top: -11rem;
+  border: 1px solid rgba(255, 255, 255, .14);
+  box-shadow: 0 0 0 2.5rem rgba(255, 255, 255, .04);
+}
+
+.masuk-puncak { position: relative; text-align: center; }
+.masuk-lambang {
+  display: grid; place-items: center; width: 3.6rem; height: 3.6rem;
+  margin: 0 auto; border-radius: 1.25rem; color: #a7f3a7;
+  background: rgba(255, 255, 255, .14);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .2);
+}
+.masuk-lambang svg { width: 1.9rem; height: 1.9rem; }
+.masuk-judul {
+  margin: 1.1rem 0 0; font-size: 1.9rem; font-weight: 700;
+  letter-spacing: .16em; color: #fff; line-height: 1.1;
+}
+.masuk-sub {
+  margin: .5rem 0 0; font-size: .78rem; font-weight: 400;
+  color: rgba(214, 245, 226, .75);
+}
+
+.masuk-kartu {
+  position: relative; margin-top: 2.25rem; padding: 1.6rem 1.25rem 1.35rem;
+  background: #fff; border-radius: 1.75rem;
+  box-shadow: 0 24px 48px -28px rgba(2, 30, 18, .7), 0 2px 6px rgba(2, 30, 18, .18);
+}
+.masuk-sapa {
+  margin: 0; font-size: 1.22rem; font-weight: 600; letter-spacing: -.02em;
+  color: #05402c;
+}
+.masuk-ket { margin: .3rem 0 0; font-size: .765rem; color: #64748b; }
+.masuk-form { margin-top: 1.35rem; display: flex; flex-direction: column; gap: .9rem; }
+
+/* Kolom isian dengan label mengambang: labelnya duduk di dalam kolom saat
+   kosong, lalu naik ke tepi atas begitu diisi — nama kolom tidak pernah
+   hilang, tapi juga tidak memakan baris sendiri. */
+.kolom { position: relative; }
+.kolom input {
+  width: 100%; padding: 1.35rem 2.9rem .6rem 2.85rem;
+  border: 1.5px solid #e2e8e5; border-radius: 1rem; background: #f8faf9;
+  font-size: .875rem; font-weight: 500; color: #05402c;
+  transition: border-color .3s ease-in-out, background-color .3s ease-in-out;
+}
+.kolom input:focus { outline: none; border-color: #009000; background: #fff; }
+.kolom-ikon {
+  position: absolute; left: .95rem; top: 1.18rem;
+  width: 1.1rem; height: 1.1rem; color: #9aa8a2; pointer-events: none;
+  transition: color .3s ease-in-out;
+}
+.kolom input:focus ~ .kolom-ikon { color: #009000; }
+.kolom label {
+  position: absolute; left: 2.9rem; top: 1.12rem;
+  font-size: .82rem; font-weight: 400; color: #9aa8a2; pointer-events: none;
+  transition: all .2s ease-in-out;
+}
+.kolom input:focus + label,
+.kolom input:not(:placeholder-shown) + label {
+  top: .45rem; font-size: .63rem; font-weight: 600; letter-spacing: .05em;
+  text-transform: uppercase; color: #059669;
+}
+.kolom-mata {
+  position: absolute; right: .35rem; top: .35rem;
+  display: grid; place-items: center; width: 2.4rem; height: 2.4rem;
+  border: 0; border-radius: .8rem; background: none; color: #9aa8a2;
+}
+.kolom-mata svg { width: 1.15rem; height: 1.15rem; }
+.kolom-mata:active { background: #f1f5f4; }
+
+.masuk-galat {
+  margin: 0; padding: .7rem .9rem; border-radius: .9rem;
+  background: #fef2f4; color: #be123c; font-size: .76rem; font-weight: 500;
+  box-shadow: inset 0 0 0 1px #fbd5dd;
+}
+.masuk-tombol {
+  display: flex; align-items: center; justify-content: center; gap: .5rem;
+  width: 100%; margin-top: .2rem; padding: .95rem 1rem; border: 0;
+  border-radius: 1rem; background: #009000; color: #fff;
+  font-size: .9rem; font-weight: 600; letter-spacing: .01em;
+  box-shadow: 0 10px 22px -12px rgba(0, 144, 0, .85);
+  transition: transform .3s ease-in-out, background-color .3s ease-in-out;
+}
+.masuk-tombol:active { transform: scale(.985); background: #047857; }
+.masuk-kaki {
+  margin: 1.15rem 0 0; text-align: center; font-size: .69rem; color: #94a3b8;
+}
+
 /* --- lencana status kecil ---
    Dipakai di baris daftar dan di kepala rincian surat. Sempat hilang saat
    bagian kartu lama dibuang, dan tanpa aturan ini teksnya tampil polos
@@ -555,93 +661,87 @@ table.data tbody tr:hover { background: #f0f9f0; }
    terkumpul di satu tempat, dan daftar surat — bagian yang benar-benar
    dibaca — duduk di atas kertas putih yang tenang.
    =========================================================================== */
-.puncak {
-  /* overflow disembunyikan: dua lingkaran hiasan di bawah berada di luar
-     tepi kanan, dan tanpa ini halaman jadi bisa digeser ke samping —
-     itulah kenapa layarnya tampak tidak muat. */
+.bilah {
+  /* Luberan disembunyikan: lengkung hiasan di bawah melewati tepi kanan,
+     dan tanpa ini halaman bisa digeser ke samping. */
   position: relative; overflow: hidden;
-  padding: calc(env(safe-area-inset-top, 0px) + 1.25rem) 1.15rem 3.5rem;
+  padding: calc(env(safe-area-inset-top, 0px) + .7rem) .9rem 2.9rem;
   background:
-    radial-gradient(120% 100% at 100% 0%, rgba(255, 255, 255, .16) 0%, rgba(255, 255, 255, 0) 55%),
-    linear-gradient(148deg, #05673c 0%, #018a19 52%, #0aa50a 100%);
+    radial-gradient(130% 120% at 100% 0%, rgba(255, 255, 255, .13) 0%, rgba(255, 255, 255, 0) 60%),
+    linear-gradient(150deg, #04351f 0%, #05402c 40%, #06563a 100%);
   color: #fff;
 }
-/* Satu lengkung tipis saja — dua lingkaran penuh membuat kepala ramai. */
-.puncak::before {
+.bilah::before {
   content: ''; position: absolute; border-radius: 50%; pointer-events: none;
-  width: 17rem; height: 17rem; right: -6.5rem; top: -8.5rem;
-  border: 1px solid rgba(255, 255, 255, .22);
-  box-shadow: 0 0 0 1.75rem rgba(255, 255, 255, .05);
+  width: 16rem; height: 16rem; right: -6rem; top: -8rem;
+  border: 1px solid rgba(255, 255, 255, .16);
+  box-shadow: 0 0 0 1.6rem rgba(255, 255, 255, .04);
 }
 
-.puncak-baris { position: relative; display: flex; align-items: center; gap: .8rem; }
-.puncak-avatar {
-  flex: none; display: grid; place-items: center; width: 2.9rem; height: 2.9rem;
-  border-radius: 50%; border: 0;
-  background: rgba(255, 255, 255, .18); color: #fff;
-  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .45);
-  font-size: .86rem; font-weight: 600; letter-spacing: .01em;
-  transition: background-color .3s ease-in-out, transform .3s ease-in-out;
-}
-.puncak-avatar:active { transform: scale(.94); background: rgba(255, 255, 255, .26); }
-.puncak-id { min-width: 0; flex: 1; }
-.puncak-nama {
-  margin: 0; font-size: 1.02rem; font-weight: 600; line-height: 1.25;
-  letter-spacing: -.015em;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.puncak-peran {
-  margin: .1rem 0 0; font-size: .715rem; font-weight: 400; letter-spacing: .01em;
-  color: rgba(226, 250, 235, .78);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-/* Tombol ikon bundar, bukan pil berlabel: di kepala yang sempit, satu
-   lingkaran lebih tenang dan namanya sudah jelas dari ikonnya. */
-.puncak-tombol {
-  position: relative; flex: none; display: grid; place-items: center;
-  width: 2.6rem; height: 2.6rem; border-radius: 50%;
-  border: 0; background: rgba(255, 255, 255, .16); color: #fff;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22);
-  transition: background-color .3s ease-in-out, transform .3s ease-in-out;
-}
-.puncak-tombol:active { transform: scale(.93); background: rgba(255, 255, 255, .26); }
-.puncak-tombol svg { width: 1.15rem; height: 1.15rem; }
-.puncak-tombol span:not(.puncak-angka-kecil) { display: none; }
-.puncak-angka-kecil {
-  position: absolute; top: -.15rem; right: -.2rem; min-width: 1.1rem;
-  padding: 0 .28rem; border-radius: 999px;
-  background: #ffb020; color: #3d2400;
-  box-shadow: 0 0 0 2px rgba(1, 138, 25, .95);
-  font-size: .595rem; font-weight: 700; line-height: 1.1rem; text-align: center;
-}
-
-/* Tiga angka pada satu bidang kaca. Dipisah garis tipis, bukan tiga kotak
-   sendiri-sendiri: satu blok yang tenang, bukan tiga benda yang bersaing. */
-.puncak-petak {
-  position: relative; display: grid; margin-top: 1.35rem;
-  border-radius: 1.4rem; padding: 1rem .35rem .95rem;
-  background: rgba(255, 255, 255, .12);
+.bilah-atas { position: relative; display: flex; align-items: center; gap: .6rem; }
+.bilah-lambang {
+  flex: none; display: grid; place-items: center; width: 2.1rem; height: 2.1rem;
+  border-radius: .7rem; background: rgba(255, 255, 255, .14); color: #a7f3a7;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .18);
-  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
 }
-.petak {
-  display: block; text-align: center; padding: 0 .35rem; color: #fff;
-  background: none; border: 0; transition: transform .3s ease-in-out;
+.bilah-lambang svg { width: 1.15rem; height: 1.15rem; }
+.bilah-judul { min-width: 0; flex: 1; }
+.bilah-nama {
+  margin: 0; font-size: 1.06rem; font-weight: 700; line-height: 1.2;
+  letter-spacing: .1em;
 }
-.petak + .petak { box-shadow: inset 1px 0 0 rgba(255, 255, 255, .18); }
-.petak:active { transform: scale(.95); }
-.petak-n {
-  display: block; font-size: 1.5rem; font-weight: 600; line-height: 1.15;
-  letter-spacing: -.035em; font-variant-numeric: tabular-nums;
+.bilah-peran {
+  margin: .1rem 0 0; font-size: .665rem; font-weight: 400; letter-spacing: .02em;
+  color: rgba(214, 245, 226, .72);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.petak-l {
-  display: block; margin-top: .22rem; font-size: .66rem; font-weight: 400;
-  line-height: 1.25; color: rgba(226, 250, 235, .8);
+.bilah-ikon, .bilah-avatar {
+  position: relative; flex: none; display: grid; place-items: center;
+  width: 2.3rem; height: 2.3rem; border-radius: 50%; border: 0; color: #fff;
+  background: rgba(255, 255, 255, .13);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .18);
+  transition: background-color .3s ease-in-out, transform .3s ease-in-out;
 }
+.bilah-ikon:active, .bilah-avatar:active {
+  transform: scale(.93); background: rgba(255, 255, 255, .24);
+}
+.bilah-ikon svg { width: 1.08rem; height: 1.08rem; }
+.bilah-avatar { font-size: .73rem; font-weight: 600; letter-spacing: .02em; }
+.bilah-angka {
+  position: absolute; top: -.2rem; right: -.25rem; min-width: 1.05rem;
+  padding: 0 .26rem; border-radius: 999px; background: #ffb020; color: #3d2400;
+  box-shadow: 0 0 0 2px #05402c;
+  font-size: .58rem; font-weight: 700; line-height: 1.05rem; text-align: center;
+}
+
+/* Baris angka surat: kecil, berikon, sebaris, bisa digeser kalau tidak
+   muat. Bentuk ini menahan bilah tetap ramping — tiga petak besar mendorong
+   daftar surat turun jauh dari layar pertama. */
+.bilah-info {
+  position: relative; display: flex; gap: .4rem; margin-top: .9rem;
+  overflow-x: auto; scrollbar-width: none;
+  padding-bottom: .1rem;
+}
+.bilah-info::-webkit-scrollbar { display: none; }
+.info {
+  flex: none; display: inline-flex; align-items: center; gap: .32rem;
+  padding: .38rem .65rem; border-radius: 999px; border: 0; color: #fff;
+  background: rgba(255, 255, 255, .11);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .15);
+  font-size: .67rem; font-weight: 400; line-height: 1.2; white-space: nowrap;
+  transition: background-color .3s ease-in-out, transform .3s ease-in-out;
+}
+.info:active { transform: scale(.96); background: rgba(255, 255, 255, .2); }
+.info svg { width: .82rem; height: .82rem; color: #8fe6a3; }
+.info b {
+  font-size: .78rem; font-weight: 700; letter-spacing: -.01em;
+  font-variant-numeric: tabular-nums;
+}
+.info span { color: rgba(214, 245, 226, .78); }
 
 /* Lembar isi menutupi ujung bawah puncak. */
 .lembaran {
-  position: relative; z-index: 1; margin-top: -2.1rem;
+  position: relative; z-index: 1; margin-top: -1.7rem;
   /* Kertas putih harus sampai ke bawah layar; kalau tidak, kanvas abu
      muncul sebagai pita kosong di bawah baris terakhir. */
   min-height: calc(100vh - 12rem); padding: 1rem 0 1.5rem;
@@ -678,6 +778,28 @@ table.data tbody tr:hover { background: #f0f9f0; }
 .bagian-hitung {
   margin: 0; font-size: .69rem; font-weight: 500; color: #94a3b8;
   font-variant-numeric: tabular-nums;
+}
+
+/* --- kaki daftar bertahap ---
+   Menyebut berapa yang sudah tampil dari berapa, jadi jelas bahwa masih
+   ada sisanya dan jelas pula kapan benar-benar habis. */
+.muat-kaki {
+  display: flex; align-items: center; justify-content: center; gap: .5rem;
+  min-height: 2.75rem; padding: .85rem 1rem 1.1rem;
+  font-size: .7rem; color: #94a3b8;
+}
+.muat-kaki:empty { min-height: .75rem; padding: 0; }
+.muat-habis, .muat-sisa { font-variant-numeric: tabular-nums; }
+.muat-habis { color: #b4c0ba; }
+.muat-putar {
+  width: 1.05rem; height: 1.05rem; border-radius: 50%;
+  border: 2px solid #dbe4de; border-top-color: #009000;
+  animation: putar .7s linear infinite;
+}
+@keyframes putar { to { transform: rotate(360deg); } }
+.muat-ulang {
+  padding: .45rem .9rem; border-radius: 999px; border: 1px solid #e8edea;
+  background: #fff; color: #475569; font-size: .72rem; font-weight: 500;
 }
 
 /* ===========================================================================
