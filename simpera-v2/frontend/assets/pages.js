@@ -181,7 +181,11 @@
         body.innerHTML = baris.map(function (row, index) {
           return '<tr data-index="' + index + '"' + (cfg.onRow ? ' class="cursor-pointer"' : '') + '>' +
             cfg.columns.map(function (c) {
-              return '<td' + (c.tdClass ? ' class="' + c.tdClass + '"' : '') + '>' + c.render(row) + '</td>';
+              // Seluruh baris halaman ikut dikirim: sebagian kolom perlu
+              // melihat baris lain untuk memutuskan (mis. apakah surat yang
+              // sama sudah pernah didisposisikan oleh pemakai ini).
+              return '<td' + (c.tdClass ? ' class="' + c.tdClass + '"' : '') + '>' +
+                     c.render(row, baris) + '</td>';
             }).join('') + '</tr>';
         }).join('');
         pager.appendChild(S.pagination(data, function (next) { page = next; load(); }));
@@ -346,12 +350,22 @@
       '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; )</div></div></div>';
   }
 
-  /* Judul tombol teruskan, menyesuaikan peran kita atas baris itu. */
-  function judulTeruskan(r) {
-    if (r.status_disposisi === 'Mendisposisikan') {
-      return 'Teruskan surat ini ke jabatan lain';
+  /* Apakah pemakai ini sudah mendisposisikan surat pada baris itu.
+
+     Yang menentukan bukan baris yang sedang dilihat, melainkan apakah ada
+     baris mana pun untuk surat yang SAMA yang dikirim oleh pemakai ini —
+     satu surat bisa punya beberapa disposisi, dan yang dikirim orang lain
+     tidak menghalangi haknya untuk ikut meneruskan.
+
+     Penandanya status_disposisi "Mendisposisikan", yang dihitung backend
+     tepat ketika id_usrz baris itu miliknya (lihat common.status_disposisi). */
+  function sudahSayaDisposisikan(r, semua) {
+    var daftar = (semua && semua.length) ? semua : [r];
+    for (var i = 0; i < daftar.length; i++) {
+      if (String(daftar[i].id_surat) === String(r.id_surat) &&
+          daftar[i].status_disposisi === 'Mendisposisikan') return true;
     }
-    return 'Teruskan disposisi ini';
+    return false;
   }
 
   /* Penuntasan disposisi adalah hak jabatan penerimanya. */
@@ -934,21 +948,28 @@
         { title: 'Selesai', tdClass: 'whitespace-nowrap', render: function (r) {
             return r.selesai ? badge('Selesai', 'green')
                              : '<span class="text-slate-400">-</span>'; } },
-        { title: 'Aksi', thClass: 'text-right kolom-aksi', tdClass: 'whitespace-nowrap kolom-aksi', render: function (r) {
+        { title: 'Aksi', thClass: 'text-right kolom-aksi', tdClass: 'whitespace-nowrap kolom-aksi', render: function (r, semua) {
             return S.tombolAksi([
               { ikon: 'detail', warna: 'hijau', judul: 'Lihat detail surat', aksi: 'detail',
                 nonaktif: !r.id_surat },
-              // Disposisi yang kita kirim sendiri tidak perlu tombol kirim
-              // lagi — cukup keterangan. Penerusan adalah hak jabatan
-              // penerimanya.
-              // Meneruskan surat adalah hak peran, bukan hak jabatan penerima
-              // disposisi: backend pun hanya memeriksa ROLE_DISPOSISI. Dulu
-              // tombol ini dibatasi ke jabatan penerima, sehingga jabatan yang
-              // lebih sering mengirim daripada menerima — Rektor, WR2, WR4 —
-              // tidak punya satu pun baris yang bisa didisposisikan dari sini.
+              /* Meneruskan surat adalah hak peran, bukan hak jabatan penerima
+                 disposisi: backend pun hanya memeriksa ROLE_DISPOSISI. Jadi
+                 tombolnya tidak dibatasi ke jabatan penerima — kalau begitu,
+                 jabatan yang lebih sering mengirim daripada menerima (Rektor,
+                 WR2, WR4) tidak punya satu pun baris yang bisa didisposisikan
+                 dari sini.
+
+                 Tetapi sekali pemakai ini sendiri sudah mendisposisikan surat
+                 itu, tombolnya tidak boleh hidup lagi: menekannya kedua kali
+                 hanya melahirkan disposisi kembar. Yang tampil keterangan
+                 menuju jejaknya. */
               S.boleh('disposisi')
-                ? { ikon: 'kirim', warna: 'ungu', judul: judulTeruskan(r),
-                    aksi: 'teruskan', nonaktif: !r.id_surat }
+                ? (sudahSayaDisposisikan(r, semua)
+                    ? { ikon: 'info', warna: 'biru', aksi: 'jejak',
+                        judul: 'Anda sudah mendisposisikan surat ini — lihat jejaknya',
+                        nonaktif: !r.id_surat }
+                    : { ikon: 'kirim', warna: 'ungu', judul: 'Teruskan disposisi ini',
+                        aksi: 'teruskan', nonaktif: !r.id_surat })
                 : null,
               // Hanya jabatan penerima yang boleh menuntaskan, seperti
               // aplikasi lama; yang lain melihat tombolnya tetapi mati.

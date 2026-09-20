@@ -11,7 +11,7 @@
  *   Aturan berkas statis di bawah menyimpannya sendiri setelah dipakai.
  * ========================================================================== */
 
-var VERSI = 'simpera-m-24f8d5854c';
+var VERSI = 'simpera-m-bfba5fc91f';
 var CANGKANG = [
   './',
   './index.html',
