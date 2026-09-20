@@ -108,7 +108,11 @@ def daftar_disposisi(
         LEFT JOIN tm_jabatan jb ON jb.id_jabatan = d.id_jabatan
         LEFT JOIN users u ON u.id = d.id_usrz
         WHERE {clause}
-        ORDER BY d.id_disposisi DESC
+        -- Terbaru lebih dulu menurut TANGGAL disposisinya. Urutan nomor
+        -- baris saja tidak cukup: sebagian baris lama dimasukkan belakangan
+        -- saat migrasi, jadi nomornya besar walau tanggalnya tua.
+        ORDER BY COALESCE(d.tgl_disposisi, DATE(d.created_at)) DESC,
+                 d.id_disposisi DESC
         LIMIT %s OFFSET %s
         """,
         [user.get("id") or 0, *params, per_page, offset],

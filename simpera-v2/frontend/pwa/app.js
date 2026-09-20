@@ -827,17 +827,21 @@
     tolak: 'Peran Anda tidak berwenang memverifikasi surat.'
   });
 
+  /* "Semua" yang aktif saat dibuka, bukan "Berjalan". Menyaring lebih dulu
+     membuat layar terbuka dengan segelintir baris dan terlihat seperti
+     datanya hilang — padahal yang selesai pun masih perlu dilihat. */
   var CHIP_DISPOSISI = [
+    { nilai: '', label: 'Semua' },
     { nilai: 'jalan', label: 'Berjalan' },
-    { nilai: 'selesai', label: 'Selesai' },
-    { nilai: '', label: 'Semua' }
+    { nilai: 'selesai', label: 'Selesai' }
   ];
 
   /* Daftar disposisi dulu hanya mengambil yang sedang berjalan, 25 baris,
      tanpa halaman berikutnya — jadi tampak jauh lebih sedikit daripada
-     yang sebenarnya ada. Sekarang bisa disaring dan digulir sampai habis. */
+     yang sebenarnya ada. Sekarang terbuka apa adanya, terurut dari yang
+     paling baru, bisa disaring, dan digulir sampai habis. */
   halaman.disposisi = function (wadah) {
-    var saring = 'jalan';
+    var saring = '';
 
     function kepala() {
       el('m-chip').innerHTML = chipPenyaring(CHIP_DISPOSISI, saring);
@@ -1174,6 +1178,63 @@
   var OPSI_DISPOSISI = ['Untuk diproses', 'Untuk diketahui', 'Untuk ditindaklanjuti',
                         'Mohon pertimbangan', 'Untuk dihadiri', 'Arsipkan'];
 
+  /* Menuntaskan disposisi tanpa meneruskannya.
+
+     Catatan penyelesaian wajib diisi — begitu pula di e-surat dan di
+     backend (SelesaiDisposisiIn), jadi memaksanya di sini hanya membuat
+     galatnya ketahuan sebelum permintaan dikirim. */
+  function formSelesaiDisposisi(induk, surat) {
+    bukaSheet('Selesaikan disposisi',
+      '<form id="m-form-tuntas" class="space-y-5" novalidate>' +
+        '<div class="rounded-2xl bg-slate-50 p-4">' +
+          '<p class="text-sm text-slate-800">' + dash(surat && surat.perihal) + '</p>' +
+          '<p class="mt-1 text-xs text-slate-500">Disposisi ke ' +
+            dash(induk.tujuan_jabatan) + ' · ' + tanggal(induk.tgl_disposisi) + '</p>' +
+        '</div>' +
+        '<p class="rounded-2xl bg-brand-50 px-4 py-3 text-xs leading-relaxed text-brand-900">' +
+          'Disposisi ini akan ditandai <b>selesai</b> dan surat berhenti di ' +
+          'jabatan Anda — tidak perlu diteruskan ke jabatan lain.</p>' +
+        '<div>' +
+          '<label class="mb-1.5 block text-sm font-medium text-slate-700">Catatan penyelesaian *</label>' +
+          '<textarea name="catatan" rows="3" maxlength="1000" class="field" ' +
+            'placeholder="Mis. Sudah ditindaklanjuti, surat balasan dikirim 20 Sep"></textarea>' +
+        '</div>' +
+        '<p id="m-tuntas-error" class="hidden rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700"></p>' +
+        '<button type="submit" class="btn-primary w-full justify-center py-3.5 text-base">Tandai selesai</button>' +
+      '</form>');
+
+    var form = el('m-form-tuntas');
+    form.addEventListener('submit', function (event) {
+      event.preventDefault();
+      var pesan = el('m-tuntas-error');
+      pesan.classList.add('hidden');
+      var catatan = (form.querySelector('[name="catatan"]').value || '').trim();
+      if (!catatan) {
+        pesan.textContent = 'Catatan penyelesaian wajib diisi.';
+        pesan.classList.remove('hidden');
+        return;
+      }
+      var tombol = form.querySelector('button[type=submit]');
+      tombol.disabled = true;
+      tombol.textContent = 'Menyimpan…';
+
+      minta('/disposisi/' + induk.id_disposisi + '/selesai', {
+        method: 'POST',
+        body: { catatan: catatan }
+      }).then(function () {
+        tutupSheet();
+        toast('Disposisi ditandai selesai.', 'ok');
+        muatNotif();
+        gambar();
+      }).catch(function (err) {
+        pesan.textContent = err.message;
+        pesan.classList.remove('hidden');
+        tombol.disabled = false;
+        tombol.textContent = 'Tandai selesai';
+      });
+    });
+  }
+
   function formDisposisi(idSurat) {
     sheetMemuat('Disposisi Surat');
     Promise.all([
@@ -1243,6 +1304,17 @@
           '</div>' +
           '<p id="m-disposisi-error" class="hidden rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700"></p>' +
           '<button type="submit" class="btn-primary w-full justify-center py-3.5 text-base">Kirim disposisi</button>' +
+          /* Meneruskan bukan satu-satunya jalan. Kalau surat ini memang
+             berhenti di jabatan kita, tandai selesai — tanpa itu orang
+             merasa wajib meneruskan ke jabatan lain hanya untuk menutup
+             disposisinya. Hanya muncul kalau ada disposisi masuk yang bisa
+             ditutup. */
+          (induk
+            ? '<button type="button" id="m-disposisi-selesai" ' +
+              'class="mt-2 w-full rounded-2xl border border-brand-200 bg-white py-3.5 ' +
+              'text-sm font-semibold text-brand-700 active:scale-[.99]">' +
+              'Tandai selesai saja</button>'
+            : '') +
         '</form>');
 
       // :has() menangani tampilan chip di peramban baru; kelas ini menjaga
@@ -1316,6 +1388,13 @@
       });
       gambarDaftar();
       gambarRingkas();
+
+      var tombolSelesai = el('m-disposisi-selesai');
+      if (tombolSelesai) {
+        tombolSelesai.addEventListener('click', function () {
+          formSelesaiDisposisi(induk, bahan.surat);
+        });
+      }
 
       var form = el('m-form-disposisi');
       form.addEventListener('submit', function (event) {
