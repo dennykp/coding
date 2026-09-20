@@ -11,21 +11,33 @@
  *   Aturan berkas statis di bawah menyimpannya sendiri setelah dipakai.
  * ========================================================================== */
 
-var VERSI = 'simpera-m-0ba143c3f0';
+var VERSI = 'simpera-m-5bcac36bc9';
 var CANGKANG = [
   './',
   './index.html',
   './manifest.webmanifest',
   './icon.svg',
   './icon-maskable.svg',
-  '../assets/app.css?v=6a531e911a',
+  '../assets/app.css?v=7c5d115b2d',
   'app.js?v=d52652fcc5'
+];
+
+/* Berkas pelengkap: enak ada, tapi bukan syarat aplikasi jalan. Lambang
+   UNISMA ditarik saat pemasangan oleh deploy/ambil-lambang.sh, jadi di
+   lingkungan yang belum menjalankannya berkas ini memang tidak ada — dan
+   satu 404 tidak boleh menggagalkan seluruh prapasang cangkang. */
+var PELENGKAP = [
+  './lambang-unisma.png'
 ];
 
 self.addEventListener('install', function (event) {
   event.waitUntil(
     caches.open(VERSI).then(function (cache) {
-      return cache.addAll(CANGKANG);
+      return cache.addAll(CANGKANG).then(function () {
+        return Promise.all(PELENGKAP.map(function (alamat) {
+          return cache.add(alamat).catch(function () { /* diabaikan */ });
+        }));
+      });
     }).then(function () { return self.skipWaiting(); })
   );
 });
