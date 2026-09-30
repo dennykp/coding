@@ -30,3 +30,14 @@ Backup setiap berkas: `*.bak-202609301654`.
 - OCR gagal ~65–80% (`paddle-gagal`, `tanpa-plat`) — perlu penyetelan di server 192.168.19.21.
 - Kamera 192.168.153.106 perlu dicek fisik/jaringan.
 - Arah di "Gerbang Keluar (Hadap Dalam)" perlu diverifikasi (masuk 72 vs keluar 29; tidak memakai `balik`).
+
+## Lanjutan (akses server 21)
+- **Kamera Masjid (Hadap Dalam) pindah IP .106 → .90**: diperbarui di MediaMTX (API + `mediamtx.yml`),
+  tripwire (`cameras.json`) dan ANPR (`/cctv`). Tersambung kembali.
+- **Pengikut IP otomatis** `~/tripwire/ikut_ip.py` (cron tiap 2 menit, log `ikut_ip.log`):
+  kamera dikenali lewat **MAC (ONVIF port 2020)**. Kalau kamera putus 2x berturut-turut, subnet
+  192.168.153.0/24 dipindai, IP dengan MAC yang sama dicari, lalu MediaMTX/tripwire/ANPR diperbarui
+  dan notifikasi "IP kamera berpindah" masuk ke PWA. Sudah diuji (IP salah .106 → kembali .90 sendiri).
+- **Pemilihan frame plat** (`~/tripwire/app/.env`, backup `.env.bak-*`):
+  `TRIPWIRE_RIWAYAT 0→8`, `TRIPWIRE_TUNGGU_MS 150→500`, `TRIPWIRE_KANDIDAT_MAX 4→10`.
+  GPU (RTX PRO 2000) sudah dipakai ANPR; bukan GPU yang kurang, tapi kualitas/ukuran plat di gambar.
