@@ -41,3 +41,12 @@ Backup setiap berkas: `*.bak-202609301654`.
 - **Pemilihan frame plat** (`~/tripwire/app/.env`, backup `.env.bak-*`):
   `TRIPWIRE_RIWAYAT 0→8`, `TRIPWIRE_TUNGGU_MS 150→500`, `TRIPWIRE_KANDIDAT_MAX 4→10`.
   GPU (RTX PRO 2000) sudah dipakai ANPR; bukan GPU yang kurang, tapi kualitas/ukuran plat di gambar.
+
+## Aturan pasangan harian & sapu snapshot (30-09-2026 sore)
+- Pelanggaran **hanya** dari pasangan masuk→keluar **di tanggal yang sama** (`inc/parkir_liar_hitung.php`).
+  Masuk kemarin + keluar hari ini = dua kejadian tanpa pasangan (menginap tidak dihitung lagi).
+- Sapu tahap 3 `~/sapu/sapu_pasangan.py` (ikut cron `jalan.sh` per jam, server 21): untuk 7 hari terakhir
+  yang sudah lewat, snapshot plat tanpa pasangan dihapus (baris tetap, `snapshot_path` = NULL; crop plat
+  disimpan). Plat yang dilindungi diambil dari `api/sapu_pasangan.php` (analisa + semua plat berdenda);
+  kalau e-surat tak menjawab, tidak ada yang dihapus. Putaran pertama: 3.839 snapshot, ±1,5 GB.
+- OCR: 16 dari 17 koreksi manual adalah H→N. Bahan latih: 15.996 crop plat di server 21.
