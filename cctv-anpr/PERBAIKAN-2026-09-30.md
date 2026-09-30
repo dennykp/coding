@@ -50,3 +50,15 @@ Backup setiap berkas: `*.bak-202609301654`.
   disimpan). Plat yang dilindungi diambil dari `api/sapu_pasangan.php` (analisa + semua plat berdenda);
   kalau e-surat tak menjawab, tidak ada yang dihapus. Putaran pertama: 3.839 snapshot, ±1,5 GB.
 - OCR: 16 dari 17 koreksi manual adalah H→N. Bahan latih: 15.996 crop plat di server 21.
+
+## Revisi aturan (30-09-2026 malam)
+- Pelanggaran tetap **wajib pasangan** masuk→keluar, dengan tiga sebab:
+  - **Menginap**: masuk hari D, keluar hari D+1 (lebih dari sehari = bukan pasangan).
+  - **Jam malam**: keluar tercatat lewat jam malam (Setting Pelanggaran) + toleransi 15 menit.
+  - **Lewat batas**: lama parkir ≥ batas jam.
+  Tanpa pasangan = bukan pelanggaran; snapshot disapu setelah D+1 selesai (`sapu_pasangan.py` mulai H-2).
+  Semua sebab ditagih otomatis. Snapshot yang sudah tersapu diganti potongan plat di riwayat.
+- PWA: filter Belum bayar / Menginap / Jam malam / Lewat batas / Lunas; satu label sebab per kartu;
+  tanpa kalimat "masuk sore keluar pagi". SW `spai-v26`.
+- Admin: menu **Setting QRIS** (`setting_qris.php`, grup ANALISIS) — unggah PNG/JPG/WEBP ≤3 MB,
+  disimpan sebagai `/pwa/qris.png` (gambar lama dicadangkan).
