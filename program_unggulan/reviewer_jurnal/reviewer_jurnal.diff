@@ -1,0 +1,224 @@
+--- a/app/Http/Controllers/ReviewerController.php
++++ b/app/Http/Controllers/ReviewerController.php
+@@ -168,10 +168,23 @@
+         }
+ 
+         // Ambil jenis reviewer yang diperbolehkan untuk user ini di fakultas terkait
+-        $reviewer = DB::table('tb_reviewer')
+-            ->where('user_id', $user_id)
+-            ->where('fakultas_id', $isian->fakultas_id)
+-            ->first();
++        $reviewer = null;
++
++        // Jika jenis review dikirim (program/keuangan/jurnal), pakai jenis tsb bila user punya aksesnya
++        if (in_array($request->jenis_review, ['program', 'keuangan', 'jurnal'], true)) {
++            $reviewer = DB::table('tb_reviewer')
++                ->where('user_id', $user_id)
++                ->where('fakultas_id', $isian->fakultas_id)
++                ->where('jenis', $request->jenis_review)
++                ->first();
++        }
++
++        if (!$reviewer) {
++            $reviewer = DB::table('tb_reviewer')
++                ->where('user_id', $user_id)
++                ->where('fakultas_id', $isian->fakultas_id)
++                ->first();
++        }
+ 
+         if (!$reviewer) {
+             return response()->json([
+--- a/resources/views/pengisian_program.blade.php
++++ b/resources/views/pengisian_program.blade.php
+@@ -3185,10 +3185,12 @@
+     // ================= CEK AKSES REVIEWER JENIS APA SAJA =================
+     $adaAksesProgram  = false;
+     $adaAksesKeuangan = false;
++    $adaAksesJurnal   = false;
+ 
+     foreach ($reviewer_per_fakultas as $fid => $jenisArr) {
+         if (in_array('program', $jenisArr))  $adaAksesProgram  = true;
+         if (in_array('keuangan', $jenisArr)) $adaAksesKeuangan = true;
++        if (in_array('jurnal', $jenisArr))   $adaAksesJurnal   = true;
+     }
+ 
+     // Role 1 (admin) dianggap punya akses lihat keduanya
+@@ -3203,12 +3205,42 @@
+     $tabProgRevisiPengusul = 0;
+     $tabKeuRevisiPengusul  = 0;
+ 
++    // ================= KEGIATAN TERKAIT JURNAL =================
++    // (sumber dana "Dana Jurnal dan Penulisan Buku" atau nama kegiatan mengandung kata "jurnal")
++    $tabJurBelum = $tabJurDitolak = $tabJurDirevisi = $tabJurDisetujui = 0;
++    $isianIdsSemua  = collect($isian)->flatten()->filter()->pluck('id')->all();
++    $isianIdsJurnal = [];
++    if (!empty($isianIdsSemua)) {
++        $isianIdsJurnal = DB::table('tb_isian_fakultas as ij')
++            ->leftJoin('tb_biaya as bj', 'bj.isian_fakultas_id', '=', 'ij.id')
++            ->whereIn('ij.id', $isianIdsSemua)
++            ->where(function ($q) {
++                $q->where('bj.sumber_dana_universitas', 'Dana Jurnal dan Penulisan Buku')
++                  ->orWhere('ij.nama_kegiatan', 'like', '%jurnal%');
++            })
++            ->distinct()
++            ->pluck('ij.id')
++            ->map(fn ($v) => (int) $v)
++            ->all();
++    }
++
+     foreach ($isian as $subId => $rowsIsian) {
+         foreach ($rowsIsian as $row) {
+             if (!$row) continue;
+ 
+             $rev = $row->review_detail ?? [];
+ 
++            // ---------- JURNAL ----------
++            $row->terkait_jurnal = in_array((int) $row->id, $isianIdsJurnal, true);
++            $statusJur = $rev['jurnal']['status'] ?? null;
++            $row->status_jurnal = in_array($statusJur, ['disetujui', 'ditolak', 'direvisi'], true) ? $statusJur : 'belum';
++            if ($row->terkait_jurnal) {
++                if ($row->status_jurnal === 'disetujui')    $tabJurDisetujui++;
++                elseif ($row->status_jurnal === 'ditolak')  $tabJurDitolak++;
++                elseif ($row->status_jurnal === 'direvisi') $tabJurDirevisi++;
++                else                                         $tabJurBelum++;
++            }
++
+             // ---------- PROGRAM ----------
+             $statusProg = $rev['program']['status'] ?? null;
+ 
+@@ -3291,6 +3323,7 @@
+ 
+     $tabProgTotal = $tabProgBelum + $tabProgDitolak + $tabProgDirevisi + $tabProgDisetujui;
+     $tabKeuTotal  = $tabKeuBelum  + $tabKeuDitolak  + $tabKeuDirevisi  + $tabKeuDisetujui;
++    $tabJurTotal  = $tabJurBelum  + $tabJurDitolak  + $tabJurDirevisi  + $tabJurDisetujui;
+ @endphp
+ 
+ @endif
+@@ -3386,6 +3419,50 @@
+     </ul>
+ </div>
+ @endif
++@if($adaAksesJurnal)
++<div class="mb-4">
++    <div class="fw-bold text-warning fs-8 text-uppercase mb-2">
++        <i class="fa fa-book me-1"></i> Status Review Jurnal
++    </div>
++    <ul class="nav nav-pills gap-2 mb-3 status-tab-group" data-jenis-group="jurnal">
++        <li class="nav-item">
++            <button type="button" class="btn status-tab-btn active" data-jenis="jurnal" data-status-filter="all">
++                <i class="fa fa-list-ul me-1"></i> Semua
++            </button>
++        </li>
++        <li class="nav-item">
++            <button type="button" class="btn status-tab-btn" data-jenis="jurnal" data-status-filter="jurnal_semua">
++                <i class="fa fa-book me-1"></i> Kegiatan Jurnal
++                <span class="badge bg-dark ms-1">{{ $tabJurTotal }}</span>
++            </button>
++        </li>
++        <li class="nav-item">
++            <button type="button" class="btn status-tab-btn" data-jenis="jurnal" data-status-filter="belum">
++                <i class="fa fa-hourglass-split me-1"></i> Belum Direview
++                <span class="badge bg-secondary ms-1">{{ $tabJurBelum }}</span>
++            </button>
++        </li>
++        <li class="nav-item">
++            <button type="button" class="btn status-tab-btn" data-jenis="jurnal" data-status-filter="ditolak">
++                <i class="fa fa-times-circle me-1"></i> Ditolak
++                <span class="badge bg-danger ms-1">{{ $tabJurDitolak }}</span>
++            </button>
++        </li>
++        <li class="nav-item">
++            <button type="button" class="btn status-tab-btn" data-jenis="jurnal" data-status-filter="direvisi">
++                <i class="fa fa-pen me-1"></i> Direvisi
++                <span class="badge bg-warning text-dark ms-1">{{ $tabJurDirevisi }}</span>
++            </button>
++        </li>
++        <li class="nav-item">
++            <button type="button" class="btn status-tab-btn" data-jenis="jurnal" data-status-filter="disetujui">
++                <i class="fa fa-check-circle me-1"></i> Disetujui
++                <span class="badge bg-success ms-1">{{ $tabJurDisetujui }}</span>
++            </button>
++        </li>
++    </ul>
++</div>
++@endif
+ 
+ @endif
+ <div class="card card-page table-rounded">
+@@ -3620,7 +3697,9 @@
+     data-status-program="{{ $row->status_program ?? 'belum' }}"
+     data-status-keuangan="{{ $row->status_keuangan ?? 'belum' }}"
+     data-revisi-pengusul-program="{{ $row->revisi_pengusul_program ? '1' : '0' }}"
+-    data-revisi-pengusul-keuangan="{{ $row->revisi_pengusul_keuangan ? '1' : '0' }}">
++    data-revisi-pengusul-keuangan="{{ $row->revisi_pengusul_keuangan ? '1' : '0' }}"
++    data-jurnal="{{ ($row->terkait_jurnal ?? false) ? '1' : '0' }}"
++    data-status-jurnal="{{ $row->status_jurnal ?? 'belum' }}">
+ @endif
+ 
+     <td></td>
+@@ -3886,6 +3965,12 @@
+             </button>
+         @endif
+ 
++        @if(in_array('jurnal', $reviewer_fakultas) && ($row->terkait_jurnal ?? false))
++            <button class="btn btn-sm btn-warning btnReviewIsian" data-id="{{ $row->id }}" data-jenis="jurnal">
++                <i class="fa fa-book"></i> Review Jurnal
++            </button>
++        @endif
++
+         <button class="btn btn-sm btn-info text-white btnRiwayatRevisi" data-id="{{ $row->id }}">
+             <i class="fa fa-history"></i> Lihat Hasil Revisi
+         </button>
+@@ -3950,7 +4035,7 @@
+                 <span class="badge bg-info text-white">
+                     {{ $jenis == 'program'
+                         ? '📋 Reviewer Program'
+-                        : '💰 Reviewer Keuangan' }}
++                        : ($jenis == 'jurnal' ? '📚 Reviewer Jurnal' : '💰 Reviewer Keuangan') }}
+                 </span>
+ 
+             </div>
+@@ -5533,15 +5618,17 @@
+ 
+     let activeProgram  = $('.status-tab-group[data-jenis-group="program"] .status-tab-btn.active').data('status-filter');
+     let activeKeuangan = $('.status-tab-group[data-jenis-group="keuangan"] .status-tab-btn.active').data('status-filter');
++    let activeJurnal   = $('.status-tab-group[data-jenis-group="jurnal"] .status-tab-btn.active').data('status-filter');
+ 
+     if (typeof activeProgram === 'undefined')  activeProgram  = 'all';
+     if (typeof activeKeuangan === 'undefined') activeKeuangan = 'all';
++    if (typeof activeJurnal === 'undefined')   activeJurnal   = 'all';
+ 
+     $('#tabEmptyState').remove();
+ 
+     let $baris = $('.tabel_show > tbody > tr');
+ 
+-    if (activeProgram === 'all' && activeKeuangan === 'all') {
++    if (activeProgram === 'all' && activeKeuangan === 'all' && activeJurnal === 'all') {
+         $baris.show();
+         return;
+     }
+@@ -5579,7 +5666,14 @@
+             cocokKeuangan = (statusKeuangan === activeKeuangan);
+         }
+ 
+-        if (cocokProgram && cocokKeuangan) {
++        // ---- cek kecocokan JURNAL ----
++        let cocokJurnal = true;
++        if (activeJurnal !== 'all') {
++            let isJurnal = String($(this).data('jurnal')) === '1';
++            cocokJurnal = isJurnal && (activeJurnal === 'jurnal_semua' || $(this).data('status-jurnal') === activeJurnal);
++        }
++
++        if (cocokProgram && cocokKeuangan && cocokJurnal) {
+ 
+             $(this).show();
+             adaYangTampil = true;
+@@ -6556,7 +6650,7 @@
+         // ===== TAMPILKAN REVIEW YANG SUDAH ADA =====
+         if(res.reviews && res.reviews.length){
+             // Ambil review untuk jenis yang sama dengan tombol (misal btnReviewIsian punya data-jenis)
+-            let jenis = $(this).data('jenis'); // pastikan di tombol ada data-jenis="program"/"keuangan"
++            let jenis = $('#review_jenis').val() || $(this).data('jenis'); // pastikan di tombol ada data-jenis="program"/"keuangan"
+             
+             let existingReview = res.reviews.find(r => r.jenis_review === jenis);
+             if(existingReview){
