@@ -9,7 +9,7 @@
 
    Arah desain: sewarna dengan dashboard web (hijau UNISMA), huruf
    Plus Jakarta Sans, kartu lebih lega, plat nomor seperti plat
-   sungguhan, dan tombol "Tambah" menjadi tombol aksi mengambang.
+   sungguhan, dan menu bawah yang rata (termasuk "Tambah").
    ============================================================ */
 :root {
   --font: 'Plus Jakarta Sans', -apple-system, 'Segoe UI', system-ui, sans-serif;
@@ -129,25 +129,14 @@ body { letter-spacing: -.005em; }
 .segmen button.aktif { background: #0f1a14; border-color: #0f1a14; box-shadow: 0 8px 16px -10px rgba(0,0,0,.6); }
 @media (prefers-color-scheme: dark) { .segmen button.aktif { background: #16a862; border-color: #16a862; } }
 
-/* ---------- Bar bawah: tombol Tambah jadi aksi mengambang ---------- */
+/* ---------- Bar bawah: semua menu sejajar, menu aktif diberi garis atas ---------- */
 .bar { box-shadow: 0 -12px 30px -20px rgba(6,40,27,.45); }
 .bar button { font-weight: 700; }
 .bar button.aktif::before {
   content: ''; position: absolute; top: 0; left: 32%; right: 32%; height: 3px;
   border-radius: 0 0 4px 4px; background: var(--hijau-500);
 }
-.bar button[data-tab="tambah"] { color: var(--hijau-600); }
-.bar button[data-tab="tambah"] .kotak-ikon {
-  width: 54px; height: 54px; border-radius: 19px; margin-top: -30px; color: #fff;
-  background: linear-gradient(145deg, #27c785, #0b7042);
-  box-shadow: 0 14px 26px -12px rgba(13,138,78,.9), 0 0 0 5px var(--latar);
-  transition: transform .15s;
-}
-.bar button[data-tab="tambah"]:active .kotak-ikon { transform: scale(.94); }
-.bar button[data-tab="tambah"] svg { width: 26px; height: 26px; stroke-width: 2.3; }
-.bar button[data-tab="tambah"].aktif::before { display: none; }
-.bar button[data-tab="tambah"].aktif .kotak-ikon { background: linear-gradient(145deg, #0f1a14, #26352d); }
-.isi { padding-bottom: 34px; }
+.isi { padding-bottom: 24px; }
 
 /* ---------- Masuk ---------- */
 .masuk-atas {

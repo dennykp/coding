@@ -78,11 +78,56 @@ Bug yang diperbaiki:
 `pwa/pwa_desain.css` disisipkan sebagai lapisan di `<head>` `pwa/index.html`;
 HTML `<body>` dan seluruh JavaScript **tidak diubah** (diverifikasi byte-per-byte).
 Huruf Plus Jakarta Sans, kepala bergradien, kartu statistik berkilau, plat seperti plat
-sungguhan, tombol "Tambah" mengambang di bar bawah, mode gelap ikut disesuaikan.
-Judul tab diperbaiki, versi cache service worker dinaikkan ke `spai-v27`.
-Cadangan: `pwa/index.html.bak-202610012030`, `pwa/sw.js.bak-202610012030`.
+sungguhan, mode gelap ikut disesuaikan. Menu bawah rata: "Tambah" tampil biasa seperti menu
+lain (tidak menonjol/mengambang); menu aktif ditandai garis hijau di atas ikon.
+Judul tab diperbaiki, versi cache service worker dinaikkan ke `spai-v28` supaya HP langsung
+mengambil tampilan baru.
+Cadangan: `pwa/index.html.bak-202610012030`, `pwa/index.html.bak-202610012040`,
+`pwa/sw.js.bak-202610012030`.
 
-## 5. Pengujian yang dijalankan
+## 5. Kamera Gerbang Utama (Hadap Dalam) gagal malam hari
+
+**Gejala.** Siang hari kamera ini membaca ~2× lebih banyak plat daripada Hadap Luar, tetapi
+mulai pukul 17:00 anjlok (10 hari terakhir, jam 17: 42 plat yakin vs 117 di Hadap Luar;
+3 jam terakhir sebelum perbaikan: 74 dari 90 kejadian gagal).
+
+**Penyebab: blur gerak, bukan OCR.** Pengaturan kamera (dibaca lewat API web kamera):
+jadwal "siang" 00:00–24:00 → profil exposure *auto* sepanjang malam, yang memperlambat
+shutter sampai **1/25 detik**. Motor yang lewat bergeser ~15 cm selama satu jepretan;
+kotak plat sering ditemukan (conf 0,9) tapi hurufnya tercoreng.
+Uji pada 147 gambar malam (`server21/bench4/uji_malam.py`): detektor lebih besar
+(yolo-v9-s-608, t-640), deteksi per ubin, CLAHE — **0 dari 61** gambar gagal yang bisa
+diselamatkan. Jadi perbaikannya harus di kamera.
+
+**Perbaikan (kamera VIGI C340 192.168.153.33, lewat API web kamera):**
+
+| | sebelum | sesudah |
+|---|---|---|
+| jadwal siang | 00:00–24:00 (malam tak pernah aktif) | **06:00–17:00** |
+| profil siang `shedday` | auto | auto (tidak diubah) |
+| profil malam `shednight` | (tak terpakai) | **manual, shutter 1/500 s atau lebih cepat**, warna (IR & lampu putih mati) |
+
+Shutter 1/500 s memotong blur ~20× dibanding 1/25 s; kecerahan tetap ~100 (setara
+sebelumnya) karena gain dinaikkan. Kendaraan pertama sesudah perubahan: motor bergerak
+terbaca **N 4509 ADS (0,94)**, plat tajam; motor yang sama di Hadap Luar (belum diubah)
+gagal karena kabur.
+
+**Penjaga kecerahan otomatis** `server21/kamera/atur_malam.py` → di server
+`/home/cctv/anpr/kamera/`, cron tiap 2 menit:
+- malam: ukur kecerahan stream `dalam`, setel gain (dan shutter bila senja/fajar masih
+  terang). Shutter **tidak pernah** lebih lambat dari 1/500 s.
+- siang: tidak menyentuh kamera, hanya menyiapkan nilai awal profil malam (1/1000 s, gain 40).
+- login kamera gagal sekali → berhenti 12 jam (kamera mengunci akun setelah 5 salah sandi).
+- bila server/skrip mati, kamera tetap berganti profil sendiri sesuai jadwalnya.
+- log: `atur_malam.log`; uji simulasi kestabilan: `python3 uji_atur_malam.py` (LULUS).
+
+Pengaturan asli tersimpan di `/home/cctv/anpr/kamera/dalam_image_awal_20261001.json`.
+Kembali seperti semula: hapus baris cron `atur_malam.py`, lalu
+`python3 /home/cctv/anpr/kamera/atur_malam.py --pulihkan` (jadwal siang 00:00–24:00).
+`server21/kamera/vigi_api.py` = alat baca/ubah pengaturan kamera (sandi dibaca dari
+`cameras.json` tripwire, tidak pernah dicetak).
+
+## 6. Pengujian yang dijalankan
 
 - Lint PHP 7.4 (versi produksi) untuk semua berkas.
 - 14 halaman admin + API: HTTP 200, tanpa galat PHP, judul benar.
@@ -91,10 +136,12 @@ Cadangan: `pwa/index.html.bak-202610012030`, `pwa/sw.js.bak-202610012030`.
 - Admin Data Kendaraan: tambah, plat salah, duplikat, ubah, nonaktif, token salah, hapus.
 - Screenshot desktop & HP (dashboard, data kendaraan, parkir liar, form, PWA).
 - Semua data uji dihapus kembali.
+- Kamera Hadap Dalam: 147 gambar malam × 7 varian deteksi; uji gelap/terang langsung ke
+  kamera untuk memastikan profil malam yang aktif; simulasi kestabilan pengatur.
 
 ## Catatan yang belum ditangani
 
-- Malam hari, kamera **Gerbang Utama (Hadap Dalam)** hampir selalu gagal menemukan plat
-  (`tanpa-plat`) — masalah pencahayaan/IR kamera, bukan OCR.
+- Kamera **Gerbang Utama (Hadap Luar)** juga turun keterbacaannya malam hari (plat depan
+  silau lampu & kabur). Belum diubah; cara yang sama (bagian 5) bisa diterapkan bila diminta.
 - `wajib_login()` mengarahkan permintaan `api/*.php` tanpa sesi ke `api/login.php` (404);
   dibiarkan agar alur PWA tidak berubah.
