@@ -41,3 +41,9 @@ php artisan view:clear
 ```
 
 Perubahan lengkap ada di `reviewer_jurnal.diff`.
+
+## Update: modal review jurnal tanpa bagian keuangan
+
+Saat tombol **Review Jurnal** diklik, blok "Rincian Biaya Anggaran" di modal review disembunyikan
+(`#wrapReviewBiaya`), dan muncul lagi saat modal ditutup. Review program/keuangan tidak berubah.
+Backup sebelum update ini: `storage/pengisian_program.blade.php.bak_*_sebelum_modal`.
