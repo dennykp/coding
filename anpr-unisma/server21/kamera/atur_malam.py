@@ -46,8 +46,12 @@ IMAGE_UKUR = "anpr-fpo"          # image yang punya OpenCV, untuk mengukur strea
 
 SHUTTER = ["1%2f500", "1%2f750", "1%2f1000", "1%2f2000", "1%2f4000", "1%2f10000"]
 AWAL = {"s": 2, "g": 40}          # nilai awal 17:00 (masih senja: 1/1000 s)
-TARGET, PITA = 100.0, 10.0        # kecerahan rata-rata yang dijaga
+TARGET, PITA = 85.0, 8.0          # kecerahan area jalan yang dijaga (lihat catatan)
 SIANG = (6 * 60, 17 * 60)         # jadwal siang kamera (menit WIB)
+# Catatan kalibrasi 01-10-2026 21:15 (1/500 s, area jalan 30-95% tinggi frame):
+#   gain 30 -> 76, gain 45 -> 87, gain 60 -> 87, gain 100 -> 91.
+# Di atas ~45 gain hampir tak menambah terang, hanya menambah noise; maka target
+# 85 supaya gain berhenti di sekitar 40-45.
 
 
 def sekarang_wib():
