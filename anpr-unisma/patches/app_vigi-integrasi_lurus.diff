@@ -1,0 +1,158 @@
+--- app_vigi.py.bak-20261001-lurus
++++ app_vigi.py
+@@ -900,6 +900,67 @@
+
+
+ # ======================================================================
++# PELURUSAN PLAT (sidecar /baca)
++# ======================================================================
++# Kamera gerbang melihat plat dari atas-samping sehingga plat di gambar
++# terputar tajam (72% kotak plat berasio < 1,8; plat mendatar ~3:1).
++# Sidecar memutar area plat ke 13 sudut (-54..+54), mendeteksi ulang plat di tiap
++# sudut, membaca, lalu mem-voting. Penjelasan & angka uji lengkap ada di
++# fpo_service.py -> baca_lurus().
++#
++# Uji silang-kamera 01-10-2026 (230 penilaian): benar 74,8% -> 82,2%.
++# Dengan ambang dashboard 0,80, plat SALAH yang tampil turun 17,8% -> 6,3%.
++# Saat bacaan lama dan bacaan lurus berselisih: lurus benar 14x, lama 1x.
++#
++# Matikan dengan FPO_LURUS=0 di .env -> perilaku persis seperti sebelumnya.
++FPO_LURUS = _os.environ.get("FPO_LURUS", "1").strip().lower() \
++    not in ("0", "false", "no", "off")
++FPO_LURUS_URL = f"http://{_FPO_HOST}:8011/baca"
++FPO_LURUS_TIMEOUT = float(_os.environ.get("FPO_LURUS_TIMEOUT", "8"))
++
++
++def _fpo_lurus(frame_bgr: np.ndarray, det_box: list):
++    """
++    Minta sidecar meluruskan dan membaca plat di det_box.
++
++    Return:
++      dict  -> sidecar menjawab. dict["plate"] bisa KOSONG: artinya di 13
++               sudut tidak ada satu pun bacaan berbentuk plat sah.
++      None  -> sidecar tidak terjangkau/galat. Pemanggil harus kembali ke
++               jalur lama apa adanya (aman bila sidecar mati).
++    """
++    try:
++        ih, iw = frame_bgr.shape[:2]
++        x1, y1, x2, y2 = [float(v) for v in det_box]
++        bw, bh = x2 - x1, y2 - y1
++        if bw <= 2 or bh <= 2:
++            return None
++        cx, cy = (x1 + x2) / 2.0, (y1 + y2) / 2.0
++        R = max(bw, bh) * 1.35
++        X1, Y1 = int(max(0, cx - R)), int(max(0, cy - R))
++        X2, Y2 = int(min(iw, cx + R)), int(min(ih, cy + R))
++        area = frame_bgr[Y1:Y2, X1:X2]
++        if area.size == 0:
++            return None
++        ok, buf = cv2.imencode(".jpg", area, [cv2.IMWRITE_JPEG_QUALITY, 95])
++        if not ok:
++            return None
++        q = (f"?x1={x1 - X1:.1f}&y1={y1 - Y1:.1f}"
++             f"&x2={x2 - X1:.1f}&y2={y2 - Y1:.1f}")
++        req = _urlrequest.Request(
++            FPO_LURUS_URL + q, data=buf.tobytes(),
++            headers={"Content-Type": "application/octet-stream"},
++            method="POST",
++        )
++        with _urlrequest.urlopen(req, timeout=FPO_LURUS_TIMEOUT) as resp:
++            d = _json.loads(resp.read().decode())
++        return d if isinstance(d, dict) else None
++    except Exception as e:
++        log.debug(f"[LURUS] sidecar tidak tersedia: {e}")
++        return None
++
++
++# ======================================================================
+ # DUA MESIN OCR  PENIMBANG
+ # ======================================================================
+ # Sebelumnya sidecar fast-plate-ocr hanya dipanggil KALAU PaddleOCR gagal
+@@ -1720,7 +1781,24 @@
+         # yang wajar. Benchmark: PaddleOCR menang saat bentuknya sah,
+         # sidecar menang saat PaddleOCR gagal/rusak (24/25, char 98.9%).
+         _alasan = "paddle"
+-        if OCR_DUA_MESIN:
++        _crop_lurus = None
++        _lurus = _fpo_lurus(frame_bgr, det_box) if FPO_LURUS else None
++        if _lurus and _lurus.get("plate"):
++            l_text = _lurus["plate"]
++            l_conf = float(_lurus.get("conf") or 0.0)
++            p_norm = _rata_plat(clean_plate_text(raw_text) or raw_text)
++            # Kesepakatan dengan PaddleOCR TIDAK menaikkan keyakinan: diuji,
++            # bacaan lurus yang lemah + Paddle sepakat hanya benar 6 dari 14
++            # (galatnya berkorelasi karena jalur lama ikut memakai fpo).
++            _alasan = "lurus-sepakat" if p_norm == _rata_plat(l_text) else "lurus"
++            if _alasan == "lurus" and raw_text:
++                log.info(f"[LURUS] {raw_text!r}({ocr_conf:.2f}) -> {l_text!r}"
++                         f"({l_conf:.2f}, {_lurus.get('votes')} sudut sepakat,"
++                         f" putar {float(_lurus.get('angle') or 0):+.0f})")
++            raw_text, ocr_conf = l_text, l_conf
++            deskew_angle = float(_lurus.get("angle") or 0.0)
++            _crop_lurus = _lurus.get("crop_jpg") or None
++        elif OCR_DUA_MESIN:
+             _fpo_text, _fpo_conf = _fpo_rescue(frame_bgr, det_box)
+             _pilih, _yakin, _alasan = _timbang_bacaan(
+                 raw_text, ocr_conf, _fpo_text, _fpo_conf)
+@@ -1738,6 +1816,13 @@
+                     ocr_conf = _fpo_conf
+                     deskew_angle = 0.0
+
++        if _lurus is not None and not _lurus.get("plate") and raw_text:
++            # Diuji: kalau pelurusan gagal di semua sudut, bacaan lama yang
++            # >= 0,80 hanya benar 1 dari 3. Tetap disimpan, tapi di bawah
++            # ambang dashboard sehingga tidak dipakai menuduh parkir liar.
++            ocr_conf = min(float(ocr_conf or 0.0), 0.79)
++            _alasan = "tanpa-lurus"     # kolom ocr_alasan maks 32 karakter
++
+         #  Jenis & warna kendaraan pemilik plat ini
+         _jenis = _warna = _warna_hex = None
+         _v = _kendaraan_pemilik(det_box, vehicle_boxes)
+@@ -1772,6 +1857,7 @@
+             "crop_b64": crop_b64,
+             "jenis": _jenis, "warna": _warna, "warna_hex": _warna_hex,
+             "ocr_alasan": _alasan,
++            "crop_lurus": _crop_lurus,
+         })
+     if not plates:
+         ff_plates = _fullframe_ocr_fallback(frame_bgr, paddle_ocr)
+@@ -1915,11 +2001,22 @@
+     dest_dir:  Path,
+     stem:      str,
+     suffix:    str = "_crop",
++    jpg_b64:   Optional[str] = None,
+ ) -> Optional[str]:
+     """
+     Potong area det_box dari frame, simpan ke dest_dir/{stem}{suffix}.jpg.
++    Kalau jpg_b64 diberikan (potongan plat yang sudah DILURUSKAN sidecar),
++    itu yang disimpan: petugas melihat plat mendatar yang mudah dibaca.
+     Return: path absolut file crop, atau None jika gagal.
+     """
++    if jpg_b64:
++        crop_path = dest_dir / f"{stem}{suffix}.jpg"
++        try:
++            data = base64.b64decode(jpg_b64)
++            await asyncio.to_thread(crop_path.write_bytes, data)
++            return str(crop_path)
++        except Exception as e:
++            log.warning(f"[save_crop] Gagal simpan crop lurus {crop_path}: {e}")
+     if not det_box or len(det_box) != 4:
+         return None
+     ih, iw = frame_bgr.shape[:2]
+@@ -2790,6 +2887,7 @@
+             crop_path_saved = await _save_crop(
+                 frame_bgr, best.get("det_box") or [],
+                 snap_path.parent, snap_path.stem,
++                jpg_b64=best.get("crop_lurus"),
+             )
+             if crop_path_saved:
+                 log.info(
+@@ -3905,7 +4003,7 @@
+             "det_confidence":  round(det_conf, 3),
+             "rec_confidence":  round(rec_conf, 3),
+             "box":             _rescale_box(p.get("det_box"), scale_x, scale_y),
+-            "crop_image":      p.get("crop_b64"),
++            "crop_image":      p.get("crop_lurus") or p.get("crop_b64"),
+             "deskew_angle":    p.get("deskew_angle", 0.0),
+         })
+

@@ -1,0 +1,205 @@
+--- fpo_service.py.bak-20261001-lurus
++++ fpo_service.py
+@@ -15,13 +15,26 @@
+                 -> {"plate": "...", "min_prob": .., "mean_prob": ..,
+                     "region": "...", "region_prob": ..}
+
++  POST /baca?x1=..&y1=..&x2=..&y2=..
++                body = bytes gambar (potongan di sekitar plat)
++                -> {"plate": "...", "conf": .., "votes": .., "angle": ..,
++                    "crop_jpg": base64}
++                Plat DILURUSKAN dulu (dicoba beberapa sudut putar, plat
++                dideteksi ulang di tiap sudut), lalu dibaca dan di-voting.
++                Lihat penjelasan di baca_lurus().
++
+   GET  /health  -> {"ok": true, ...}
+
+ Kalau service ini mati, pemanggil (app_vigi) harus tetap jalan normal.
+ """
++import base64
+ import json
+ import logging
++import math
++import re
+ import threading
++from collections import Counter, defaultdict
++from urllib.parse import parse_qs, urlparse
+ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+ import cv2
+@@ -122,6 +135,151 @@
+     }
+
+
++# ======================================================================
++# PELURUSAN PLAT + VOTING MULTI-SUDUT
++# ======================================================================
++# Kamera gerbang dipasang tinggi dan menyamping, sehingga plat di gambar
++# TERPUTAR tajam. Diukur pada 1.551 plat (29-09 s/d 01-10-2026): 72% kotak
++# plat berasio lebar/tinggi < 1,8, padahal plat yang mendatar ~3:1. Model
++# OCR plat (fast-plate-ocr, PaddleOCR) dilatih untuk plat mendatar: pada
++# kotak paling miring (< 1,3) fast-plate-ocr hanya yakin di 37% kasus.
++#
++# Arah miringnya tetap per kamera (posisi kamera tidak berubah):
++#   Gerbang Utama Hadap Luar   +9..+27 derajat
++#   Gerbang Utama Hadap Dalam  -9..-36
++#   Utama Timur Hadap Luar     -9..-36
++#   Gerbang Keluar Hadap Dalam +18..+45
++#
++# Cara kerja: area di sekitar plat diputar ke beberapa sudut. Di tiap
++# sudut plat DIDETEKSI ULANG (supaya kotaknya rapat ke plat yang sudah
++# mendatar), dibaca, lalu semua bacaan di-voting. Bacaan yang muncul
++# konsisten di beberapa sudut jauh lebih bisa dipercaya daripada satu
++# bacaan tunggal.
++#
++# Hasil uji silang-kamera (230 penilaian, kunci = bacaan kamera lain):
++#   produksi lama (PaddleOCR+fpo)  benar 74,8%  salah 17,8%
++#   pelurusan + voting             benar 82,2%  salah 15,2%
++#   ... dengan ambang yakin (>=3 sudut sepakat, prob >= 0,95):
++#                                  presisi 92,6% pada cakupan 85%
++# Saat keduanya berselisih, pelurusan benar 14x, produksi lama benar 1x.
++# VLM (Qwen3-VL 4B/8B di GPU) juga diuji dan justru lebih buruk (70-72%).
++SUDUT_LURUS = [-54, -45, -36, -27, -18, -9, 0, 9, 18, 27, 36, 45, 54]
++_BENTUK = re.compile(r"^([A-Z]{1,2})\d{1,4}[A-Z]{0,3}$")
++_WILAYAH_SAH = {
++    "A", "AA", "AB", "AD", "AE", "AG", "B", "BA", "BB", "BD", "BE", "BG",
++    "BH", "BK", "BL", "BM", "BN", "BP", "D", "DA", "DB", "DC", "DD", "DE",
++    "DG", "DH", "DK", "DL", "DM", "DN", "DP", "DR", "DS", "DT", "DW", "E",
++    "EA", "EB", "ED", "F", "G", "H", "K", "KB", "KH", "KT", "KU", "L", "M",
++    "N", "P", "PA", "PB", "R", "S", "T", "W", "Z",
++}
++
++
++def _bentuk_sah(t: str) -> bool:
++    m = _BENTUK.match(t or "")
++    return bool(m) and len(t) >= 4 and m.group(1) in _WILAYAH_SAH
++
++
++def _keyakinan(votes: int, maks: float) -> float:
++    """
++    Keyakinan akhir, dikalibrasi terhadap ambang 0,80 di dashboard.
++
++    >= 3 sudut sepakat dan prob karakter terendah >= 0,95 -> presisi 92,6%
++    pada uji silang-kamera, jadi diberi 0,90-0,99 (tampil). Di bawah itu
++    presisinya turun tajam (tambahan kasusnya hanya ~45% benar), jadi
++    sengaja diberi < 0,80: tetap tersimpan, tapi tidak dipajang sebagai
++    plat pasti dan tidak dipakai menuduh parkir liar.
++    """
++    if votes >= 3 and maks >= 0.95:
++        return round(min(0.99, 0.90 + 0.02 * (votes - 3)), 3)
++    if votes >= 2 and maks >= 0.90:
++        return 0.75
++    return round(0.6 * maks, 3)
++
++
++def baca_lurus(img_bytes: bytes, box) -> dict:
++    kosong = {"plate": "", "conf": 0.0, "votes": 0, "angle": 0.0,
++              "max_prob": 0.0, "n_sudut": 0, "crop_jpg": ""}
++    img = _decode(img_bytes)
++    if img is None or img.size == 0:
++        return kosong
++    ih, iw = img.shape[:2]
++    x1, y1, x2, y2 = [float(v) for v in box]
++    bw, bh = x2 - x1, y2 - y1
++    if bw <= 2 or bh <= 2:
++        return kosong
++    cx, cy = (x1 + x2) / 2.0, (y1 + y2) / 2.0
++    R = max(bw, bh) * 1.25
++    X1, Y1 = int(max(0, cx - R)), int(max(0, cy - R))
++    X2, Y2 = int(min(iw, cx + R)), int(min(ih, cy + R))
++    reg = img[Y1:Y2, X1:X2]
++    if reg.size == 0:
++        return kosong
++    pcx, pcy = cx - X1, cy - Y1
++    d, m = get_det(), get_ocr()
++
++    calon = []
++    for a in SUDUT_LURUS:
++        M = cv2.getRotationMatrix2D((pcx, pcy), a, 1.0)
++        rr = cv2.warpAffine(reg, M, (reg.shape[1], reg.shape[0]),
++                            flags=cv2.INTER_CUBIC,
++                            borderMode=cv2.BORDER_REPLICATE)
++        with _det_lock:
++            hasil = d.predict(rr) or []
++        if not hasil:
++            continue
++
++        # Pilih kotak yang paling dekat ke titik putar: itulah plat yang
++        # sedang diluruskan, bukan plat kendaraan lain di sebelahnya.
++        def jarak(r):
++            b = r.bounding_box
++            return math.hypot((b.x1 + b.x2) / 2 - pcx, (b.y1 + b.y2) / 2 - pcy) / R
++        r = min(hasil, key=lambda r: jarak(r) - 0.3 * float(r.confidence))
++        if jarak(r) > 0.6:
++            continue
++        b = r.bounding_box
++        w, h = b.x2 - b.x1, b.y2 - b.y1
++        crop = rr[max(0, int(b.y1 - .06 * h)):int(b.y2 + .06 * h),
++                  max(0, int(b.x1 - .02 * w)):int(b.x2 + .02 * w)]
++        if crop.size == 0:
++            continue
++        with _ocr_lock:
++            pred = m.run(crop, return_confidence=True)[0]
++        probs = [float(x) for x in pred.char_probs]
++        calon.append({"sudut": a, "plat": (pred.plate or "").upper(),
++                      "min": min(probs) if probs else 0.0,
++                      "crop": crop})
++
++    skor, n, maks = defaultdict(float), Counter(), defaultdict(float)
++    for c in calon:
++        if c["min"] >= 0.30 and _bentuk_sah(c["plat"]):
++            skor[c["plat"]] += c["min"]
++            n[c["plat"]] += 1
++            maks[c["plat"]] = max(maks[c["plat"]], c["min"])
++    if not skor:
++        kosong["n_sudut"] = len(calon)
++        return kosong
++
++    plat = max(skor, key=skor.get)
++    terbaik = max((c for c in calon if c["plat"] == plat), key=lambda c: c["min"])
++    tampil = terbaik["crop"]
++    th, tw = tampil.shape[:2]
++    if th < 96:
++        s = min(96.0 / th, 4.0)
++        tampil = cv2.resize(tampil, (int(tw * s), int(th * s)),
++                            interpolation=cv2.INTER_CUBIC)
++    ok, buf = cv2.imencode(".jpg", tampil, [cv2.IMWRITE_JPEG_QUALITY, 92])
++    return {
++        "plate": plat,
++        "conf": _keyakinan(n[plat], maks[plat]),
++        "votes": int(n[plat]),
++        "max_prob": round(maks[plat], 3),
++        "angle": float(terbaik["sudut"]),
++        "n_sudut": len(calon),
++        "lain": {t: int(k) for t, k in n.items() if t != plat},
++        "crop_jpg": base64.b64encode(buf.tobytes()).decode() if ok else "",
++    }
++
++
+ class Handler(BaseHTTPRequestHandler):
+     protocol_version = "HTTP/1.1"
+
+@@ -147,7 +305,8 @@
+             self._send(404, {"error": "not found"})
+
+     def do_POST(self):
+-        if self.path not in ("/read", "/detect"):
++        url = urlparse(self.path)
++        if url.path not in ("/read", "/detect", "/baca"):
+             self._send(404, {"error": "not found"})
+             return
+         try:
+@@ -159,8 +318,12 @@
+             return
+         try:
+             data = self.rfile.read(n)
+-            if self.path == "/detect":
++            if url.path == "/detect":
+                 self._send(200, detect_plates(data))
++            elif url.path == "/baca":
++                q = parse_qs(url.query)
++                box = [float(q[k][0]) for k in ("x1", "y1", "x2", "y2")]
++                self._send(200, baca_lurus(data, box))
+             else:
+                 self._send(200, read_plate(data))
+         except Exception as e:
